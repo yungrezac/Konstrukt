@@ -6,6 +6,8 @@
     <title>Генератор Mini App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Подключаем Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -65,9 +67,9 @@
         .mockup-phone { background: #1c1c1e; border-radius: 44px; padding: 12px; box-shadow: 0 20px 50px -10px rgba(0,0,0,0.25); width: 250px; height: 500px; transition: transform 0.3s; }
         .mockup-screen { background-color: var(--tg-theme-bg-color); border-radius: 32px; overflow: hidden; }
         .mockup-header { background-color: var(--tg-theme-secondary-bg-color); padding: 10px 14px; }
-        .mockup-logo { width: 36px; height: 36px; border-radius: 10px; background-color: var(--tg-theme-hint-color); object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; color: var(--tg-theme-text-color); }
-        .mockup-title { font-weight: 600; font-size: 15px; }
-        .mockup-content { font-size: 13px; }
+        .mockup-logo { width: 32px; height: 32px; border-radius: 9px; background-color: var(--tg-theme-hint-color); object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; color: var(--tg-theme-text-color); }
+        .mockup-title { font-weight: 600; font-size: 14px; }
+        .mockup-content { font-size: 12px; }
         #final-success-container { animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
         .success-checkmark-bg { background-color: color-mix(in srgb, var(--tg-theme-button-color) 15%, transparent); color: var(--tg-theme-button-color); }
         #download-app-btn {
@@ -89,50 +91,51 @@
         <div id="step-1" class="step active flex flex-col h-full">
             <div class="pt-5 shrink-0">
                 <div class="text-center mb-4 px-5 animate-in" style="animation-delay: 0.1s;">
-                    <h1 class="text-3xl font-bold">Создать Mini App</h1>
-                    <p class="text-lg text-[var(--tg-theme-hint-color)] mt-1">Шаг 1: Выберите шаблон</p>
+                    <h1 class="text-2xl font-bold">Создать Mini App</h1>
+                    <p class="text-base text-[var(--tg-theme-hint-color)] mt-1">Шаг 1: Выберите шаблон</p>
                 </div>
                 <div id="category-tabs" class="flex space-x-6 border-b border-[var(--tg-theme-secondary-bg-color)] mb-2 overflow-x-auto px-5 animate-in" style="animation-delay: 0.2s;"></div>
             </div>
-            <div id="template-list" class="flex flex-col gap-3 overflow-y-auto flex-grow p-4 animate-in" style="animation-delay: 0.3s;"></div>
+            <div id="template-list" class="flex flex-col gap-3 overflow-y-auto flex-grow p-4 animate-in" style="animation-delay: 0.3s;">
+                <!-- Индикатор загрузки -->
+                <div id="loading-indicator" class="text-center text-[var(--tg-theme-hint-color)] p-8">Загрузка шаблонов...</div>
+            </div>
         </div>
 
         <!-- Экран 2: Кастомизация -->
         <div id="step-2" class="step hidden-right flex flex-col h-full p-5 overflow-y-auto pb-24">
             <div class="text-center mb-5 shrink-0 animate-in" style="animation-delay: 0.1s;">
-                <h1 class="text-3xl font-bold">Настройки</h1>
-                <p class="text-lg text-[var(--tg-theme-hint-color)] mt-1">Шаг 2: Укажите детали</p>
+                <h1 class="text-2xl font-bold">Настройки</h1>
+                <p class="text-base text-[var(--tg-theme-hint-color)] mt-1">Шаг 2: Укажите детали</p>
             </div>
-            
             <div class="flex justify-center mb-6 shrink-0 animate-in" style="animation-delay: 0.2s;">
                 <div class="mockup-phone">
                     <div class="mockup-screen h-full flex flex-col">
-                        <div class="mockup-header flex items-center space-x-3">
+                        <div class="mockup-header flex items-center space-x-2.5">
                             <div id="mockup-logo-container" class="mockup-logo">
-                                <img id="mockup-logo-img" src="" class="w-full h-full object-cover rounded-[10px] hidden">
+                                <img id="mockup-logo-img" src="" class="w-full h-full object-cover rounded-[9px] hidden">
                                 <span id="mockup-logo-initials"></span>
                             </div>
                             <span id="mockup-title-text" class="mockup-title text-[var(--tg-theme-text-color)] whitespace-nowrap overflow-hidden text-ellipsis">Ваше приложение</span>
                         </div>
-                        <div id="mockup-content-preview" class="mockup-content flex-grow p-4 text-[var(--tg-theme-hint-color)]">Предпросмотр...</div>
+                        <div id="mockup-content-preview" class="mockup-content flex-grow p-3 text-[var(--tg-theme-hint-color)]">Предпросмотр...</div>
                     </div>
                 </div>
             </div>
-
-            <div class="space-y-5">
+            <div class="space-y-4">
                 <div class="animate-in" style="animation-delay: 0.3s;">
-                    <label for="app-name" class="font-semibold text-lg block mb-2">Название</label>
-                    <input type="text" id="app-name" class="w-full p-3.5 text-base rounded-xl bg-[var(--tg-theme-secondary-bg-color)] border-2 border-transparent focus:ring-2 focus:ring-[var(--tg-theme-button-color)] focus:bg-[var(--tg-theme-bg-color)] transition outline-none" placeholder="Например, 'Мой Магазин'">
+                    <label for="app-name" class="font-semibold text-base block mb-1.5">Название</label>
+                    <input type="text" id="app-name" class="w-full p-3 text-sm rounded-xl bg-[var(--tg-theme-secondary-bg-color)] border-2 border-transparent focus:ring-2 focus:ring-[var(--tg-theme-button-color)] focus:bg-[var(--tg-theme-bg-color)] transition outline-none" placeholder="Например, 'Мой Магазин'">
                 </div>
                 <div class="animate-in" style="animation-delay: 0.4s;">
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="font-semibold text-lg">Логотип</label>
-                        <button id="remove-logo-btn" class="text-sm text-[var(--tg-theme-link-color)] hidden font-medium">Удалить</button>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="font-semibold text-base">Логотип</label>
+                        <button id="remove-logo-btn" class="text-xs text-[var(--tg-theme-link-color)] hidden font-medium">Удалить</button>
                     </div>
-                    <label for="logo-upload" id="logo-dropzone" class="custom-file-upload relative h-36 rounded-xl p-4 text-center cursor-pointer flex items-center justify-center">
+                    <label for="logo-upload" id="logo-dropzone" class="custom-file-upload relative h-32 rounded-xl p-4 text-center cursor-pointer flex items-center justify-center">
                         <div id="logo-placeholder" class="flex flex-col items-center justify-center h-full text-[var(--tg-theme-hint-color)]">
-                            <svg class="h-10 w-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" /></svg>
-                            <p class="mt-2 text-sm font-medium">Нажмите или перетащите файл</p>
+                            <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" /></svg>
+                            <p class="mt-2 text-xs font-medium">Нажмите или перетащите файл</p>
                         </div>
                         <img id="logo-preview" class="hidden h-full w-auto object-contain rounded-lg" alt="Предпросмотр логотипа">
                     </label>
@@ -144,13 +147,12 @@
         <!-- Экран 3: Успех -->
         <div id="step-3" class="step hidden-right flex flex-col h-full items-center justify-center text-center p-6">
             <div id="final-success-container" class="flex flex-col items-center">
-                <div class="p-4 rounded-full success-checkmark-bg mb-5">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                <div class="p-3 rounded-full success-checkmark-bg mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
                 </div>
-                <h1 class="text-3xl font-bold mb-2">Ваш Mini App готов!</h1>
-                <p class="text-[var(--tg-theme-hint-color)] mb-8 text-lg max-w-sm">Нажмите кнопку ниже, чтобы скачать готовый <b class="font-bold text-[var(--tg-theme-text-color)]">.html</b> файл.</p>
-                
-                <a id="download-app-btn" href="#" download="mini-app.html" class="w-full max-w-xs text-center font-bold py-4 px-6 rounded-xl shadow-lg">
+                <h1 class="text-2xl font-bold mb-1.5">Ваш Mini App готов!</h1>
+                <p class="text-[var(--tg-theme-hint-color)] mb-6 text-base max-w-sm">Нажмите кнопку ниже, чтобы скачать готовый <b class="font-bold text-[var(--tg-theme-text-color)]">.html</b> файл.</p>
+                <a id="download-app-btn" href="#" download="mini-app.html" class="w-full max-w-xs text-center font-semibold py-3 px-5 rounded-xl shadow-lg text-sm">
                     Скачать Mini App
                 </a>
             </div>
@@ -160,388 +162,23 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+
+            // ВАШИ ДАННЫЕ SUPABASE
+            const SUPABASE_URL = 'https://jvapdhhyjbianlyfwobm.supabase.co'; 
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2YXBkaGh5amJpYW5seWZ3b2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzOTMxMTEsImV4cCI6MjA3MDk2OTExMX0.XcvGzp18BeA5Sf-_k7nHaZG5J5eB9H9adQEl3ZAa5mY';
+
+            // ИСПРАВЛЕНИЕ: Используем `supabase` (глобальный объект) для создания клиента
+            // и сохраняем его в новую переменную `supabaseClient`.
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
             const App = {
                 state: { currentStep: 1, selectedTemplate: null, appName: '', logoDataUrl: null },
                 DOM: {},
-                
                 templatesData: {
-                    "Все": [
-                        // НОВЫЙ ШАБЛОН: Визитка
-                        { 
-                            id: 'link-in-bio', name: 'Визитная карточка', icon: '👤', category: 'Личное', 
-                            previewHtml: `<div class='text-center'><div class='w-16 h-16 bg-gray-300 rounded-full mx-auto'></div><div class='h-4 bg-[var(--tg-theme-secondary-bg-color)] rounded w-3/4 mx-auto mt-2'></div><div class='space-y-2 mt-4'><div class='h-6 bg-gray-200 rounded-lg'></div><div class='h-6 bg-gray-200 rounded-lg'></div></div></div>`,
-                            htmlContent: `<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>%%APP_NAME%%</title>
-    <script src="https://cdn.tailwindcss.com"><\/script>
-    <script src="https://telegram.org/js/telegram-web-app.js"><\/script>
-    <style>
-        :root { --tg-theme-bg-color: #fff; --tg-theme-text-color: #000; --tg-theme-hint-color: #999; --tg-theme-button-color: #2481cc; --tg-theme-button-text-color: #fff; --tg-theme-secondary-bg-color: #f4f4f4; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); margin: 0; }
-        .link-item { transition: transform 0.2s; }
-        .link-item:hover { transform: scale(1.03); }
-    <\/style>
-</head>
-<body class="antialiased p-5">
-    <div class="text-center">
-        <img src="%%APP_LOGO_BASE64%%" class="w-28 h-28 rounded-full mx-auto shadow-lg mb-4" alt="Аватар">
-        <h1 class="text-2xl font-bold">%%APP_NAME%%</h1>
-        <p id="bio" class="text-base text-[var(--tg-theme-hint-color)] mt-2 max-w-md mx-auto">Краткое описание вашей деятельности. Отредактируйте этот текст в HTML-файле.</p>
-        
-        <div id="links-container" class="mt-8 space-y-3">
-            <!-- Ссылки добавляются здесь из JS -->
-        </div>
-    </div>
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        const themeParams = %%THEME_PARAMS_JSON%%;
-        if (themeParams) { Object.entries(themeParams).forEach(([k, v]) => document.documentElement.style.setProperty('--tg-theme-' + k.replace(/_/g, '-'), v)); }
-
-        // Отредактируйте этот массив, чтобы изменить ссылки
-        const links = [
-            { title: 'Мой Telegram канал', url: 'https://t.me/durov' },
-            { title: 'Написать в поддержку', url: 'https://t.me/telegram' },
-            { title: 'Веб-сайт', url: 'https://telegram.org' }
-        ];
-
-        const linksContainer = document.getElementById('links-container');
-        links.forEach(link => {
-            const linkEl = document.createElement('a');
-            linkEl.href = link.url;
-            linkEl.className = 'link-item block w-full text-center font-semibold p-4 rounded-xl';
-            linkEl.style.backgroundColor = 'var(--tg-theme-secondary-bg-color)';
-            linkEl.style.color = 'var(--tg-theme-text-color)';
-            linkEl.textContent = link.title;
-            linksContainer.appendChild(linkEl);
-        });
-        
-        tg.MainButton.setText("Поделиться").show();
-        tg.onEvent('mainButtonClicked', () => {
-            // Здесь должна быть ссылка на ваше мини-приложение
-            tg.switchInlineQuery('Смотри, моя визитка!');
-        });
-    <\/script>
-</body>
-</html>`
-                        },
-                        // НОВЫЙ ШАБЛОН: Опрос
-                        { 
-                            id: 'poll', name: 'Опрос / Голосование', icon: '📊', category: 'Сообщество', 
-                            previewHtml: `<div class='space-y-2'><div class='h-5 bg-[var(--tg-theme-secondary-bg-color)] rounded w-full mb-3'></div><div class='h-7 bg-gray-200 border border-gray-300 rounded-lg'></div><div class='h-7 bg-blue-100 border border-blue-300 rounded-lg'></div><div class='h-7 bg-gray-200 border border-gray-300 rounded-lg'></div></div>`,
-                            htmlContent: `<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>%%APP_NAME%%</title>
-    <script src="https://cdn.tailwindcss.com"><\/script>
-    <script src="https://telegram.org/js/telegram-web-app.js"><\/script>
-    <style>
-        :root { --tg-theme-bg-color: #fff; --tg-theme-text-color: #000; --tg-theme-hint-color: #999; --tg-theme-button-color: #2481cc; --tg-theme-button-text-color: #fff; --tg-theme-secondary-bg-color: #f4f4f4; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); margin: 0; }
-        .option { transition: background-color 0.2s; border: 2px solid transparent; }
-        .option.selected { border-color: var(--tg-theme-button-color); background-color: color-mix(in srgb, var(--tg-theme-button-color) 15%, transparent); }
-        .result-bar-bg { background-color: var(--tg-theme-secondary-bg-color); }
-        .result-bar { background-color: var(--tg-theme-button-color); transition: width 0.5s ease-out; }
-    <\/style>
-</head>
-<body class="antialiased p-5">
-    <div class="flex items-center mb-5">
-        <img src="%%APP_LOGO_BASE64%%" class="w-10 h-10 rounded-lg mr-3" alt="Логотип">
-        <h1 class="text-xl font-bold">%%APP_NAME%%</h1>
-    </div>
-    <p id="poll-question" class="text-lg font-semibold mb-4">Какой ваш любимый фреймворк?</p>
-    
-    <div id="options-container" class="space-y-3"></div>
-    <div id="results-container" class="hidden space-y-3"></div>
-
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        const themeParams = %%THEME_PARAMS_JSON%%;
-        if (themeParams) { Object.entries(themeParams).forEach(([k, v]) => document.documentElement.style.setProperty('--tg-theme-' + k.replace(/_/g, '-'), v)); }
-
-        const pollData = {
-            question: "Какой ваш любимый фреймворк?",
-            options: [
-                { text: "React", votes: 58 },
-                { text: "Vue", votes: 32 },
-                { text: "Svelte", votes: 25 },
-                { text: "Angular", votes: 11 }
-            ]
-        };
-        
-        let selectedOption = null;
-        let hasVoted = false;
-
-        const optionsContainer = document.getElementById('options-container');
-        const resultsContainer = document.getElementById('results-container');
-        document.getElementById('poll-question').textContent = pollData.question;
-        
-        function renderOptions() {
-            optionsContainer.innerHTML = '';
-            pollData.options.forEach((opt, index) => {
-                const optEl = document.createElement('div');
-                optEl.className = 'option p-3 rounded-lg cursor-pointer font-medium';
-                optEl.style.backgroundColor = 'var(--tg-theme-secondary-bg-color)';
-                optEl.textContent = opt.text;
-                optEl.addEventListener('click', () => {
-                    if (hasVoted) return;
-                    selectedOption = index;
-                    document.querySelectorAll('.option').forEach(el => el.classList.remove('selected'));
-                    optEl.classList.add('selected');
-                    tg.MainButton.setText('Проголосовать').show().enable();
-                });
-                optionsContainer.appendChild(optEl);
-            });
-        }
-
-        function renderResults() {
-            resultsContainer.innerHTML = '';
-            optionsContainer.classList.add('hidden');
-            resultsContainer.classList.remove('hidden');
-            const totalVotes = pollData.options.reduce((sum, opt) => sum + opt.votes, 0);
-
-            pollData.options.forEach(opt => {
-                const percentage = totalVotes === 0 ? 0 : (opt.votes / totalVotes * 100).toFixed(1);
-                const resultEl = document.createElement('div');
-                resultEl.innerHTML = \`
-                    <div class="flex justify-between items-center mb-1 text-sm font-medium">
-                        <span>\${opt.text}</span>
-                        <span class="text-[var(--tg-theme-hint-color)]">\${percentage}%</span>
-                    </div>
-                    <div class="result-bar-bg w-full h-2 rounded-full overflow-hidden">
-                        <div class="result-bar h-full" style="width: \${percentage}%;"></div>
-                    </div>
-                \`;
-                resultsContainer.appendChild(resultEl);
-            });
-        }
-
-        tg.onEvent('mainButtonClicked', () => {
-            if (!hasVoted && selectedOption !== null) {
-                hasVoted = true;
-                pollData.options[selectedOption].votes++;
-                tg.MainButton.setText('Спасибо за ваш голос!').disable();
-                renderResults();
-                tg.HapticFeedback.notificationOccurred('success');
-            }
-        });
-
-        renderOptions();
-    <\/script>
-</body>
-</html>`
-                        },
-                        // НОВЫЙ ШАБЛОН: Меню
-                        { 
-                            id: 'menu', name: 'Меню кафе/ресторана', icon: '🍔', category: 'Бизнес', 
-                            previewHtml: `<div class='space-y-3'><div class='h-5 bg-gray-300 rounded w-1/2'></div><div class='h-4 bg-[var(--tg-theme-secondary-bg-color)] rounded'></div><div class='h-4 bg-[var(--tg-theme-secondary-bg-color)] rounded w-3/4'></div><div class='h-5 bg-gray-300 rounded w-1/2 mt-2'></div></div>`,
-                            htmlContent: `<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>%%APP_NAME%%</title>
-    <script src="https://cdn.tailwindcss.com"><\/script>
-    <script src="https://telegram.org/js/telegram-web-app.js"><\/script>
-    <style>
-        :root { --tg-theme-bg-color: #fff; --tg-theme-text-color: #000; --tg-theme-hint-color: #999; --tg-theme-button-color: #2481cc; --tg-theme-button-text-color: #fff; --tg-theme-secondary-bg-color: #f4f4f4; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); margin: 0; }
-    <\/style>
-</head>
-<body class="antialiased">
-    <div class="p-4">
-        <div class="text-center mb-6">
-            <img src="%%APP_LOGO_BASE64%%" class="w-20 h-20 rounded-2xl mx-auto shadow-md mb-3" alt="Логотип">
-            <h1 class="text-3xl font-bold">%%APP_NAME%%</h1>
-            <p class="text-base text-[var(--tg-theme-hint-color)] mt-1">Наше меню</p>
-        </div>
-        <div id="menu-container" class="space-y-6">
-            <!-- Категории и блюда будут здесь -->
-        </div>
-    </div>
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        const themeParams = %%THEME_PARAMS_JSON%%;
-        if (themeParams) { Object.entries(themeParams).forEach(([k, v]) => document.documentElement.style.setProperty('--tg-theme-' + k.replace(/_/g, '-'), v)); }
-
-        // Отредактируйте этот объект для изменения меню
-        const menuData = [
-            {
-                category: "Горячие блюда",
-                items: [
-                    { name: "Паста Карбонара", description: "Спагетти, бекон, сливочный соус, пармезан", price: "550₽" },
-                    { name: "Стейк из говядины", description: "Подается с овощами гриль и соусом", price: "980₽" },
-                ]
-            },
-            {
-                category: "Салаты",
-                items: [
-                    { name: "Цезарь с курицей", description: "Классический салат с куриной грудкой", price: "420₽" },
-                    { name: "Греческий салат", description: "Свежие овощи, фета и оливки", price: "380₽" },
-                ]
-            },
-            {
-                category: "Напитки",
-                items: [
-                    { name: "Домашний лимонад", description: "Освежающий цитрусовый лимонад", price: "250₽" },
-                    { name: "Капучино", description: "Кофе на основе эспрессо с молочной пеной", price: "220₽" },
-                ]
-            }
-        ];
-
-        const menuContainer = document.getElementById('menu-container');
-        menuData.forEach(category => {
-            const categoryEl = document.createElement('div');
-            let itemsHtml = '';
-            category.items.forEach(item => {
-                itemsHtml += \`
-                    <div class="py-3 border-b" style="border-color: var(--tg-theme-secondary-bg-color);">
-                        <div class="flex justify-between items-start">
-                            <h3 class="font-semibold text-base">\${item.name}</h3>
-                            <p class="font-bold text-base whitespace-nowrap pl-4">\${item.price}</p>
-                        </div>
-                        <p class="text-sm text-[var(--tg-theme-hint-color)] mt-1">\${item.description}</p>
-                    </div>
-                \`;
-            });
-            categoryEl.innerHTML = \`
-                <h2 class="text-xl font-bold mb-2">\${category.category}</h2>
-                <div class="space-y-2">\${itemsHtml}</div>
-            \`;
-            menuContainer.appendChild(categoryEl);
-        });
-
-        tg.MainButton.setText("Забронировать стол").show();
-        tg.onEvent('mainButtonClicked', () => {
-            tg.openTelegramLink('https://t.me/telegram'); // Замените на ваш контакт для брони
-        });
-    <\/script>
-</body>
-</html>`
-                        },
-                        // СТАРЫЕ ШАБЛОНЫ
-                        { 
-                            id: 'store', name: 'Простая страница', icon: '📄', category: 'Инструменты', 
-                            previewHtml: `<div class='text-center'><div class='h-6 bg-[var(--tg-theme-secondary-bg-color)] rounded w-3/4 mx-auto mb-2'></div><div class='h-4 bg-gray-200 rounded w-1/2 mx-auto'></div><div class='h-24 bg-gray-100 rounded-lg w-full mt-4'></div></div>`,
-                            htmlContent: `<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>%%APP_NAME%%</title>
-    <script src="https://cdn.tailwindcss.com"><\/script>
-    <script src="https://telegram.org/js/telegram-web-app.js"><\/script>
-    <style>
-        :root { --tg-theme-bg-color: #ffffff; --tg-theme-text-color: #000000; --tg-theme-hint-color: #999999; --tg-theme-button-color: #2481cc; --tg-theme-button-text-color: #ffffff; --tg-theme-secondary-bg-color: #f4f4f4; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); margin: 0; padding: 20px; }
-    <\/style>
-</head>
-<body class="antialiased">
-    <div class="text-center">
-        <img id="logo" src="%%APP_LOGO_BASE64%%" class="w-24 h-24 rounded-3xl mx-auto shadow-md mb-4" alt="Логотип">
-        <h1 class="text-3xl font-bold">%%APP_NAME%%</h1>
-        <p class="text-lg text-[var(--tg-theme-hint-color)] mt-2">Это ваш новый Mini App!</p>
-        <div class="mt-8 p-4 rounded-xl bg-[var(--tg-theme-secondary-bg-color)] text-left text-sm">
-            <p>Это простое приложение, созданное с помощью конструктора.</p>
-            <p class="mt-2">Вы можете отредактировать этот HTML-файл, чтобы добавить любую функциональность.</p>
-        </div>
-        <button id="main-action-btn" class="w-full mt-8 py-3 rounded-lg font-semibold text-base" style="background-color: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color);">Главное действие</button>
-    </div>
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        const themeParams = %%THEME_PARAMS_JSON%%;
-        if (themeParams) { Object.entries(themeParams).forEach(([key, value]) => document.documentElement.style.setProperty('--tg-theme-' + key.replace(/_/g, '-'), value)); }
-        tg.MainButton.setText("Закрыть").show();
-        tg.onEvent('mainButtonClicked', () => tg.close());
-        document.getElementById('main-action-btn').addEventListener('click', () => {
-            tg.showPopup({ title: 'Отлично!', message: 'Вы нажали на кнопку.', buttons: [{ type: 'ok' }] });
-        });
-    <\/script>
-</body>
-</html>`
-                        },
-                         { 
-                            id: 'tasks', name: 'Список дел', icon: '📝', category: 'Инструменты', 
-                            previewHtml: `<div class='space-y-2'><div class='flex items-center'><div class='w-4 h-4 border-2 border-gray-300 rounded mr-2'></div><div class='h-4 bg-[var(--tg-theme-secondary-bg-color)] rounded flex-1'></div></div><div class='flex items-center'><div class='w-4 h-4 border-2 border-[var(--tg-theme-button-color)] bg-[var(--tg-theme-button-color)] rounded mr-2 flex items-center justify-center'><svg class='w-3 h-3 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M5 13l4 4L19 7'></path></svg></div><div class='h-4 bg-[var(--tg-theme-secondary-bg-color)] rounded flex-1 opacity-50 line-through'></div></div></div>`,
-                            htmlContent: `<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>%%APP_NAME%%</title>
-    <script src="https://cdn.tailwindcss.com"><\/script>
-    <script src="https://telegram.org/js/telegram-web-app.js"><\/script>
-    <style>
-        :root { --tg-theme-bg-color: #fff; --tg-theme-text-color: #000; --tg-theme-hint-color: #999; --tg-theme-button-color: #2481cc; --tg-theme-button-text-color: #fff; --tg-theme-secondary-bg-color: #f4f4f4; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); margin: 0; }
-        .task.done span { text-decoration: line-through; color: var(--tg-theme-hint-color); }
-        .task-checkbox { border-color: var(--tg-theme-hint-color); }
-        .task.done .task-checkbox { background-color: var(--tg-theme-button-color); border-color: var(--tg-theme-button-color); }
-    <\/style>
-</head>
-<body class="antialiased">
-    <div class="p-5">
-        <div class="flex items-center mb-6">
-            <img src="%%APP_LOGO_BASE64%%" class="w-12 h-12 rounded-xl mr-4" alt="Логотип">
-            <h1 class="text-2xl font-bold">%%APP_NAME%%</h1>
-        </div>
-        <div id="task-list" class="space-y-3"></div>
-        <div class="mt-4 flex">
-            <input type="text" id="new-task-input" class="w-full p-3 text-base rounded-lg bg-[var(--tg-theme-secondary-bg-color)] border-2 border-transparent focus:ring-2 focus:ring-[var(--tg-theme-button-color)] focus:bg-[var(--tg-theme-bg-color)] transition outline-none" placeholder="Новая задача...">
-            <button id="add-task-btn" class="ml-2 px-4 rounded-lg font-semibold text-lg" style="background-color: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color);">+</button>
-        </div>
-    </div>
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        const themeParams = %%THEME_PARAMS_JSON%%;
-        if (themeParams) { Object.entries(themeParams).forEach(([k, v]) => document.documentElement.style.setProperty('--tg-theme-' + k.replace(/_/g, '-'), v)); }
-        const taskList = document.getElementById('task-list');
-        const newTaskInput = document.getElementById('new-task-input');
-        const addTaskBtn = document.getElementById('add-task-btn');
-        let tasks = [{text: 'Купить молоко', done: true}, {text: 'Создать Mini App', done: false}];
-        function renderTasks() {
-            taskList.innerHTML = '';
-            if (tasks.length === 0) {
-                taskList.innerHTML = '<p class="text-center text-[var(--tg-theme-hint-color)]">Задач пока нет</p>';
-                tg.MainButton.hide();
-                return;
-            }
-            tasks.forEach((task, index) => {
-                const taskEl = document.createElement('div');
-                taskEl.className = 'task flex items-center p-3 rounded-lg bg-[var(--tg-theme-secondary-bg-color)]' + (task.done ? ' done' : '');
-                taskEl.innerHTML = \`<div class="task-checkbox w-6 h-6 rounded-md border-2 mr-3 flex items-center justify-center flex-shrink-0">\${task.done ? '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}</div><span class="flex-grow">\${task.text}</span>\`;
-                taskEl.addEventListener('click', () => { tasks[index].done = !tasks[index].done; renderTasks(); });
-                taskList.appendChild(taskEl);
-            });
-            const uncompleted = tasks.filter(t => !t.done).length;
-            if (uncompleted > 0) { tg.MainButton.setText(\`Осталось задач: \${uncompleted}\`).show(); } else { tg.MainButton.setText('Все сделано!').show(); }
-        }
-        function addTask() {
-            const text = newTaskInput.value.trim();
-            if (text) { tasks.push({ text, done: false }); newTaskInput.value = ''; renderTasks(); }
-        }
-        addTaskBtn.addEventListener('click', addTask);
-        newTaskInput.addEventListener('keypress', (e) => e.key === 'Enter' && addTask());
-        tg.onEvent('mainButtonClicked', () => { tg.showPopup({ title: 'Отлично!', message: 'Продолжайте в том же духе!', buttons: [{ type: 'ok' }] }); });
-        renderTasks();
-    <\/script>
-</body>
-</html>`
-                        },
-                    ],
-                    "Бизнес": [], "Сообщество": [], "Инструменты": [], "Личное": [],
+                    "Все": [],
                 },
 
-                init() {
+                async init() {
                     if (!window.Telegram || !window.Telegram.WebApp) {
                         console.warn("Telegram Web App SDK not found.");
                         window.Telegram = { WebApp: {
@@ -554,12 +191,29 @@
                     }
                     this.tg = window.Telegram.WebApp;
                     this.cacheDOM();
+                    await this.fetchTemplates();
                     this.prepareTemplates();
                     this.setupTelegram();
                     this.bindEvents();
                     this.renderCategories();
                     this.renderTemplates();
                     this.animateStepChildren(this.DOM.steps[0]);
+                },
+
+                async fetchTemplates() {
+                    const loadingIndicator = document.getElementById('loading-indicator');
+                    try {
+                        // ИСПРАВЛЕНИЕ: Используем `supabaseClient` для запроса.
+                        const { data, error } = await supabaseClient
+                            .from('mini_app_templates')
+                            .select('template_id, name, icon, category, preview_html, html_content');
+                        if (error) throw error;
+                        this.templatesData["Все"] = data.map(item => ({...item, id: item.template_id}));
+                        loadingIndicator.style.display = 'none';
+                    } catch (error) {
+                        console.error("Ошибка при загрузке шаблонов:", error);
+                        loadingIndicator.textContent = 'Не удалось загрузить шаблоны.';
+                    }
                 },
 
                 cacheDOM() {
@@ -580,7 +234,13 @@
                     D.downloadAppBtn = document.getElementById('download-app-btn');
                 },
                 
-                prepareTemplates() { this.templatesData["Все"].forEach(t => { if(this.templatesData[t.category]) this.templatesData[t.category].push(t) }); },
+                prepareTemplates() {
+                    const categories = [...new Set(this.templatesData["Все"].map(t => t.category))];
+                    categories.forEach(cat => { this.templatesData[cat] = []; });
+                    this.templatesData["Все"].forEach(t => { 
+                        if(this.templatesData[t.category]) this.templatesData[t.category].push(t);
+                    });
+                },
 
                 setupTelegram() {
                     this.tg.ready();
@@ -620,7 +280,7 @@
                     Object.keys(this.templatesData).forEach((category, index) => {
                         if (this.templatesData[category].length === 0 && category !== "Все") return;
                         const tab = document.createElement('button');
-                        tab.className = 'category-tab py-2 px-1 text-base font-semibold text-[var(--tg-theme-hint-color)]';
+                        tab.className = 'category-tab py-2 px-1 text-sm font-semibold text-[var(--tg-theme-hint-color)]';
                         if (index === 0) tab.classList.add('active');
                         tab.textContent = category;
                         tab.addEventListener('click', () => {
@@ -635,12 +295,18 @@
 
                 renderTemplates(category = "Все") {
                     this.DOM.templateListContainer.innerHTML = '';
+                    if (!this.templatesData[category] || this.templatesData[category].length === 0) {
+                        if (this.templatesData["Все"].length === 0) {
+                             document.getElementById('loading-indicator').style.display = 'block';
+                        }
+                        return;
+                    }
                     this.templatesData[category].forEach(template => {
                         const listItem = document.createElement('div');
-                        listItem.className = 'template-list-item bg-[var(--tg-theme-bg-color)] rounded-xl p-3.5 flex items-center justify-between w-full cursor-pointer';
+                        listItem.className = 'template-list-item bg-[var(--tg-theme-bg-color)] rounded-xl p-3 flex items-center justify-between w-full cursor-pointer';
                         if (this.state.selectedTemplate === template.id) listItem.classList.add('selected');
                         listItem.dataset.templateId = template.id;
-                        listItem.innerHTML = `<div class="flex items-center"><div class="text-3xl w-12 text-center mr-4">${template.icon}</div><div><span class="font-semibold text-base text-[var(--tg-theme-text-color)]">${template.name}</span><span class="text-sm text-[var(--tg-theme-hint-color)] block">${template.category}</span></div></div><svg class="chevron h-6 w-6 text-[var(--tg-theme-hint-color)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>`;
+                        listItem.innerHTML = `<div class="flex items-center"><div class="text-2xl w-10 text-center mr-3">${template.icon}</div><div><span class="font-semibold text-sm text-[var(--tg-theme-text-color)]">${template.name}</span><span class="text-xs text-[var(--tg-theme-hint-color)] block">${template.category}</span></div></div><svg class="chevron h-5 w-5 text-[var(--tg-theme-hint-color)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>`;
                         listItem.addEventListener('click', () => this.selectTemplate(template.id, listItem));
                         this.DOM.templateListContainer.appendChild(listItem);
                     });
@@ -697,7 +363,7 @@
                         this.DOM.mockupLogoInitials.textContent = initials;
                     }
                     const template = this.templatesData["Все"].find(t => t.id === this.state.selectedTemplate);
-                    this.DOM.mockupContentPreview.innerHTML = (template && template.previewHtml) ? template.previewHtml : 'Предпросмотр...';
+                    this.DOM.mockupContentPreview.innerHTML = (template && template.preview_html) ? template.preview_html : 'Предпросмотр...';
                 },
 
                 animateStepChildren(stepEl) {
@@ -784,7 +450,7 @@
                         finalLogoBase64 = canvas.toDataURL();
                     }
                     
-                    let finalHtml = template.htmlContent
+                    let finalHtml = template.html_content
                         .replace(/%%APP_NAME%%/g, this.state.appName)
                         .replace(/%%APP_LOGO_BASE64%%/g, finalLogoBase64)
                         .replace(/%%THEME_PARAMS_JSON%%/g, JSON.stringify(this.tg.themeParams));

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>Конструктор Mini App</title>
+    <title>Генератор Mini App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,15 +19,6 @@
             --tg-theme-button-text-color: #ffffff;
             --tg-theme-secondary-bg-color: #f4f4f4;
         }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes popIn {
-            0% { opacity: 0; transform: scale(0.8); }
-            80% { opacity: 1; transform: scale(1.05); }
-            100% { opacity: 1; transform: scale(1); }
-        }
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--tg-theme-bg-color);
@@ -36,167 +27,132 @@
             -moz-osx-font-smoothing: grayscale;
             overscroll-behavior: none;
             -webkit-tap-highlight-color: transparent;
+            margin: 0;
         }
-        #app {
-            background: var(--tg-theme-secondary-bg-color);
-        }
+        #app-container { background: var(--tg-theme-secondary-bg-color); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.8); } 80% { opacity: 1; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } }
+        .animate-in { animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both; }
         .step {
-            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s;
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-color: var(--tg-theme-bg-color);
+            visibility: hidden;
         }
-        .step.hidden-right { transform: translateX(100%); opacity: 0; pointer-events: none; }
-        .step.hidden-left { transform: translateX(-100%); opacity: 0; pointer-events: none; }
-        .step.active { transform: translateX(0); opacity: 1; }
-        
-        .animate-in { animation: fadeInUp 0.5s both; }
-
+        .step.active { transform: translateX(0); opacity: 1; visibility: visible; }
+        .step.hidden-right { transform: translateX(100%); opacity: 0; }
+        .step.hidden-left { transform: translateX(-100%); opacity: 0; }
         .template-list-item {
             border: 2px solid transparent;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: all 0.25s ease-in-out;
         }
-        .template-list-item:hover {
-            transform: scale(1.02);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        }
+        .template-list-item:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
         .template-list-item.selected {
             border-color: var(--tg-theme-button-color);
             background-color: color-mix(in srgb, var(--tg-theme-button-color) 8%, transparent);
+            transform: translateY(-2px) scale(1.01);
         }
-        .template-list-item.selected .chevron {
-            color: var(--tg-theme-button-color);
-        }
-
-        /* Эффект затухания для списка */
-        #template-list {
-            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%);
-            mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%);
-        }
-        /* Скрытие скроллбара */
-        #template-list::-webkit-scrollbar,
-        #category-tabs::-webkit-scrollbar { 
-            display: none; 
-        }
-        #template-list,
-        #category-tabs { 
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-
+        .template-list-item.selected .chevron { color: var(--tg-theme-button-color); transform: translateX(2px); }
+        .chevron { transition: color 0.2s, transform 0.2s; }
+        .category-tab { transition: all 0.25s; border-bottom: 3px solid transparent; padding-bottom: 10px; white-space: nowrap; }
+        .category-tab.active { color: var(--tg-theme-link-color); border-bottom-color: var(--tg-theme-link-color); }
+        #template-list::-webkit-scrollbar, #category-tabs::-webkit-scrollbar { display: none; }
+        #template-list, #category-tabs { -ms-overflow-style: none; scrollbar-width: none; }
         input[type="file"] { display: none; }
-        .custom-file-upload {
-            border: 2px dashed var(--tg-theme-hint-color);
-            transition: border-color 0.2s, background-color 0.2s;
+        .custom-file-upload { border: 2px dashed var(--tg-theme-hint-color); transition: border-color 0.2s, background-color 0.2s; }
+        .custom-file-upload.dragover { border-color: var(--tg-theme-button-color); background-color: color-mix(in srgb, var(--tg-theme-button-color) 10%, transparent); }
+        .mockup-phone { background: #1c1c1e; border-radius: 44px; padding: 12px; box-shadow: 0 20px 50px -10px rgba(0,0,0,0.25); width: 250px; height: 500px; transition: transform 0.3s; }
+        .mockup-screen { background-color: var(--tg-theme-bg-color); border-radius: 32px; overflow: hidden; }
+        .mockup-header { background-color: var(--tg-theme-secondary-bg-color); padding: 10px 14px; }
+        .mockup-logo { width: 36px; height: 36px; border-radius: 10px; background-color: var(--tg-theme-hint-color); object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; color: var(--tg-theme-text-color); }
+        .mockup-title { font-weight: 600; font-size: 15px; }
+        .mockup-content { font-size: 13px; }
+        #final-success-container { animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
+        .success-checkmark-bg { background-color: color-mix(in srgb, var(--tg-theme-button-color) 15%, transparent); color: var(--tg-theme-button-color); }
+        #download-app-btn {
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            transition: all 0.2s ease-in-out;
         }
-        .custom-file-upload:hover { 
-            border-color: var(--tg-theme-button-color);
-            background-color: rgba(36, 129, 204, 0.05);
-        }
-        #logo-preview {
-            width: 72px; height: 72px; object-fit: cover; border-radius: 20px;
-        }
-        .category-tab {
-            transition: all 0.2s; border-bottom: 3px solid transparent; padding-bottom: 10px; white-space: nowrap;
-        }
-        .category-tab.active {
-            color: var(--tg-theme-link-color); border-bottom-color: var(--tg-theme-link-color);
-        }
-        .mockup-phone {
-            background: #1c1c1e; border-radius: 36px; padding: 10px;
-            box-shadow: 0 12px 35px rgba(0,0,0,0.2);
-            width: 220px; height: 440px; transition: transform 0.3s;
-        }
-        .mockup-screen {
-            background-color: var(--tg-theme-bg-color); border-radius: 26px; overflow: hidden; position: relative;
-        }
-        .mockup-header {
-            background-color: var(--tg-theme-secondary-bg-color); padding: 8px 12px; display: flex; align-items: center;
-        }
-        .mockup-logo {
-            width: 32px; height: 32px; border-radius: 9px; background-color: var(--tg-theme-hint-color); object-fit: cover;
-        }
-        .mockup-title {
-            color: var(--tg-theme-text-color); font-weight: 600; font-size: 14px; margin-left: 8px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .mockup-content {
-            padding: 12px; color: var(--tg-theme-hint-color); font-size: 12px;
-        }
-        #final-success-container {
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        #download-app-btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 8px 25px -5px var(--tg-theme-button-color);
         }
     </style>
 </head>
 <body class="overflow-hidden">
 
-    <div id="app" class="h-screen w-screen relative max-w-md mx-auto">
+    <div id="app-container" class="h-screen w-screen relative max-w-md mx-auto overflow-hidden">
 
         <!-- Экран 1: Выбор шаблона -->
         <div id="step-1" class="step active flex flex-col h-full">
-            <div class="pt-4">
-                <div class="text-center mb-4 shrink-0 animate-in px-4" style="animation-delay: 0.1s;">
-                    <h1 class="text-2xl font-bold">Создать Mini App</h1>
-                    <p class="text-base text-[var(--tg-theme-hint-color)]">Шаг 1: Выберите шаблон</p>
+            <div class="pt-5 shrink-0">
+                <div class="text-center mb-4 px-5 animate-in" style="animation-delay: 0.1s;">
+                    <h1 class="text-3xl font-bold">Создать Mini App</h1>
+                    <p class="text-lg text-[var(--tg-theme-hint-color)] mt-1">Шаг 1: Выберите шаблон</p>
                 </div>
-                <div id="category-tabs" class="flex space-x-6 border-b border-gray-200 mb-2 overflow-x-auto shrink-0 animate-in pl-4" style="animation-delay: 0.2s;">
-                    <!-- Категории -->
-                </div>
+                <div id="category-tabs" class="flex space-x-6 border-b border-[var(--tg-theme-secondary-bg-color)] mb-2 overflow-x-auto px-5 animate-in" style="animation-delay: 0.2s;"></div>
             </div>
-            <div id="template-list" class="flex flex-col gap-2 overflow-y-auto flex-grow py-2 px-4 animate-in" style="animation-delay: 0.3s;">
-                <!-- Шаблоны в виде списка -->
-            </div>
+            <div id="template-list" class="flex flex-col gap-3 overflow-y-auto flex-grow p-4 animate-in" style="animation-delay: 0.3s;"></div>
         </div>
 
         <!-- Экран 2: Кастомизация -->
-        <div id="step-2" class="step hidden-right flex flex-col h-full p-4 overflow-y-auto pb-20">
-            <div class="text-center mb-4 shrink-0 animate-in" style="animation-delay: 0.1s;">
-                <h1 class="text-2xl font-bold">Настройки</h1>
-                <p class="text-base text-[var(--tg-theme-hint-color)]">Шаг 2: Укажите детали</p>
+        <div id="step-2" class="step hidden-right flex flex-col h-full p-5 overflow-y-auto pb-24">
+            <div class="text-center mb-5 shrink-0 animate-in" style="animation-delay: 0.1s;">
+                <h1 class="text-3xl font-bold">Настройки</h1>
+                <p class="text-lg text-[var(--tg-theme-hint-color)] mt-1">Шаг 2: Укажите детали</p>
             </div>
             
             <div class="flex justify-center mb-6 shrink-0 animate-in" style="animation-delay: 0.2s;">
                 <div class="mockup-phone">
                     <div class="mockup-screen h-full flex flex-col">
-                        <div class="mockup-header">
-                            <img id="mockup-logo-img" src="" class="mockup-logo">
-                            <span id="mockup-title-text" class="mockup-title">Ваше приложение</span>
+                        <div class="mockup-header flex items-center space-x-3">
+                            <div id="mockup-logo-container" class="mockup-logo">
+                                <img id="mockup-logo-img" src="" class="w-full h-full object-cover rounded-[10px] hidden">
+                                <span id="mockup-logo-initials"></span>
+                            </div>
+                            <span id="mockup-title-text" class="mockup-title text-[var(--tg-theme-text-color)] whitespace-nowrap overflow-hidden text-ellipsis">Ваше приложение</span>
                         </div>
-                        <div id="mockup-content-preview" class="mockup-content flex-grow">Предпросмотр...</div>
+                        <div id="mockup-content-preview" class="mockup-content flex-grow p-4 text-[var(--tg-theme-hint-color)]">Предпросмотр...</div>
                     </div>
                 </div>
             </div>
 
             <div class="space-y-5">
                 <div class="animate-in" style="animation-delay: 0.3s;">
-                    <label for="app-name" class="font-semibold text-base block mb-2">Название</label>
-                    <input type="text" id="app-name" class="w-full p-3 text-base rounded-xl bg-[var(--tg-theme-secondary-bg-color)] border-2 border-transparent focus:ring-2 focus:ring-[var(--tg-theme-button-color)] focus:bg-[var(--tg-theme-bg-color)] transition" placeholder="Например, 'Мой Магазин'">
+                    <label for="app-name" class="font-semibold text-lg block mb-2">Название</label>
+                    <input type="text" id="app-name" class="w-full p-3.5 text-base rounded-xl bg-[var(--tg-theme-secondary-bg-color)] border-2 border-transparent focus:ring-2 focus:ring-[var(--tg-theme-button-color)] focus:bg-[var(--tg-theme-bg-color)] transition outline-none" placeholder="Например, 'Мой Магазин'">
                 </div>
                 <div class="animate-in" style="animation-delay: 0.4s;">
-                    <label class="font-semibold text-base block mb-2">Логотип</label>
-                    <label for="logo-upload" class="custom-file-upload h-32 rounded-xl p-4 text-center cursor-pointer flex items-center justify-center">
-                        <div id="logo-placeholder" class="flex flex-col items-center justify-center h-full">
-                            <svg class="h-10 w-10 text-[var(--tg-theme-hint-color)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
-                            </svg>
-                            <p class="mt-2 text-[var(--tg-theme-hint-color)] text-sm">Нажмите для загрузки</p>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="font-semibold text-lg">Логотип</label>
+                        <button id="remove-logo-btn" class="text-sm text-[var(--tg-theme-link-color)] hidden font-medium">Удалить</button>
+                    </div>
+                    <label for="logo-upload" id="logo-dropzone" class="custom-file-upload relative h-36 rounded-xl p-4 text-center cursor-pointer flex items-center justify-center">
+                        <div id="logo-placeholder" class="flex flex-col items-center justify-center h-full text-[var(--tg-theme-hint-color)]">
+                            <svg class="h-10 w-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" /></svg>
+                            <p class="mt-2 text-sm font-medium">Нажмите или перетащите файл</p>
                         </div>
-                        <img id="logo-preview" class="hidden" alt="Предпросмотр логотипа">
+                        <img id="logo-preview" class="hidden h-full w-auto object-contain rounded-lg" alt="Предпросмотр логотипа">
                     </label>
-                    <input id="logo-upload" type="file" accept="image/png, image/jpeg">
+                    <input id="logo-upload" type="file" accept="image/png, image/jpeg, image/webp">
                 </div>
             </div>
         </div>
 
         <!-- Экран 3: Успех -->
-        <div id="step-3" class="step hidden-right flex flex-col h-full items-center justify-center text-center p-4">
+        <div id="step-3" class="step hidden-right flex flex-col h-full items-center justify-center text-center p-6">
             <div id="final-success-container" class="flex flex-col items-center">
-                <div class="p-4 rounded-full bg-green-100 text-green-500 mb-5">
+                <div class="p-4 rounded-full success-checkmark-bg mb-5">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
                 </div>
-                <h1 class="text-3xl font-bold mb-2">Готово!</h1>
-                <p class="text-[var(--tg-theme-hint-color)] mb-6 text-lg">Ваш Mini App <b id="final-app-name" class="font-bold text-[var(--tg-theme-text-color)]"></b> создан.</p>
-                <img id="final-logo" class="w-28 h-28 rounded-3xl mx-auto shadow-xl" alt="Логотип приложения">
+                <h1 class="text-3xl font-bold mb-2">Ваш Mini App готов!</h1>
+                <p class="text-[var(--tg-theme-hint-color)] mb-8 text-lg max-w-sm">Нажмите кнопку ниже, чтобы скачать готовый <b class="font-bold text-[var(--tg-theme-text-color)]">.html</b> файл.</p>
+                
+                <a id="download-app-btn" href="#" download="mini-app.html" class="w-full max-w-xs text-center font-bold py-4 px-6 rounded-xl shadow-lg">
+                    Скачать Mini App
+                </a>
             </div>
         </div>
 
@@ -204,219 +160,442 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const tg = window.Telegram.WebApp;
+            const App = {
+                state: { currentStep: 1, selectedTemplate: null, appName: '', logoDataUrl: null },
+                DOM: {},
+                
+                // ОБНОВЛЕНО: Добавлен `htmlContent` для каждого шаблона.
+                // Это полноценный HTML-код для генерируемого приложения.
+                templatesData: {
+                    "Все": [
+                        { 
+                            id: 'store', name: 'Простая страница', icon: '📄', category: 'Инструменты', 
+                            previewHtml: `<div class='text-center'><div class='h-6 bg-[var(--tg-theme-secondary-bg-color)] rounded w-3/4 mx-auto mb-2'></div><div class='h-4 bg-gray-200 rounded w-1/2 mx-auto'></div><div class='h-24 bg-gray-100 rounded-lg w-full mt-4'></div></div>`,
+                            htmlContent: `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>%%APP_NAME%%</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <script src="https://telegram.org/js/telegram-web-app.js"><\/script>
+    <style>
+        :root { /* Fallback styles */
+            --tg-theme-bg-color: #ffffff; --tg-theme-text-color: #000000;
+            --tg-theme-hint-color: #999999; --tg-theme-button-color: #2481cc;
+            --tg-theme-button-text-color: #ffffff; --tg-theme-secondary-bg-color: #f4f4f4;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);
+            margin: 0; padding: 20px;
+        }
+    <\/style>
+</head>
+<body class="antialiased">
+    <div class="text-center">
+        <img id="logo" src="%%APP_LOGO_BASE64%%" class="w-24 h-24 rounded-3xl mx-auto shadow-md mb-4" alt="Логотип">
+        <h1 class="text-3xl font-bold">%%APP_NAME%%</h1>
+        <p class="text-lg text-[var(--tg-theme-hint-color)] mt-2">Это ваш новый Mini App!</p>
+        <div class="mt-8 p-4 rounded-xl bg-[var(--tg-theme-secondary-bg-color)] text-left text-sm">
+            <p>Это простое приложение, созданное с помощью конструктора.</p>
+            <p class="mt-2">Вы можете отредактировать этот HTML-файл, чтобы добавить любую функциональность.</p>
+        </div>
+        <button id="main-action-btn" class="w-full mt-8 py-3 rounded-lg font-semibold text-base" style="background-color: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color);">
+            Главное действие
+        </button>
+    </div>
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        
+        // Применяем тему Telegram
+        const themeParams = %%THEME_PARAMS_JSON%%;
+        if (themeParams) {
+            const root = document.documentElement;
+            Object.entries(themeParams).forEach(([key, value]) => {
+                root.style.setProperty('--tg-theme-' + key.replace(/_/g, '-'), value);
+            });
+        }
 
-            const state = { currentStep: 1, selectedTemplate: null, appName: '', logoFile: null, logoDataUrl: null };
+        // Показываем кнопку в интерфейсе Telegram
+        tg.MainButton.setText("Закрыть").show();
+        tg.onEvent('mainButtonClicked', () => tg.close());
 
-            const templates = {
-                "Все": [
-                    { id: 'store', name: 'Магазин', icon: '🛍️', category: 'Бизнес' }, { id: 'tasks', name: 'Задачи', icon: '📝', category: 'Инструменты' },
-                    { id: 'quiz', name: 'Квиз', icon: '❓', category: 'Сообщество' }, { id: 'menu', name: 'Меню', icon: '🍔', category: 'Бизнес' },
-                    { id: 'booking', name: 'Бронь', icon: '📅', category: 'Бизнес' }, { id: 'portfolio', name: 'Портфолио', icon: '🎨', category: 'Инструменты' },
-                    { id: 'blog', name: 'Блог', icon: '📰', category: 'Сообщество' }, { id: 'feedback', name: 'Форма', icon: '💬', category: 'Инструменты' },
-                    { id: 'crypto', name: 'Кошелек', icon: '₿', category: 'Инструменты' }, { id: 'delivery', name: 'Доставка', icon: '🚚', category: 'Бизнес' },
-                ], "Бизнес": [], "Сообщество": [], "Инструменты": [],
-            };
-            templates["Все"].forEach(t => templates[t.category].push(t));
+        // Пример взаимодействия с кнопкой в приложении
+        document.getElementById('main-action-btn').addEventListener('click', () => {
+            tg.showPopup({
+                title: 'Отлично!',
+                message: 'Вы нажали на кнопку.',
+                buttons: [{ type: 'ok' }]
+            });
+        });
+    <\/script>
+</body>
+</html>`
+                        },
+                         { 
+                            id: 'tasks', name: 'Список дел', icon: '📝', category: 'Инструменты', 
+                            previewHtml: `<div class='space-y-2'><div class='flex items-center'><div class='w-4 h-4 border-2 border-gray-300 rounded mr-2'></div><div class='h-4 bg-[var(--tg-theme-secondary-bg-color)] rounded flex-1'></div></div><div class='flex items-center'><div class='w-4 h-4 border-2 border-[var(--tg-theme-button-color)] bg-[var(--tg-theme-button-color)] rounded mr-2 flex items-center justify-center'><svg class='w-3 h-3 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M5 13l4 4L19 7'></path></svg></div><div class='h-4 bg-[var(--tg-theme-secondary-bg-color)] rounded flex-1 opacity-50 line-through'></div></div></div>`,
+                            htmlContent: `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>%%APP_NAME%%</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <script src="https://telegram.org/js/telegram-web-app.js"><\/script>
+    <style>
+        :root { --tg-theme-bg-color: #fff; --tg-theme-text-color: #000; --tg-theme-hint-color: #999; --tg-theme-button-color: #2481cc; --tg-theme-button-text-color: #fff; --tg-theme-secondary-bg-color: #f4f4f4; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); margin: 0; }
+        .task.done span { text-decoration: line-through; color: var(--tg-theme-hint-color); }
+        .task-checkbox { border-color: var(--tg-theme-hint-color); }
+        .task.done .task-checkbox { background-color: var(--tg-theme-button-color); border-color: var(--tg-theme-button-color); }
+    <\/style>
+</head>
+<body class="antialiased">
+    <div class="p-5">
+        <div class="flex items-center mb-6">
+            <img src="%%APP_LOGO_BASE64%%" class="w-12 h-12 rounded-xl mr-4" alt="Логотип">
+            <h1 class="text-2xl font-bold">%%APP_NAME%%</h1>
+        </div>
+        <div id="task-list" class="space-y-3"></div>
+        <div class="mt-4 flex">
+            <input type="text" id="new-task-input" class="w-full p-3 text-base rounded-lg bg-[var(--tg-theme-secondary-bg-color)] border-2 border-transparent focus:ring-2 focus:ring-[var(--tg-theme-button-color)] focus:bg-[var(--tg-theme-bg-color)] transition outline-none" placeholder="Новая задача...">
+            <button id="add-task-btn" class="ml-2 px-4 rounded-lg font-semibold text-lg" style="background-color: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color);">+</button>
+        </div>
+    </div>
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        const themeParams = %%THEME_PARAMS_JSON%%;
+        if (themeParams) { Object.entries(themeParams).forEach(([k, v]) => document.documentElement.style.setProperty('--tg-theme-' + k.replace(/_/g, '-'), v)); }
+        
+        const taskList = document.getElementById('task-list');
+        const newTaskInput = document.getElementById('new-task-input');
+        const addTaskBtn = document.getElementById('add-task-btn');
+        let tasks = [{text: 'Купить молоко', done: true}, {text: 'Создать Mini App', done: false}];
 
-            const categoryTabsContainer = document.getElementById('category-tabs');
-            const templateListContainer = document.getElementById('template-list');
-            const appNameInput = document.getElementById('app-name');
-            const logoUpload = document.getElementById('logo-upload');
-            const logoPreview = document.getElementById('logo-preview');
-            const logoPlaceholder = document.getElementById('logo-placeholder');
-            const mockupLogo = document.getElementById('mockup-logo-img');
-            const mockupTitle = document.getElementById('mockup-title-text');
-            const finalAppName = document.getElementById('final-app-name');
-            const finalLogo = document.getElementById('final-logo');
-
-            try {
-                tg.ready(); tg.expand();
-                const root = document.documentElement;
-                const themeParams = tg.themeParams;
-                if (themeParams) {
-                    Object.entries(themeParams).forEach(([key, value]) => {
-                        root.style.setProperty(`--tg-theme-${key.replace(/_/g, '-')}`, value);
-                    });
-                }
-                tg.MainButton.setText("Далее").hide();
-                tg.BackButton.hide();
-                tg.onEvent('mainButtonClicked', onMainButtonClick);
-                tg.onEvent('backButtonClicked', onBackButtonClick);
-            } catch (e) {
-                console.error("Telegram Web App SDK error:", e);
+        function renderTasks() {
+            taskList.innerHTML = '';
+            if (tasks.length === 0) {
+                taskList.innerHTML = '<p class="text-center text-[var(--tg-theme-hint-color)]">Задач пока нет</p>';
+                tg.MainButton.hide();
+                return;
             }
-            
-            function renderCategories() {
-                categoryTabsContainer.innerHTML = '';
-                Object.keys(templates).forEach((category, index) => {
-                    const tab = document.createElement('button');
-                    tab.className = 'category-tab py-2 px-1 text-base font-semibold text-[var(--tg-theme-hint-color)]';
-                    if (index === 0) tab.classList.add('active');
-                    tab.textContent = category;
-                    tab.addEventListener('click', () => {
-                        document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-                        tab.classList.add('active');
-                        renderTemplates(category);
-                    });
-                    categoryTabsContainer.appendChild(tab);
+            tasks.forEach((task, index) => {
+                const taskEl = document.createElement('div');
+                taskEl.className = 'task flex items-center p-3 rounded-lg bg-[var(--tg-theme-secondary-bg-color)]' + (task.done ? ' done' : '');
+                taskEl.innerHTML = \`
+                    <div class="task-checkbox w-6 h-6 rounded-md border-2 mr-3 flex items-center justify-center flex-shrink-0">
+                        \${task.done ? '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+                    </div>
+                    <span class="flex-grow">\${task.text}</span>
+                \`;
+                taskEl.addEventListener('click', () => {
+                    tasks[index].done = !tasks[index].done;
+                    renderTasks();
                 });
+                taskList.appendChild(taskEl);
+            });
+            const uncompleted = tasks.filter(t => !t.done).length;
+            if (uncompleted > 0) {
+                tg.MainButton.setText(\`Осталось задач: \${uncompleted}\`).show();
+            } else {
+                tg.MainButton.setText('Все сделано!').show();
             }
+        }
 
-            function renderTemplates(category = "Все") {
-                templateListContainer.innerHTML = '';
-                templates[category].forEach(template => {
-                    const listItem = document.createElement('div');
-                    listItem.className = 'template-list-item bg-[var(--tg-theme-bg-color)] rounded-xl p-3 flex items-center justify-between w-full cursor-pointer';
-                    if (state.selectedTemplate === template.id) {
-                        listItem.classList.add('selected');
+        function addTask() {
+            const text = newTaskInput.value.trim();
+            if (text) {
+                tasks.push({ text, done: false });
+                newTaskInput.value = '';
+                renderTasks();
+            }
+        }
+
+        addTaskBtn.addEventListener('click', addTask);
+        newTaskInput.addEventListener('keypress', (e) => e.key === 'Enter' && addTask());
+        tg.onEvent('mainButtonClicked', () => {
+             tg.showPopup({ title: 'Отлично!', message: 'Продолжайте в том же духе!', buttons: [{ type: 'ok' }] });
+        });
+        renderTasks();
+    <\/script>
+</body>
+</html>`
+                        },
+                    ],
+                    "Бизнес": [], "Сообщество": [], "Инструменты": [],
+                },
+
+                init() {
+                    if (!window.Telegram || !window.Telegram.WebApp) {
+                        console.warn("Telegram Web App SDK not found.");
+                        window.Telegram = { WebApp: {
+                            ready: ()=>{}, expand: ()=>{}, onEvent: ()=>{}, HapticFeedback: { impactOccurred: ()=>{} },
+                            MainButton: { setText: ()=>{return this}, show: ()=>{return this}, hide: ()=>{return this}, enable: ()=>{return this}, showProgress: ()=>{}, hideProgress: ()=>{} },
+                            BackButton: { show: ()=>{}, hide: ()=>{} },
+                            showAlert: (msg) => alert(msg),
+                            close: () => console.log("WebApp closed.")
+                        }};
                     }
-                    listItem.dataset.templateId = template.id;
-                    
-                    listItem.innerHTML = `
-                        <div class="flex items-center">
-                            <div class="text-3xl w-12 text-center mr-4">${template.icon}</div>
-                            <span class="font-semibold text-base text-[var(--tg-theme-text-color)]">${template.name}</span>
-                        </div>
-                        <svg class="chevron h-6 w-6 text-[var(--tg-theme-hint-color)] transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                        </svg>
-                    `;
-                    
-                    listItem.addEventListener('click', () => selectTemplate(template.id, listItem));
-                    templateListContainer.appendChild(listItem);
-                });
-            }
+                    this.tg = window.Telegram.WebApp;
+                    this.cacheDOM();
+                    this.prepareTemplates();
+                    this.setupTelegram();
+                    this.bindEvents();
+                    this.renderCategories();
+                    this.renderTemplates();
+                    this.animateStepChildren(this.DOM.steps[0]);
+                },
 
-            function selectTemplate(templateId, listItemElement) {
-                try { tg.HapticFeedback.impactOccurred('light'); } catch (e) {}
-                const alreadySelected = state.selectedTemplate === templateId;
-                state.selectedTemplate = alreadySelected ? null : templateId;
+                cacheDOM() {
+                    const D = this.DOM;
+                    D.steps = document.querySelectorAll('.step');
+                    D.categoryTabsContainer = document.getElementById('category-tabs');
+                    D.templateListContainer = document.getElementById('template-list');
+                    D.appNameInput = document.getElementById('app-name');
+                    D.logoUpload = document.getElementById('logo-upload');
+                    D.logoDropzone = document.getElementById('logo-dropzone');
+                    D.logoPreview = document.getElementById('logo-preview');
+                    D.logoPlaceholder = document.getElementById('logo-placeholder');
+                    D.removeLogoBtn = document.getElementById('remove-logo-btn');
+                    D.mockupLogoImg = document.getElementById('mockup-logo-img');
+                    D.mockupLogoInitials = document.getElementById('mockup-logo-initials');
+                    D.mockupTitle = document.getElementById('mockup-title-text');
+                    D.mockupContentPreview = document.getElementById('mockup-content-preview');
+                    D.downloadAppBtn = document.getElementById('download-app-btn');
+                },
                 
-                document.querySelectorAll('.template-list-item').forEach(c => c.classList.remove('selected'));
-                
-                if (!alreadySelected) {
-                    listItemElement.classList.add('selected');
-                }
-                state.selectedTemplate ? tg.MainButton.show() : tg.MainButton.hide();
-            }
+                prepareTemplates() { this.templatesData["Все"].forEach(t => this.templatesData[t.category].push(t)); },
 
-            function animateStepChildren(stepEl) {
-                const elements = stepEl.querySelectorAll('.animate-in');
-                elements.forEach(el => {
-                    el.style.opacity = '0';
-                    setTimeout(() => el.style.opacity = '1', 50);
-                });
-            }
-
-            function showStep(stepNumber, direction = 'forward') {
-                const currentStepEl = document.getElementById(`step-${state.currentStep}`);
-                const nextStepEl = document.getElementById(`step-${stepNumber}`);
-                if (!currentStepEl || !nextStepEl) return;
-
-                if (direction === 'forward') {
-                    currentStepEl.classList.add('hidden-left');
-                    nextStepEl.classList.remove('hidden-right');
-                } else {
-                    currentStepEl.classList.add('hidden-right');
-                    nextStepEl.classList.remove('hidden-left');
-                }
-                currentStepEl.classList.remove('active');
-                nextStepEl.classList.add('active');
-                
-                animateStepChildren(nextStepEl);
-                state.currentStep = stepNumber;
-                updateTgButtons();
-            }
-
-            function updateTgButtons() {
-                if (state.currentStep === 1) {
-                    tg.BackButton.hide();
-                    state.selectedTemplate ? tg.MainButton.show().setText("Далее") : tg.MainButton.hide();
-                } else if (state.currentStep === 2) {
-                    tg.BackButton.show();
-                    tg.MainButton.show().setText("Создать").enable();
-                } else if (state.currentStep === 3) {
-                    tg.BackButton.hide();
-                    tg.MainButton.show().setText("Завершить").enable();
-                }
-            }
-            
-            function onMainButtonClick() {
-                try { tg.HapticFeedback.impactOccurred('medium'); } catch (e) {}
-                
-                if (state.currentStep === 1 && state.selectedTemplate) {
-                    showStep(2);
-                    updatePreview();
-                } else if (state.currentStep === 2) {
-                    state.appName = appNameInput.value.trim();
-                    if (!state.appName) {
-                        try { tg.showAlert('Пожалуйста, введите название приложения.'); } catch (e) { alert('Пожалуйста, введите название приложения.'); }
-                        return;
+                setupTelegram() {
+                    this.tg.ready();
+                    this.tg.expand();
+                    const root = document.documentElement;
+                    const themeParams = this.tg.themeParams;
+                    if (themeParams) {
+                        Object.entries(themeParams).forEach(([key, value]) => {
+                            root.style.setProperty(`--tg-theme-${key.replace(/_/g, '-')}`, value);
+                        });
                     }
-                    tg.MainButton.showProgress();
-                    setTimeout(() => {
-                        tg.MainButton.hideProgress();
-                        finalizeApp();
-                        showStep(3);
-                    }, 800);
-                } else if (state.currentStep === 3) {
-                    tg.close();
-                }
-            }
+                    this.tg.MainButton.setText("Далее").hide();
+                    this.tg.BackButton.hide();
+                    this.tg.onEvent('mainButtonClicked', this.onMainButtonClick.bind(this));
+                    this.tg.onEvent('backButtonClicked', this.onBackButtonClick.bind(this));
+                },
 
-            function onBackButtonClick() {
-                try { tg.HapticFeedback.impactOccurred('light'); } catch (e) {}
-                if (state.currentStep === 2) showStep(1, 'backward');
-            }
+                bindEvents() {
+                    this.DOM.appNameInput.addEventListener('input', this.updatePreview.bind(this));
+                    this.DOM.logoUpload.addEventListener('change', this.handleLogoChange.bind(this));
+                    this.DOM.removeLogoBtn.addEventListener('click', this.removeLogo.bind(this));
+                    const dropzone = this.DOM.logoDropzone;
+                    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => dropzone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }));
+                    dropzone.addEventListener('dragover', () => dropzone.classList.add('dragover'));
+                    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+                    dropzone.addEventListener('drop', e => {
+                        dropzone.classList.remove('dragover');
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            this.DOM.logoUpload.files = e.dataTransfer.files;
+                            this.handleLogoChange({ target: this.DOM.logoUpload });
+                        }
+                    });
+                },
 
-            function updatePreview() {
-                mockupTitle.textContent = appNameInput.value.trim() || 'Ваше приложение';
-                if (state.logoDataUrl) {
-                    mockupLogo.src = state.logoDataUrl;
-                } else {
-                    const template = templates["Все"].find(t => t.id === state.selectedTemplate);
-                    if (template) {
+                renderCategories() {
+                    this.DOM.categoryTabsContainer.innerHTML = '';
+                    Object.keys(this.templatesData).forEach((category, index) => {
+                        const tab = document.createElement('button');
+                        tab.className = 'category-tab py-2 px-1 text-base font-semibold text-[var(--tg-theme-hint-color)]';
+                        if (index === 0) tab.classList.add('active');
+                        tab.textContent = category;
+                        tab.addEventListener('click', () => {
+                            this.hapticFeedback('light');
+                            document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                            tab.classList.add('active');
+                            this.renderTemplates(category);
+                        });
+                        this.DOM.categoryTabsContainer.appendChild(tab);
+                    });
+                },
+
+                renderTemplates(category = "Все") {
+                    this.DOM.templateListContainer.innerHTML = '';
+                    this.templatesData[category].forEach(template => {
+                        const listItem = document.createElement('div');
+                        listItem.className = 'template-list-item bg-[var(--tg-theme-bg-color)] rounded-xl p-3.5 flex items-center justify-between w-full cursor-pointer';
+                        if (this.state.selectedTemplate === template.id) listItem.classList.add('selected');
+                        listItem.dataset.templateId = template.id;
+                        listItem.innerHTML = `<div class="flex items-center"><div class="text-3xl w-12 text-center mr-4">${template.icon}</div><div><span class="font-semibold text-base text-[var(--tg-theme-text-color)]">${template.name}</span><span class="text-sm text-[var(--tg-theme-hint-color)] block">${template.category}</span></div></div><svg class="chevron h-6 w-6 text-[var(--tg-theme-hint-color)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>`;
+                        listItem.addEventListener('click', () => this.selectTemplate(template.id, listItem));
+                        this.DOM.templateListContainer.appendChild(listItem);
+                    });
+                },
+
+                selectTemplate(templateId, listItemElement) {
+                    this.hapticFeedback('light');
+                    const isDeselecting = this.state.selectedTemplate === templateId;
+                    this.state.selectedTemplate = isDeselecting ? null : templateId;
+                    document.querySelectorAll('.template-list-item').forEach(c => c.classList.remove('selected'));
+                    if (!isDeselecting) listItemElement.classList.add('selected');
+                    this.updateTgButtons();
+                },
+
+                handleLogoChange(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.state.logoDataUrl = e.target.result;
+                            this.DOM.logoPreview.src = this.state.logoDataUrl;
+                            this.DOM.logoPreview.classList.remove('hidden');
+                            this.DOM.logoPlaceholder.classList.add('hidden');
+                            this.DOM.removeLogoBtn.classList.remove('hidden');
+                            this.updatePreview();
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                },
+
+                removeLogo() {
+                    this.hapticFeedback('light');
+                    this.state.logoDataUrl = null;
+                    this.DOM.logoUpload.value = '';
+                    this.DOM.logoPreview.src = '';
+                    this.DOM.logoPreview.classList.add('hidden');
+                    this.DOM.logoPlaceholder.classList.remove('hidden');
+                    this.DOM.removeLogoBtn.classList.add('hidden');
+                    this.updatePreview();
+                },
+
+                updatePreview() {
+                    const appName = this.DOM.appNameInput.value.trim();
+                    this.state.appName = appName;
+                    this.DOM.mockupTitle.textContent = appName || 'Ваше приложение';
+                    if (this.state.logoDataUrl) {
+                        this.DOM.mockupLogoImg.src = this.state.logoDataUrl;
+                        this.DOM.mockupLogoImg.classList.remove('hidden');
+                        this.DOM.mockupLogoInitials.classList.add('hidden');
+                    } else {
+                        this.DOM.mockupLogoImg.classList.add('hidden');
+                        this.DOM.mockupLogoInitials.classList.remove('hidden');
+                        const initials = (appName.split(' ').map(s => s[0]).join('') || '?').substring(0, 2).toUpperCase();
+                        this.DOM.mockupLogoInitials.textContent = initials;
+                    }
+                    const template = this.templatesData["Все"].find(t => t.id === this.state.selectedTemplate);
+                    this.DOM.mockupContentPreview.innerHTML = (template && template.previewHtml) ? template.previewHtml : 'Предпросмотр...';
+                },
+
+                animateStepChildren(stepEl) {
+                    const elements = stepEl.querySelectorAll('.animate-in');
+                    elements.forEach(el => {
+                        el.style.opacity = '0';
+                        setTimeout(() => el.style.opacity = '1', 50);
+                    });
+                },
+
+                showStep(stepNumber, direction = 'forward') {
+                    const currentStepEl = document.getElementById(`step-${this.state.currentStep}`);
+                    const nextStepEl = document.getElementById(`step-${stepNumber}`);
+                    if (!currentStepEl || !nextStepEl) return;
+                    currentStepEl.classList.remove('active');
+                    nextStepEl.classList.remove('hidden-left', 'hidden-right');
+                    currentStepEl.classList.add(direction === 'forward' ? 'hidden-left' : 'hidden-right');
+                    nextStepEl.classList.add('active');
+                    this.animateStepChildren(nextStepEl);
+                    this.state.currentStep = stepNumber;
+                    this.updateTgButtons();
+                },
+
+                updateTgButtons() {
+                    switch (this.state.currentStep) {
+                        case 1:
+                            this.tg.BackButton.hide();
+                            this.state.selectedTemplate ? this.tg.MainButton.setText("Далее").show() : this.tg.MainButton.hide();
+                            break;
+                        case 2:
+                            this.tg.BackButton.show();
+                            this.tg.MainButton.setText("Создать").show().enable();
+                            break;
+                        case 3:
+                            this.tg.BackButton.hide();
+                            this.tg.MainButton.setText("Скачать и закрыть").show().enable();
+                            break;
+                    }
+                },
+
+                onMainButtonClick() {
+                    this.hapticFeedback('medium');
+                    switch (this.state.currentStep) {
+                        case 1:
+                            if (this.state.selectedTemplate) { this.showStep(2); this.updatePreview(); }
+                            break;
+                        case 2:
+                            if (!this.state.appName) { this.tg.showAlert('Пожалуйста, введите название приложения.'); this.hapticFeedback('error'); return; }
+                            this.tg.MainButton.showProgress();
+                            setTimeout(() => {
+                                this.tg.MainButton.hideProgress();
+                                this.finalizeApp();
+                                this.showStep(3);
+                            }, 800);
+                            break;
+                        case 3:
+                            // Программно нажимаем на кнопку скачивания
+                            this.DOM.downloadAppBtn.click();
+                            // Закрываем приложение после небольшой задержки, чтобы скачивание началось
+                            setTimeout(() => { this.tg.close(); }, 500);
+                            break;
+                    }
+                },
+
+                onBackButtonClick() {
+                    this.hapticFeedback('light');
+                    if (this.state.currentStep === 2) this.showStep(1, 'backward');
+                },
+
+                // ОБНОВЛЕНО: Эта функция теперь генерирует HTML-файл
+                finalizeApp() {
+                    const template = this.templatesData["Все"].find(t => t.id === this.state.selectedTemplate);
+                    if (!template) return;
+
+                    // Создаем логотип-заглушку, если пользовательский не загружен
+                    let finalLogoBase64 = this.state.logoDataUrl;
+                    if (!finalLogoBase64) {
                         const canvas = document.createElement('canvas');
-                        canvas.width = 64; canvas.height = 64;
+                        canvas.width = 128; canvas.height = 128;
                         const ctx = canvas.getContext('2d');
-                        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--tg-theme-secondary-bg-color');
-                        ctx.fillRect(0, 0, 64, 64);
-                        ctx.font = '32px sans-serif';
+                        ctx.fillStyle = this.tg.themeParams.secondary_bg_color || '#f4f4f4';
+                        ctx.fillRect(0, 0, 128, 128);
+                        ctx.font = 'bold 52px Inter, sans-serif';
+                        ctx.fillStyle = this.tg.themeParams.text_color || '#000000';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
-                        ctx.fillText(template.icon, 32, 32);
-                        mockupLogo.src = canvas.toDataURL();
+                        ctx.fillText(this.DOM.mockupLogoInitials.textContent, 64, 64);
+                        finalLogoBase64 = canvas.toDataURL();
                     }
+                    
+                    // Заменяем плейсхолдеры в шаблоне
+                    let finalHtml = template.htmlContent
+                        .replace(/%%APP_NAME%%/g, this.state.appName)
+                        .replace(/%%APP_LOGO_BASE64%%/g, finalLogoBase64)
+                        .replace(/%%THEME_PARAMS_JSON%%/g, JSON.stringify(this.tg.themeParams));
+
+                    // Создаем Blob и URL для скачивания
+                    const blob = new Blob([finalHtml], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+
+                    // Обновляем кнопку скачивания
+                    const filename = `${this.state.appName.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'mini-app'}.html`;
+                    this.DOM.downloadAppBtn.href = url;
+                    this.DOM.downloadAppBtn.download = filename;
+                },
+
+                hapticFeedback(style) {
+                    try { this.tg.HapticFeedback.impactOccurred(style); } catch (e) { /* ignore */ }
                 }
-            }
-
-            logoUpload.addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    state.logoFile = file;
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        state.logoDataUrl = e.target.result;
-                        logoPreview.src = state.logoDataUrl;
-                        logoPreview.classList.remove('hidden');
-                        logoPlaceholder.classList.add('hidden');
-                        updatePreview();
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-
-            appNameInput.addEventListener('input', updatePreview);
-            
-            function finalizeApp() {
-                finalAppName.textContent = state.appName;
-                finalLogo.src = state.logoDataUrl || mockupLogo.src;
-            }
-
-            renderCategories();
-            renderTemplates();
-            animateStepChildren(document.getElementById('step-1'));
+            };
+            App.init();
         });
     </script>
 </body>

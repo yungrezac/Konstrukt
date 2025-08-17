@@ -7,7 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- JSZip больше не нужен на клиенте -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -21,16 +23,7 @@
             --tg-theme-button-text-color: #ffffff;
             --tg-theme-secondary-bg-color: #f4f4f4;
         }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--tg-theme-bg-color);
-            color: var(--tg-theme-text-color);
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            overscroll-behavior: none;
-            -webkit-tap-highlight-color: transparent;
-            margin: 0;
-        }
+        body { font-family: 'Inter', sans-serif; margin: 0; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         #app-container { background: var(--tg-theme-secondary-bg-color); }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.8); } 80% { opacity: 1; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } }
@@ -52,466 +45,334 @@
         .category-tab { transition: all 0.25s; border-bottom: 3px solid transparent; padding-bottom: 10px; white-space: nowrap; }
         .category-tab.active { color: var(--tg-theme-link-color); border-bottom-color: var(--tg-theme-link-color); }
         #template-list::-webkit-scrollbar, #category-tabs::-webkit-scrollbar { display: none; }
-        #template-list, #category-tabs { -ms-overflow-style: none; scrollbar-width: none; }
-        input[type="file"] { display: none; }
-        .custom-file-upload { border: 2px dashed var(--tg-theme-hint-color); transition: border-color 0.2s, background-color 0.2s; }
-        .custom-file-upload.dragover { border-color: var(--tg-theme-button-color); background-color: color-mix(in srgb, var(--tg-theme-button-color) 10%, transparent); }
+        .scroll-container { -ms-overflow-style: none; scrollbar-width: none; }
         .mockup-phone { background: #1c1c1e; border-radius: 44px; padding: 12px; box-shadow: 0 20px 50px -10px rgba(0,0,0,0.25); width: 250px; height: 500px; transition: transform 0.3s; }
         .mockup-screen { background-color: var(--tg-theme-bg-color); border-radius: 32px; overflow: hidden; }
         .mockup-header { background-color: var(--tg-theme-secondary-bg-color); padding: 10px 14px; }
         .mockup-logo { width: 32px; height: 32px; border-radius: 9px; background-color: var(--tg-theme-hint-color); object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; color: var(--tg-theme-text-color); }
         .mockup-title { font-weight: 600; font-size: 14px; }
         .mockup-content { font-size: 12px; }
-        #final-container { animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
+        .final-container { animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
         .final-icon-bg { background-color: color-mix(in srgb, var(--tg-theme-button-color) 15%, transparent); color: var(--tg-theme-button-color); }
         .url-container { background-color: var(--tg-theme-secondary-bg-color); }
         .copy-btn { background-color: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color); }
     </style>
 </head>
-<body class="overflow-hidden">
+<body>
+    <div id="root"></div>
 
-    <div id="app-container" class="h-screen w-screen relative max-w-md mx-auto overflow-hidden">
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useMemo } = React;
 
-        <!-- Экран 1: Выбор шаблона -->
-        <div id="step-1" class="step active flex flex-col h-full">
-            <div class="pt-5 shrink-0">
-                <div class="text-center mb-4 px-5 animate-in" style="animation-delay: 0.1s;">
-                    <h1 class="text-2xl font-bold">Создать Mini App</h1>
-                    <p class="text-base text-[var(--tg-theme-hint-color)] mt-1">Шаг 1: Выберите шаблон</p>
-                </div>
-                <div id="category-tabs" class="flex space-x-6 border-b border-[var(--tg-theme-secondary-bg-color)] mb-2 overflow-x-auto px-5 animate-in" style="animation-delay: 0.2s;"></div>
-            </div>
-            <div id="template-list" class="flex flex-col gap-3 overflow-y-auto flex-grow p-4 animate-in" style="animation-delay: 0.3s;">
-                <div id="loading-indicator" class="text-center text-[var(--tg-theme-hint-color)] p-8">Загрузка шаблонов...</div>
-            </div>
-        </div>
+        // --- Supabase Client ---
+        const SUPABASE_URL = 'https://jvapdhhyjbianlyfwobm.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2YXBkaGh5amJpYW5seWZ3b2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzOTMxMTEsImV4cCI6MjA3MDk2OTExMX0.XcvGzp18BeA5Sf-_k7nHaZG5J5eB9H9adQEl3ZAa5mY';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const tg = window.Telegram.WebApp;
 
-        <!-- Экран 2: Кастомизация -->
-        <div id="step-2" class="step hidden-right flex flex-col h-full p-5 overflow-y-auto pb-24">
-            <div class="text-center mb-5 shrink-0 animate-in" style="animation-delay: 0.1s;">
-                <h1 class="text-2xl font-bold">Настройки</h1>
-                <p class="text-base text-[var(--tg-theme-hint-color)] mt-1">Шаг 2: Укажите детали</p>
-            </div>
-            <div class="flex justify-center mb-6 shrink-0 animate-in" style="animation-delay: 0.2s;">
-                <div class="mockup-phone">
-                    <div class="mockup-screen h-full flex flex-col">
-                        <div class="mockup-header flex items-center space-x-2.5">
-                            <div id="mockup-logo-container" class="mockup-logo">
-                                <img id="mockup-logo-img" src="" class="w-full h-full object-cover rounded-[9px] hidden">
-                                <span id="mockup-logo-initials"></span>
-                            </div>
-                            <span id="mockup-title-text" class="mockup-title text-[var(--tg-theme-text-color)] whitespace-nowrap overflow-hidden text-ellipsis">Ваше приложение</span>
-                        </div>
-                        <div id="mockup-content-preview" class="mockup-content flex-grow p-3 text-[var(--tg-theme-hint-color)]">Предпросмотр...</div>
-                    </div>
-                </div>
-            </div>
-            <div class="space-y-4">
-                <div class="animate-in" style="animation-delay: 0.3s;">
-                    <label for="app-name" class="font-semibold text-base block mb-1.5">Название</label>
-                    <input type="text" id="app-name" class="w-full p-3 text-sm rounded-xl bg-[var(--tg-theme-secondary-bg-color)] border-2 border-transparent focus:ring-2 focus:ring-[var(--tg-theme-button-color)] focus:bg-[var(--tg-theme-bg-color)] transition outline-none" placeholder="Например, 'Мой Магазин'">
-                </div>
-                <div class="animate-in" style="animation-delay: 0.4s;">
-                    <div class="flex justify-between items-center mb-1.5">
-                        <label class="font-semibold text-base">Логотип</label>
-                        <button id="remove-logo-btn" class="text-xs text-[var(--tg-theme-link-color)] hidden font-medium">Удалить</button>
-                    </div>
-                    <label for="logo-upload" id="logo-dropzone" class="custom-file-upload relative h-32 rounded-xl p-4 text-center cursor-pointer flex items-center justify-center">
-                        <div id="logo-placeholder" class="flex flex-col items-center justify-center h-full text-[var(--tg-theme-hint-color)]">
-                            <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" /></svg>
-                            <p class="mt-2 text-xs font-medium">Нажмите или перетащите файл</p>
-                        </div>
-                        <img id="logo-preview" class="hidden h-full w-auto object-contain rounded-lg" alt="Предпросмотр логотипа">
-                    </label>
-                    <input id="logo-upload" type="file" accept="image/png, image/jpeg, image/webp">
-                </div>
-            </div>
-        </div>
+        // --- Main App Component ---
+        function App() {
+            const [step, setStep] = useState(1);
+            const [prevStep, setPrevStep] = useState(1);
+            const [templates, setTemplates] = useState([]);
+            const [isLoading, setIsLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [appConfig, setAppConfig] = useState({
+                templateId: null,
+                appName: '',
+                logoDataUrl: null,
+            });
+            const [deployedUrl, setDeployedUrl] = useState(null);
+            const [isDeploying, setIsDeploying] = useState(false);
+            const [deployError, setDeployError] = useState(null);
 
-        <!-- Экран 3: Публикация и результат -->
-        <div id="step-3" class="step hidden-right flex flex-col h-full items-center justify-center text-center p-6">
-            <div id="final-container" class="w-full max-w-sm">
-                <!-- Состояние загрузки -->
-                <div id="final-loader">
-                    <div class="text-center">
-                        <svg class="animate-spin h-12 w-12 text-[var(--tg-theme-button-color)] mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        <h1 class="text-xl font-bold mt-4">Публикуем...</h1>
-                        <p class="text-base text-[var(--tg-theme-hint-color)] mt-1">Это может занять до 30 секунд.</p>
-                    </div>
-                </div>
-                <!-- Состояние успеха -->
-                <div id="final-success" class="hidden">
-                    <div class="p-3 rounded-full final-icon-bg inline-block mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    </div>
-                    <h1 class="text-2xl font-bold mb-1.5">Приложение опубликовано!</h1>
-                    <p class="text-[var(--tg-theme-hint-color)] mb-4 text-base">Ваш Mini App доступен по ссылке ниже.</p>
-                    <div class="url-container flex items-center p-1 rounded-lg">
-                        <input id="final-url" type="text" readonly class="w-full bg-transparent text-sm p-2 text-[var(--tg-theme-text-color)] outline-none">
-                        <button id="copy-url-btn" class="copy-btn rounded-md px-3 py-2 text-sm font-semibold flex-shrink-0">Копировать</button>
-                    </div>
-                    <div class="text-left mt-6">
-                        <h2 class="font-bold text-base">Как добавить в Telegram:</h2>
-                        <ol class="list-decimal list-inside text-sm mt-2 space-y-1.5 text-[var(--tg-theme-text-color)]">
-                            <li>Откройте <b class="font-semibold">@BotFather</b> и отправьте команду <code class="bg-[var(--tg-theme-secondary-bg-color)] p-1 rounded-md text-xs">/mybots</code>.</li>
-                            <li>Выберите вашего бота, затем <b class="font-semibold">Bot Settings &rarr; Menu Button</b>.</li>
-                            <li>Нажмите <b class="font-semibold">Configure Menu Button</b> и отправьте скопированную ссылку.</li>
-                            <li>Придумайте короткое название для кнопки (например, "Запустить").</li>
-                        </ol>
-                    </div>
-                </div>
-                 <!-- Состояние ошибки -->
-                <div id="final-error" class="hidden">
-                     <div class="p-3 rounded-full bg-red-100 text-red-600 inline-block mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </div>
-                    <h1 class="text-2xl font-bold mb-1.5">Ошибка публикации</h1>
-                    <p id="error-message" class="text-[var(--tg-theme-hint-color)] text-base">Не удалось загрузить приложение. Проверьте ваш токен Netlify и попробуйте снова.</p>
-                </div>
-            </div>
-        </div>
+            const navigateTo = (nextStep) => {
+                setPrevStep(step);
+                setStep(nextStep);
+            };
 
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            
-            // Ваши данные Supabase
-            const SUPABASE_URL = 'https://jvapdhhyjbianlyfwobm.supabase.co'; 
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2YXBkaGh5amJpYW5seWZ3b2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzOTMxMTEsImV4cCI6MjA3MDk2OTExMX0.XcvGzp18BeA5Sf-_k7nHaZG5J5eB9H9adQEl3ZAa5mY';
-
-            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-            const App = {
-                state: { currentStep: 1, selectedTemplate: null, appName: '', logoDataUrl: null, deployedUrl: null },
-                DOM: {},
-                templatesData: { "Все": [] },
-
-                async init() {
-                    if (!window.Telegram || !window.Telegram.WebApp) {
-                        console.warn("Telegram Web App SDK not found.");
-                        window.Telegram = { WebApp: {
-                            ready: ()=>{}, expand: ()=>{}, onEvent: ()=>{}, HapticFeedback: { impactOccurred: ()=>{} },
-                            MainButton: { setText: ()=>{return this}, show: ()=>{return this}, hide: ()=>{return this}, enable: ()=>{return this}, showProgress: ()=>{}, hideProgress: ()=>{} },
-                            BackButton: { show: ()=>{}, hide: ()=>{} },
-                            showAlert: (msg) => alert(msg),
-                            close: () => console.log("WebApp closed.")
-                        }};
-                    }
-                    this.tg = window.Telegram.WebApp;
-                    this.cacheDOM();
-                    await this.fetchTemplates();
-                    this.prepareTemplates();
-                    this.setupTelegram();
-                    this.bindEvents();
-                    this.renderCategories();
-                    this.renderTemplates();
-                    this.animateStepChildren(this.DOM.steps[0]);
-                },
-
-                async fetchTemplates() {
-                    const loadingIndicator = document.getElementById('loading-indicator');
-                    try {
-                        const { data, error } = await supabaseClient
-                            .from('mini_app_templates')
-                            .select('template_id, name, icon, category, preview_html, html_content');
-                        if (error) throw error;
-                        this.templatesData["Все"] = data.map(item => ({...item, id: item.template_id}));
-                        loadingIndicator.style.display = 'none';
-                    } catch (error) {
-                        console.error("Ошибка при загрузке шаблонов:", error);
-                        loadingIndicator.textContent = 'Не удалось загрузить шаблоны.';
-                    }
-                },
-
-                cacheDOM() {
-                    const D = this.DOM;
-                    D.steps = document.querySelectorAll('.step');
-                    D.categoryTabsContainer = document.getElementById('category-tabs');
-                    D.templateListContainer = document.getElementById('template-list');
-                    D.appNameInput = document.getElementById('app-name');
-                    D.logoUpload = document.getElementById('logo-upload');
-                    D.logoDropzone = document.getElementById('logo-dropzone');
-                    D.logoPreview = document.getElementById('logo-preview');
-                    D.logoPlaceholder = document.getElementById('logo-placeholder');
-                    D.removeLogoBtn = document.getElementById('remove-logo-btn');
-                    D.mockupLogoImg = document.getElementById('mockup-logo-img');
-                    D.mockupLogoInitials = document.getElementById('mockup-logo-initials');
-                    D.mockupTitle = document.getElementById('mockup-title-text');
-                    D.mockupContentPreview = document.getElementById('mockup-content-preview');
-                    D.finalLoader = document.getElementById('final-loader');
-                    D.finalSuccess = document.getElementById('final-success');
-                    D.finalError = document.getElementById('final-error');
-                    D.finalUrlInput = document.getElementById('final-url');
-                    D.copyUrlBtn = document.getElementById('copy-url-btn');
-                    D.errorMessage = document.getElementById('error-message');
-                },
-                
-                prepareTemplates() {
-                    const categories = [...new Set(this.templatesData["Все"].map(t => t.category))];
-                    categories.forEach(cat => { this.templatesData[cat] = []; });
-                    this.templatesData["Все"].forEach(t => { 
-                        if(this.templatesData[t.category]) this.templatesData[t.category].push(t);
+            useEffect(() => {
+                tg.ready();
+                tg.expand();
+                const themeParams = tg.themeParams;
+                if (themeParams && Object.keys(themeParams).length) {
+                    Object.entries(themeParams).forEach(([key, value]) => {
+                        document.documentElement.style.setProperty(`--tg-theme-${key.replace(/_/g, '-')}`, value);
                     });
-                },
-
-                setupTelegram() {
-                    this.tg.ready();
-                    this.tg.expand();
-                    const root = document.documentElement;
-                    const themeParams = this.tg.themeParams;
-                    if (themeParams) {
-                        Object.entries(themeParams).forEach(([key, value]) => {
-                            root.style.setProperty(`--tg-theme-${key.replace(/_/g, '-')}`, value);
-                        });
-                    }
-                    this.tg.MainButton.setText("Далее").hide();
-                    this.tg.BackButton.hide();
-                    this.tg.onEvent('mainButtonClicked', this.onMainButtonClick.bind(this));
-                    this.tg.onEvent('backButtonClicked', this.onBackButtonClick.bind(this));
-                },
-
-                bindEvents() {
-                    this.DOM.appNameInput.addEventListener('input', this.updatePreview.bind(this));
-                    this.DOM.logoUpload.addEventListener('change', this.handleLogoChange.bind(this));
-                    this.DOM.removeLogoBtn.addEventListener('click', this.removeLogo.bind(this));
-                    this.DOM.copyUrlBtn.addEventListener('click', this.copyUrl.bind(this));
-                    const dropzone = this.DOM.logoDropzone;
-                    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => dropzone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }));
-                    dropzone.addEventListener('dragover', () => dropzone.classList.add('dragover'));
-                    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-                    dropzone.addEventListener('drop', e => {
-                        dropzone.classList.remove('dragover');
-                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                            this.DOM.logoUpload.files = e.dataTransfer.files;
-                            this.handleLogoChange({ target: this.DOM.logoUpload });
-                        }
+                } else {
+                    // Fallback for desktop testing
+                    const fallbacks = { bg_color: '#ffffff', text_color: '#000000', hint_color: '#999999', link_color: '#2481cc', button_color: '#2481cc', button_text_color: '#ffffff', secondary_bg_color: '#f4f4f4' };
+                    Object.entries(fallbacks).forEach(([key, value]) => {
+                        document.documentElement.style.setProperty(`--tg-theme-${key.replace(/_/g, '-')}`, value);
                     });
-                },
+                }
+                fetchTemplates();
+            }, []);
 
-                renderCategories() {
-                    this.DOM.categoryTabsContainer.innerHTML = '';
-                    Object.keys(this.templatesData).forEach((category, index) => {
-                        if (this.templatesData[category].length === 0 && category !== "Все") return;
-                        const tab = document.createElement('button');
-                        tab.className = 'category-tab py-2 px-1 text-sm font-semibold text-[var(--tg-theme-hint-color)]';
-                        if (index === 0) tab.classList.add('active');
-                        tab.textContent = category;
-                        tab.addEventListener('click', () => {
-                            this.hapticFeedback('light');
-                            document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-                            tab.classList.add('active');
-                            this.renderTemplates(category);
-                        });
-                        this.DOM.categoryTabsContainer.appendChild(tab);
-                    });
-                },
-
-                renderTemplates(category = "Все") {
-                    this.DOM.templateListContainer.innerHTML = '';
-                    if (!this.templatesData[category] || this.templatesData[category].length === 0) {
-                        if (this.templatesData["Все"].length === 0) {
-                             document.getElementById('loading-indicator').style.display = 'block';
-                        }
+            const handleMainButtonClick = useCallback(async () => {
+                tg.HapticFeedback.impactOccurred('medium');
+                if (step === 1 && appConfig.templateId) {
+                    navigateTo(2);
+                } else if (step === 2) {
+                    if (!appConfig.appName) {
+                        tg.showAlert('Пожалуйста, введите название приложения.');
+                        tg.HapticFeedback.notificationOccurred('error');
                         return;
                     }
-                    this.templatesData[category].forEach(template => {
-                        const listItem = document.createElement('div');
-                        listItem.className = 'template-list-item bg-[var(--tg-theme-bg-color)] rounded-xl p-3 flex items-center justify-between w-full cursor-pointer';
-                        if (this.state.selectedTemplate === template.id) listItem.classList.add('selected');
-                        listItem.dataset.templateId = template.id;
-                        listItem.innerHTML = `<div class="flex items-center"><div class="text-2xl w-10 text-center mr-3">${template.icon}</div><div><span class="font-semibold text-sm text-[var(--tg-theme-text-color)]">${template.name}</span><span class="text-xs text-[var(--tg-theme-hint-color)] block">${template.category}</span></div></div><svg class="chevron h-5 w-5 text-[var(--tg-theme-hint-color)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>`;
-                        listItem.addEventListener('click', () => this.selectTemplate(template.id, listItem));
-                        this.DOM.templateListContainer.appendChild(listItem);
-                    });
-                },
-
-                selectTemplate(templateId, listItemElement) {
-                    this.hapticFeedback('light');
-                    const isDeselecting = this.state.selectedTemplate === templateId;
-                    this.state.selectedTemplate = isDeselecting ? null : templateId;
-                    document.querySelectorAll('.template-list-item').forEach(c => c.classList.remove('selected'));
-                    if (!isDeselecting) listItemElement.classList.add('selected');
-                    this.updateTgButtons();
-                },
-
-                handleLogoChange(event) {
-                    const file = event.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            this.state.logoDataUrl = e.target.result;
-                            this.DOM.logoPreview.src = this.state.logoDataUrl;
-                            this.DOM.logoPreview.classList.remove('hidden');
-                            this.DOM.logoPlaceholder.classList.add('hidden');
-                            this.DOM.removeLogoBtn.classList.remove('hidden');
-                            this.updatePreview();
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                },
-
-                removeLogo() {
-                    this.hapticFeedback('light');
-                    this.state.logoDataUrl = null;
-                    this.DOM.logoUpload.value = '';
-                    this.DOM.logoPreview.src = '';
-                    this.DOM.logoPreview.classList.add('hidden');
-                    this.DOM.logoPlaceholder.classList.remove('hidden');
-                    this.DOM.removeLogoBtn.classList.add('hidden');
-                    this.updatePreview();
-                },
-
-                updatePreview() {
-                    const appName = this.DOM.appNameInput.value.trim();
-                    this.state.appName = appName;
-                    this.DOM.mockupTitle.textContent = appName || 'Ваше приложение';
-                    if (this.state.logoDataUrl) {
-                        this.DOM.mockupLogoImg.src = this.state.logoDataUrl;
-                        this.DOM.mockupLogoImg.classList.remove('hidden');
-                        this.DOM.mockupLogoInitials.classList.add('hidden');
-                    } else {
-                        this.DOM.mockupLogoImg.classList.add('hidden');
-                        this.DOM.mockupLogoInitials.classList.remove('hidden');
-                        const initials = (appName.split(' ').map(s => s[0]).join('') || '?').substring(0, 2).toUpperCase();
-                        this.DOM.mockupLogoInitials.textContent = initials;
-                    }
-                    const template = this.templatesData["Все"].find(t => t.id === this.state.selectedTemplate);
-                    this.DOM.mockupContentPreview.innerHTML = (template && template.preview_html) ? template.preview_html : 'Предпросмотр...';
-                },
-
-                animateStepChildren(stepEl) {
-                    const elements = stepEl.querySelectorAll('.animate-in');
-                    elements.forEach(el => {
-                        el.style.opacity = '0';
-                        setTimeout(() => el.style.opacity = '1', 50);
-                    });
-                },
-
-                showStep(stepNumber, direction = 'forward') {
-                    const currentStepEl = document.getElementById(`step-${this.state.currentStep}`);
-                    const nextStepEl = document.getElementById(`step-${stepNumber}`);
-                    if (!currentStepEl || !nextStepEl) return;
-                    currentStepEl.classList.remove('active');
-                    nextStepEl.classList.remove('hidden-left', 'hidden-right');
-                    currentStepEl.classList.add(direction === 'forward' ? 'hidden-left' : 'hidden-right');
-                    nextStepEl.classList.add('active');
-                    this.animateStepChildren(nextStepEl);
-                    this.state.currentStep = stepNumber;
-                    this.updateTgButtons();
-                },
-
-                updateTgButtons() {
-                    switch (this.state.currentStep) {
-                        case 1:
-                            this.tg.BackButton.hide();
-                            this.state.selectedTemplate ? this.tg.MainButton.setText("Далее").show() : this.tg.MainButton.hide();
-                            break;
-                        case 2:
-                            this.tg.BackButton.show();
-                            this.tg.MainButton.setText("Опубликовать").show().enable();
-                            break;
-                        case 3:
-                            this.tg.BackButton.hide();
-                            this.tg.MainButton.setText("Закрыть").show().enable();
-                            break;
-                    }
-                },
-
-                async onMainButtonClick() {
-                    this.hapticFeedback('medium');
-                    switch (this.state.currentStep) {
-                        case 1:
-                            if (this.state.selectedTemplate) { this.showStep(2); this.updatePreview(); }
-                            break;
-                        case 2:
-                            if (!this.state.appName) { this.tg.showAlert('Пожалуйста, введите название приложения.'); this.hapticFeedback('error'); return; }
-                            this.tg.MainButton.showProgress();
-                            this.showStep(3);
-                            await this.deployApp();
-                            this.tg.MainButton.hideProgress();
-                            break;
-                        case 3:
-                            this.tg.close();
-                            break;
-                    }
-                },
-
-                onBackButtonClick() {
-                    this.hapticFeedback('light');
-                    if (this.state.currentStep === 2) this.showStep(1, 'backward');
-                    if (this.state.currentStep === 3) {
-                        this.showStep(2, 'backward');
-                        this.DOM.finalSuccess.classList.add('hidden');
-                        this.DOM.finalError.classList.add('hidden');
-                        this.DOM.finalLoader.classList.remove('hidden');
-                    }
-                },
-
-                async deployApp() {
-                    const template = this.templatesData["Все"].find(t => t.id === this.state.selectedTemplate);
-                    if (!template) return;
-
-                    let finalLogoBase64 = this.state.logoDataUrl;
-                    if (!finalLogoBase64) {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = 128; canvas.height = 128;
-                        const ctx = canvas.getContext('2d');
-                        ctx.fillStyle = this.tg.themeParams.secondary_bg_color || '#f4f4f4';
-                        ctx.fillRect(0, 0, 128, 128);
-                        ctx.font = 'bold 52px Inter, sans-serif';
-                        ctx.fillStyle = this.tg.themeParams.text_color || '#000000';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(this.DOM.mockupLogoInitials.textContent, 64, 64);
-                        finalLogoBase64 = canvas.toDataURL();
-                    }
+                    navigateTo(3);
+                    setIsDeploying(true);
+                    setDeployError(null);
+                    tg.MainButton.showProgress();
                     
-                    const finalHtml = template.html_content
-                        .replace(/%%APP_NAME%%/g, this.state.appName)
-                        .replace(/%%APP_LOGO_BASE64%%/g, finalLogoBase64)
-                        .replace(/%%THEME_PARAMS_JSON%%/g, JSON.stringify(this.tg.themeParams));
-
-                    try {
-                        // Вызываем нашу функцию Supabase
-                        const { data, error } = await supabaseClient.functions.invoke('deploy-netlify', {
-                            body: { htmlContent: finalHtml, appName: this.state.appName },
-                        });
-
-                        if (error) throw error;
-                        if (data.error) throw new Error(data.error);
-
-                        this.state.deployedUrl = data.url;
-                        this.DOM.finalUrlInput.value = this.state.deployedUrl;
-                        this.DOM.finalLoader.classList.add('hidden');
-                        this.DOM.finalSuccess.classList.remove('hidden');
-                        this.tg.BackButton.hide();
-                        this.hapticFeedback('success');
-
-                    } catch (error) {
-                        console.error("Ошибка деплоя:", error);
-                        this.DOM.errorMessage.textContent = `Не удалось опубликовать: ${error.message}. Проверьте настройки функции Supabase и секретный ключ.`;
-                        this.DOM.finalLoader.classList.add('hidden');
-                        this.DOM.finalError.classList.remove('hidden');
-                        this.tg.BackButton.show();
-                        this.hapticFeedback('error');
+                    const result = await deployApp();
+                    if (result.url) {
+                        setDeployedUrl(result.url);
+                    } else {
+                        setDeployError(result.error);
                     }
-                },
+                    setIsDeploying(false);
+                    tg.MainButton.hideProgress();
+                } else if (step === 3) {
+                    tg.close();
+                }
+            }, [step, appConfig]);
 
-                copyUrl() {
-                    this.DOM.finalUrlInput.select();
-                    document.execCommand('copy');
-                    this.DOM.copyUrlBtn.textContent = 'Готово!';
-                    this.hapticFeedback('light');
-                    setTimeout(() => { this.DOM.copyUrlBtn.textContent = 'Копировать'; }, 1500);
-                },
+            const handleBackButtonClick = useCallback(() => {
+                tg.HapticFeedback.impactOccurred('light');
+                if (step === 2) navigateTo(1);
+                if (step === 3) {
+                    navigateTo(2);
+                    setDeployedUrl(null);
+                    setDeployError(null);
+                }
+            }, [step]);
 
-                hapticFeedback(style) {
-                    try { this.tg.HapticFeedback.notificationOccurred ? this.tg.HapticFeedback.notificationOccurred(style) : this.tg.HapticFeedback.impactOccurred('light'); } catch (e) { /* ignore */ }
+            useEffect(() => {
+                tg.onEvent('mainButtonClicked', handleMainButtonClick);
+                tg.onEvent('backButtonClicked', handleBackButtonClick);
+                return () => {
+                    tg.offEvent('mainButtonClicked', handleMainButtonClick);
+                    tg.offEvent('backButtonClicked', handleBackButtonClick);
+                };
+            }, [handleMainButtonClick, handleBackButtonClick]);
+            
+            useEffect(() => {
+                if (step === 1) {
+                    tg.BackButton.hide();
+                    appConfig.templateId ? tg.MainButton.setText("Далее").show() : tg.MainButton.hide();
+                } else if (step === 2) {
+                    tg.BackButton.show();
+                    tg.MainButton.setText("Опубликовать").show();
+                } else if (step === 3) {
+                    if (isDeploying) {
+                        tg.MainButton.hide();
+                        tg.BackButton.hide();
+                    } else if (deployedUrl) {
+                        tg.BackButton.hide();
+                        tg.MainButton.setText("Закрыть").show();
+                    } else if (deployError) {
+                        tg.BackButton.show();
+                        tg.MainButton.setText("Попробовать снова").hide(); // Let user go back manually
+                    }
+                }
+            }, [step, appConfig.templateId, isDeploying, deployedUrl, deployError]);
+
+            const fetchTemplates = async () => {
+                setIsLoading(true);
+                setError(null);
+                try {
+                    const { data, error } = await supabaseClient.from('mini_app_templates').select('*');
+                    if (error) throw error;
+                    setTemplates(data.map(item => ({...item, id: item.template_id})));
+                } catch (err) {
+                    setError('Не удалось загрузить шаблоны.');
+                } finally {
+                    setIsLoading(false);
                 }
             };
-            App.init();
-        });
+            
+            const deployApp = async () => {
+                 const template = templates.find(t => t.id === appConfig.templateId);
+                if (!template) return { error: "Шаблон не найден." };
+
+                let finalLogoBase64 = appConfig.logoDataUrl;
+                if (!finalLogoBase64) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 128; canvas.height = 128;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--tg-theme-secondary-bg-color');
+                    ctx.fillRect(0, 0, 128, 128);
+                    ctx.font = 'bold 52px Inter, sans-serif';
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--tg-theme-text-color');
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    const initials = (appConfig.appName.split(' ').map(s => s[0]).join('') || '?').substring(0, 2).toUpperCase();
+                    ctx.fillText(initials, 64, 64);
+                    finalLogoBase64 = canvas.toDataURL();
+                }
+
+                const finalHtml = template.html_content
+                    .replace(/%%APP_NAME%%/g, appConfig.appName)
+                    .replace(/%%APP_LOGO_BASE64%%/g, finalLogoBase64)
+                    .replace(/%%THEME_PARAMS_JSON%%/g, JSON.stringify(tg.themeParams));
+                
+                try {
+                    const { data, error } = await supabaseClient.functions.invoke('deploy-netlify', {
+                        body: { htmlContent: finalHtml, appName: appConfig.appName },
+                    });
+                    if (error) throw error;
+                    if (data.error) throw new Error(data.error);
+                    if (!data || !data.url) throw new Error("Функция не вернула URL.");
+                    return { url: data.url };
+                } catch (err) {
+                    return { error: err.message };
+                }
+            };
+
+            return (
+                <div id="app-container" className="h-screen w-screen relative max-w-md mx-auto overflow-hidden">
+                    <Step1 isVisible={step === 1} direction={step > prevStep} templates={templates} isLoading={isLoading} error={error} appConfig={appConfig} setAppConfig={setAppConfig} />
+                    <Step2 isVisible={step === 2} direction={step > prevStep} appConfig={appConfig} setAppConfig={setAppConfig} templates={templates} />
+                    <Step3 isVisible={step === 3} isDeploying={isDeploying} deployedUrl={deployedUrl} error={deployError} />
+                </div>
+            );
+        }
+
+        function StepWrapper({ isVisible, direction, children }) {
+            const getClassName = () => {
+                if (isVisible) return 'active';
+                return direction ? 'hidden-left' : 'hidden-right';
+            };
+            return <div className={`step ${getClassName()}`}>{children}</div>;
+        }
+
+        function Step1({ isVisible, direction, templates, isLoading, error, appConfig, setAppConfig }) {
+            const categories = useMemo(() => ["Все", ...new Set(templates.map(t => t.category))], [templates]);
+            const [activeCategory, setActiveCategory] = useState("Все");
+            const filteredTemplates = useMemo(() => activeCategory === "Все" ? templates : templates.filter(t => t.category === activeCategory), [templates, activeCategory]);
+
+            const handleSelectTemplate = (templateId) => {
+                setAppConfig(prev => ({...prev, templateId: prev.templateId === templateId ? null : templateId}));
+                tg.HapticFeedback.impactOccurred('light');
+            };
+
+            return (
+                <StepWrapper isVisible={isVisible} direction={direction}>
+                    <div className="flex flex-col h-full">
+                        <div className="pt-5 shrink-0">
+                            <div className="text-center mb-4 px-5 animate-in">
+                                <h1 className="text-2xl font-bold">Создать Mini App</h1>
+                                <p className="text-base text-[var(--tg-theme-hint-color)] mt-1">Шаг 1: Выберите шаблон</p>
+                            </div>
+                            <div className="flex space-x-6 border-b border-[var(--tg-theme-secondary-bg-color)] mb-2 overflow-x-auto px-5 scroll-container animate-in" style={{animationDelay: '0.1s'}}>
+                                {categories.map(cat => (
+                                    <button key={cat} onClick={() => setActiveCategory(cat)} className={`category-tab py-2 px-1 text-sm font-semibold ${activeCategory === cat ? 'active' : 'text-[var(--tg-theme-hint-color)]'}`}>
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-3 overflow-y-auto flex-grow p-4 scroll-container animate-in" style={{animationDelay: '0.2s'}}>
+                            {isLoading && <div className="text-center text-[var(--tg-theme-hint-color)] p-8">Загрузка шаблонов...</div>}
+                            {error && <div className="text-center text-red-500 p-8">{error}</div>}
+                            {filteredTemplates.map(template => (
+                                <div key={template.id} onClick={() => handleSelectTemplate(template.id)} className={`template-list-item bg-[var(--tg-theme-bg-color)] rounded-xl p-3 flex items-center justify-between w-full cursor-pointer ${appConfig.templateId === template.id ? 'selected' : ''}`}>
+                                    <div className="flex items-center">
+                                        <div className="text-2xl w-10 text-center mr-3">{template.icon}</div>
+                                        <div>
+                                            <span className="font-semibold text-sm text-[var(--tg-theme-text-color)]">{template.name}</span>
+                                            <span className="text-xs text-[var(--tg-theme-hint-color)] block">{template.category}</span>
+                                        </div>
+                                    </div>
+                                    <svg className="chevron h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="3" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </StepWrapper>
+            );
+        }
+        
+        function Step2({ isVisible, direction, appConfig, setAppConfig, templates }) {
+            const currentTemplate = templates.find(t => t.id === appConfig.templateId);
+            const initials = (appConfig.appName.split(' ').map(s => s[0]).join('') || '?').substring(0, 2).toUpperCase();
+
+            const handleLogoChange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => setAppConfig(prev => ({...prev, logoDataUrl: event.target.result}));
+                    reader.readAsDataURL(file);
+                }
+            };
+            
+            const removeLogo = () => {
+                setAppConfig(prev => ({...prev, logoDataUrl: null}));
+                document.getElementById('logo-upload-input').value = "";
+            };
+
+            return (
+                <StepWrapper isVisible={isVisible} direction={direction}>
+                    <div className="flex flex-col h-full p-5 overflow-y-auto pb-24 scroll-container">
+                        <div className="text-center mb-5 shrink-0 animate-in">
+                            <h1 className="text-2xl font-bold">Настройки</h1>
+                            <p className="text-base text-[var(--tg-theme-hint-color)] mt-1">Шаг 2: Укажите детали</p>
+                        </div>
+                        <div className="flex justify-center mb-6 shrink-0 animate-in" style={{animationDelay: '0.1s'}}>
+                            <div className="mockup-phone">
+                                <div className="mockup-screen h-full flex flex-col">
+                                    <div className="mockup-header flex items-center space-x-2.5">
+                                        <div className="mockup-logo flex-shrink-0">
+                                            {appConfig.logoDataUrl ? <img src={appConfig.logoDataUrl} className="w-full h-full object-cover rounded-[9px]" /> : <span>{initials}</span>}
+                                        </div>
+                                        <span className="mockup-title text-[var(--tg-theme-text-color)] whitespace-nowrap overflow-hidden text-ellipsis">{appConfig.appName || 'Ваше приложение'}</span>
+                                    </div>
+                                    <div className="mockup-content flex-grow p-3" dangerouslySetInnerHTML={{ __html: currentTemplate?.preview_html || '' }} />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="animate-in" style={{animationDelay: '0.2s'}}>
+                                <label htmlFor="app-name" className="font-semibold text-base block mb-1.5">Название</label>
+                                <input type="text" id="app-name" value={appConfig.appName} onChange={e => setAppConfig(prev => ({...prev, appName: e.target.value}))} className="w-full p-3 text-sm rounded-xl bg-[var(--tg-theme-secondary-bg-color)] outline-none focus:ring-2 focus:ring-[var(--tg-theme-button-color)]" placeholder="Например, 'Мой Магазин'" />
+                            </div>
+                            <div className="animate-in" style={{animationDelay: '0.3s'}}>
+                                <div className="flex justify-between items-center mb-1.5">
+                                    <label className="font-semibold text-base">Логотип</label>
+                                    {appConfig.logoDataUrl && <button onClick={removeLogo} className="text-xs text-[var(--tg-theme-link-color)] font-medium">Удалить</button>}
+                                </div>
+                                <label className="custom-file-upload relative h-32 rounded-xl p-4 text-center cursor-pointer flex items-center justify-center">
+                                    {appConfig.logoDataUrl ? <img src={appConfig.logoDataUrl} className="h-full w-auto object-contain rounded-lg" /> : <div className="text-[var(--tg-theme-hint-color)]"><svg className="h-8 w-8 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" /></svg><p className="mt-2 text-xs font-medium">Нажмите для загрузки</p></div>}
+                                    <input type="file" id="logo-upload-input" accept="image/png, image/jpeg, image/webp" onChange={handleLogoChange} className="hidden" />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </StepWrapper>
+            );
+        }
+
+        function Step3({ isVisible, isDeploying, deployedUrl, error }) {
+            const copyUrl = () => {
+                navigator.clipboard.writeText(deployedUrl);
+                tg.HapticFeedback.impactOccurred('light');
+            };
+
+            return (
+                <StepWrapper isVisible={isVisible} direction={true}>
+                    <div className="flex flex-col h-full items-center justify-center text-center p-6">
+                        {isDeploying && <div className="final-container"><svg className="animate-spin h-12 w-12 text-[var(--tg-theme-button-color)] mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><h1 className="text-xl font-bold mt-4">Публикуем...</h1><p className="text-base text-[var(--tg-theme-hint-color)] mt-1">Это может занять до 30 секунд.</p></div>}
+                        {deployedUrl && <div className="final-container w-full max-w-sm"><div className="p-3 rounded-full final-icon-bg inline-block mb-3"><svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg></div><h1 className="text-2xl font-bold mb-1.5">Приложение опубликовано!</h1><p className="text-[var(--tg-theme-hint-color)] mb-4 text-base">Ваш Mini App доступен по ссылке ниже.</p><div className="url-container flex items-center p-1 rounded-lg"><input value={deployedUrl} type="text" readOnly className="w-full bg-transparent text-sm p-2 text-[var(--tg-theme-text-color)] outline-none" /><button onClick={copyUrl} className="copy-btn rounded-md px-3 py-2 text-sm font-semibold flex-shrink-0">Копировать</button></div><div className="text-left mt-6"><h2 className="font-bold text-base">Как добавить в Telegram:</h2><ol className="list-decimal list-inside text-sm mt-2 space-y-1.5 text-[var(--tg-theme-text-color)]"><li>Откройте <b>@BotFather</b> и отправьте <code className="bg-[var(--tg-theme-secondary-bg-color)] p-1 rounded-md text-xs">/mybots</code>.</li><li>Выберите бота, затем <b>Bot Settings &rarr; Menu Button</b>.</li><li>Нажмите <b>Configure Menu Button</b> и отправьте ссылку.</li><li>Придумайте название для кнопки.</li></ol></div></div>}
+                        {error && <div className="final-container w-full max-w-sm"><div className="p-3 rounded-full bg-red-100 text-red-600 inline-block mb-3"><svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div><h1 className="text-2xl font-bold mb-1.5">Ошибка публикации</h1><p className="text-[var(--tg-theme-hint-color)] text-base">{error}</p></div>}
+                    </div>
+                </StepWrapper>
+            );
+        }
+
+        // --- FIX: Use createRoot for React 18 ---
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
     </script>
 </body>
 </html>

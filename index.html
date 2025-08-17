@@ -6,10 +6,8 @@
     <title>Генератор Mini App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Подключаем Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Подключаем JSZip для создания архива в браузере -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- JSZip больше не нужен на клиенте -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -177,12 +175,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-
-            // --- НАСТРОЙКА ---
-            // 1. Получите токен здесь: https://app.netlify.com/user/applications#personal-access-tokens
-            // 2. Вставьте его вместо 'ВАШ_ТОКЕН_СЮДА'
-            const NETLIFY_ACCESS_TOKEN = 'nfp_HK1cZHu4GGp17CieZDVuPW6eUnvy8Sbi8300';
-
+            
             // Ваши данные Supabase
             const SUPABASE_URL = 'https://jvapdhhyjbianlyfwobm.supabase.co'; 
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2YXBkaGh5amJpYW5seWZ3b2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzOTMxMTEsImV4cCI6MjA3MDk2OTExMX0.XcvGzp18BeA5Sf-_k7nHaZG5J5eB9H9adQEl3ZAa5mY';
@@ -246,7 +239,6 @@
                     D.mockupLogoInitials = document.getElementById('mockup-logo-initials');
                     D.mockupTitle = document.getElementById('mockup-title-text');
                     D.mockupContentPreview = document.getElementById('mockup-content-preview');
-                    // Элементы финального экрана
                     D.finalLoader = document.getElementById('final-loader');
                     D.finalSuccess = document.getElementById('final-success');
                     D.finalError = document.getElementById('final-error');
@@ -434,12 +426,9 @@
                             break;
                         case 2:
                             if (!this.state.appName) { this.tg.showAlert('Пожалуйста, введите название приложения.'); this.hapticFeedback('error'); return; }
-                            if (!NETLIFY_ACCESS_TOKEN || NETLIFY_ACCESS_TOKEN === 'ВАШ_ТОКЕН_СЮДА') {
-                                this.tg.showAlert('Пожалуйста, укажите ваш токен доступа Netlify в коде.'); this.hapticFeedback('error'); return;
-                            }
                             this.tg.MainButton.showProgress();
                             this.showStep(3);
-                            await this.deployToNetlify();
+                            await this.deployApp();
                             this.tg.MainButton.hideProgress();
                             break;
                         case 3:
@@ -459,7 +448,7 @@
                     }
                 },
 
-                async deployToNetlify() {
+                async deployApp() {
                     const template = this.templatesData["Все"].find(t => t.id === this.state.selectedTemplate);
                     if (!template) return;
 
@@ -484,27 +473,15 @@
                         .replace(/%%THEME_PARAMS_JSON%%/g, JSON.stringify(this.tg.themeParams));
 
                     try {
-                        const zip = new JSZip();
-                        zip.file("index.html", finalHtml);
-                        const zipBlob = await zip.generateAsync({type:"blob"});
-
-                        const response = await fetch("https://api.netlify.com/api/v1/sites", {
-                            method: "POST",
-                            headers: {
-                                "Authorization": `Bearer ${NETLIFY_ACCESS_TOKEN}`,
-                                "Content-Type": "application/zip"
-                            },
-                            body: zipBlob
+                        // Вызываем нашу функцию Supabase
+                        const { data, error } = await supabaseClient.functions.invoke('deploy-netlify', {
+                            body: { htmlContent: finalHtml, appName: this.state.appName },
                         });
 
-                        if (!response.ok) {
-                            const errorData = await response.json();
-                            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-                        }
+                        if (error) throw error;
+                        if (data.error) throw new Error(data.error);
 
-                        const siteData = await response.json();
-                        this.state.deployedUrl = siteData.ssl_url;
-
+                        this.state.deployedUrl = data.url;
                         this.DOM.finalUrlInput.value = this.state.deployedUrl;
                         this.DOM.finalLoader.classList.add('hidden');
                         this.DOM.finalSuccess.classList.remove('hidden');
@@ -513,7 +490,7 @@
 
                     } catch (error) {
                         console.error("Ошибка деплоя:", error);
-                        this.DOM.errorMessage.textContent = `Не удалось опубликовать: ${error.message}. Проверьте токен и попробуйте снова.`;
+                        this.DOM.errorMessage.textContent = `Не удалось опубликовать: ${error.message}. Проверьте настройки функции Supabase и секретный ключ.`;
                         this.DOM.finalLoader.classList.add('hidden');
                         this.DOM.finalError.classList.remove('hidden');
                         this.tg.BackButton.show();

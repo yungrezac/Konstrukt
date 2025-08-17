@@ -62,139 +62,81 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useCallback, useMemo } = React;
+        const { useState, useEffect, useCallback, useMemo, useRef } = React;
 
-        // --- Supabase Client ---
         const SUPABASE_URL = 'https://jvapdhhyjbianlyfwobm.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2YXBkaGh5amJpYW5seWZ3b2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzOTMxMTEsImV4cCI6MjA3MDk2OTExMX0.XcvGzp18BeA5Sf-_k7nHaZG5J5eB9H9adQEl3ZAa5mY';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         const tg = window.Telegram.WebApp;
 
-        // --- Main App Component ---
         function App() {
             const [step, setStep] = useState(1);
             const [prevStep, setPrevStep] = useState(1);
             const [templates, setTemplates] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [error, setError] = useState(null);
-            const [appConfig, setAppConfig] = useState({
-                templateId: null,
-                appName: '',
-                logoDataUrl: null,
-            });
-            const [deployedUrl, setDeployedUrl] = useState(null);
-            const [isDeploying, setIsDeploying] = useState(false);
-            const [deployError, setDeployError] = useState(null);
+            const [appConfig, setAppConfig] = useState({ templateId: null, appName: '', logoDataUrl: null });
+            const [deployment, setDeployment] = useState({ status: 'idle', url: null, error: null });
+            const pollingInterval = useRef(null);
 
             const navigateTo = (nextStep) => {
                 setPrevStep(step);
                 setStep(nextStep);
             };
-
+            
             useEffect(() => {
                 tg.ready();
                 tg.expand();
                 const themeParams = tg.themeParams;
-                if (themeParams && Object.keys(themeParams).length) {
+                 if (themeParams && Object.keys(themeParams).length) {
                     Object.entries(themeParams).forEach(([key, value]) => {
                         document.documentElement.style.setProperty(`--tg-theme-${key.replace(/_/g, '-')}`, value);
                     });
                 } else {
-                    // Fallback for desktop testing
                     const fallbacks = { bg_color: '#ffffff', text_color: '#000000', hint_color: '#999999', link_color: '#2481cc', button_color: '#2481cc', button_text_color: '#ffffff', secondary_bg_color: '#f4f4f4' };
                     Object.entries(fallbacks).forEach(([key, value]) => {
                         document.documentElement.style.setProperty(`--tg-theme-${key.replace(/_/g, '-')}`, value);
                     });
                 }
                 fetchTemplates();
+
+                return () => {
+                    clearInterval(pollingInterval.current);
+                };
             }, []);
 
-            const handleMainButtonClick = useCallback(async () => {
-                tg.HapticFeedback.impactOccurred('medium');
-                if (step === 1 && appConfig.templateId) {
-                    navigateTo(2);
-                } else if (step === 2) {
-                    if (!appConfig.appName) {
-                        tg.showAlert('Пожалуйста, введите название приложения.');
+            const startPolling = (currentJobId) => {
+                // Очищаем предыдущий интервал на всякий случай
+                clearInterval(pollingInterval.current);
+
+                pollingInterval.current = setInterval(async () => {
+                    if (document.hidden) return; // Не опрашиваем, если вкладка неактивна
+
+                    const { data, error } = await supabaseClient
+                        .from('deployments')
+                        .select('status, deployed_url, error_message')
+                        .eq('id', currentJobId)
+                        .single();
+
+                    if (data?.status === 'success') {
+                        setDeployment({ status: 'success', url: data.deployed_url, error: null });
+                        clearInterval(pollingInterval.current);
+                        tg.HapticFeedback.notificationOccurred('success');
+                    } else if (data?.status === 'error') {
+                        setDeployment({ status: 'error', url: null, error: data.error_message });
+                        clearInterval(pollingInterval.current);
                         tg.HapticFeedback.notificationOccurred('error');
-                        return;
                     }
-                    navigateTo(3);
-                    setIsDeploying(true);
-                    setDeployError(null);
-                    tg.MainButton.showProgress();
-                    
-                    const result = await deployApp();
-                    if (result.url) {
-                        setDeployedUrl(result.url);
-                    } else {
-                        setDeployError(result.error);
-                    }
-                    setIsDeploying(false);
-                    tg.MainButton.hideProgress();
-                } else if (step === 3) {
-                    tg.close();
-                }
-            }, [step, appConfig]);
-
-            const handleBackButtonClick = useCallback(() => {
-                tg.HapticFeedback.impactOccurred('light');
-                if (step === 2) navigateTo(1);
-                if (step === 3) {
-                    navigateTo(2);
-                    setDeployedUrl(null);
-                    setDeployError(null);
-                }
-            }, [step]);
-
-            useEffect(() => {
-                tg.onEvent('mainButtonClicked', handleMainButtonClick);
-                tg.onEvent('backButtonClicked', handleBackButtonClick);
-                return () => {
-                    tg.offEvent('mainButtonClicked', handleMainButtonClick);
-                    tg.offEvent('backButtonClicked', handleBackButtonClick);
-                };
-            }, [handleMainButtonClick, handleBackButtonClick]);
-            
-            useEffect(() => {
-                if (step === 1) {
-                    tg.BackButton.hide();
-                    appConfig.templateId ? tg.MainButton.setText("Далее").show() : tg.MainButton.hide();
-                } else if (step === 2) {
-                    tg.BackButton.show();
-                    tg.MainButton.setText("Опубликовать").show();
-                } else if (step === 3) {
-                    if (isDeploying) {
-                        tg.MainButton.hide();
-                        tg.BackButton.hide();
-                    } else if (deployedUrl) {
-                        tg.BackButton.hide();
-                        tg.MainButton.setText("Закрыть").show();
-                    } else if (deployError) {
-                        tg.BackButton.show();
-                        tg.MainButton.setText("Попробовать снова").hide(); // Let user go back manually
-                    }
-                }
-            }, [step, appConfig.templateId, isDeploying, deployedUrl, deployError]);
-
-            const fetchTemplates = async () => {
-                setIsLoading(true);
-                setError(null);
-                try {
-                    const { data, error } = await supabaseClient.from('mini_app_templates').select('*');
-                    if (error) throw error;
-                    setTemplates(data.map(item => ({...item, id: item.template_id})));
-                } catch (err) {
-                    setError('Не удалось загрузить шаблоны.');
-                } finally {
-                    setIsLoading(false);
-                }
+                }, 3000); // Проверяем каждые 3 секунды
             };
-            
-            const deployApp = async () => {
-                 const template = templates.find(t => t.id === appConfig.templateId);
-                if (!template) return { error: "Шаблон не найден." };
 
+            const deployApp = async () => {
+                const template = templates.find(t => t.id === appConfig.templateId);
+                if (!template) return;
+
+                setDeployment({ status: 'pending', url: null, error: null });
+                navigateTo(3);
+                
                 let finalLogoBase64 = appConfig.logoDataUrl;
                 if (!finalLogoBase64) {
                     const canvas = document.createElement('canvas');
@@ -215,17 +157,94 @@
                     .replace(/%%APP_NAME%%/g, appConfig.appName)
                     .replace(/%%APP_LOGO_BASE64%%/g, finalLogoBase64)
                     .replace(/%%THEME_PARAMS_JSON%%/g, JSON.stringify(tg.themeParams));
-                
+
                 try {
-                    const { data, error } = await supabaseClient.functions.invoke('deploy-netlify', {
-                        body: { htmlContent: finalHtml, appName: appConfig.appName },
-                    });
-                    if (error) throw error;
-                    if (data.error) throw new Error(data.error);
-                    if (!data || !data.url) throw new Error("Функция не вернула URL.");
-                    return { url: data.url };
+                    const { data: jobData, error: jobError } = await supabaseClient
+                        .from('deployments')
+                        .insert({ app_name: appConfig.appName, html_content: finalHtml })
+                        .select('id')
+                        .single();
+
+                    if (jobError) throw jobError;
+                    
+                    const newJobId = jobData.id;
+                    
+                    supabaseClient.functions.invoke('deploy-netlify', { body: { jobId: newJobId } });
+                    
+                    startPolling(newJobId);
+
                 } catch (err) {
-                    return { error: err.message };
+                    setDeployment({ status: 'error', url: null, error: err.message });
+                }
+            };
+            
+            const handleMainButtonClick = useCallback(() => {
+                tg.HapticFeedback.impactOccurred('medium');
+                if (step === 1 && appConfig.templateId) {
+                    navigateTo(2);
+                } else if (step === 2) {
+                    if (!appConfig.appName) {
+                        tg.showAlert('Пожалуйста, введите название приложения.');
+                        tg.HapticFeedback.notificationOccurred('error');
+                        return;
+                    }
+                    deployApp();
+                } else if (step === 3) {
+                    tg.close();
+                }
+            }, [step, appConfig, templates]);
+
+            const handleBackButtonClick = useCallback(() => {
+                tg.HapticFeedback.impactOccurred('light');
+                if (step === 2) navigateTo(1);
+                if (step === 3) {
+                    navigateTo(2);
+                    setDeployment({ status: 'idle', url: null, error: null });
+                    clearInterval(pollingInterval.current);
+                }
+            }, [step]);
+
+            useEffect(() => {
+                tg.onEvent('mainButtonClicked', handleMainButtonClick);
+                tg.onEvent('backButtonClicked', handleBackButtonClick);
+                return () => {
+                    tg.offEvent('mainButtonClicked', handleMainButtonClick);
+                    tg.offEvent('backButtonClicked', handleBackButtonClick);
+                };
+            }, [handleMainButtonClick, handleBackButtonClick]);
+            
+            useEffect(() => {
+                if (step === 1) {
+                    tg.BackButton.hide();
+                    appConfig.templateId ? tg.MainButton.setText("Далее").show() : tg.MainButton.hide();
+                } else if (step === 2) {
+                    tg.BackButton.show();
+                    tg.MainButton.setText("Опубликовать").show();
+                } else if (step === 3) {
+                    if (deployment.status === 'pending') {
+                        tg.MainButton.hide();
+                        tg.BackButton.hide();
+                    } else if (deployment.status === 'success') {
+                        tg.BackButton.hide();
+                        tg.MainButton.setText("Закрыть").show();
+                    } else if (deployment.status === 'error') {
+                        tg.BackButton.show();
+                        tg.MainButton.hide();
+                    }
+                }
+            }, [step, appConfig.templateId, deployment]);
+
+            const fetchTemplates = async () => {
+                setIsLoading(true);
+                setError(null);
+                try {
+                    const { data, error } = await supabaseClient.from('mini_app_templates').select('*');
+                    if (error) throw error;
+                    setTemplates(data.map(item => ({...item, id: item.template_id})));
+                } catch (err) {
+                    setError('Не удалось загрузить шаблоны.');
+                } finally {
+                    setIsLoading(false);
                 }
             };
 
@@ -233,7 +252,7 @@
                 <div id="app-container" className="h-screen w-screen relative max-w-md mx-auto overflow-hidden">
                     <Step1 isVisible={step === 1} direction={step > prevStep} templates={templates} isLoading={isLoading} error={error} appConfig={appConfig} setAppConfig={setAppConfig} />
                     <Step2 isVisible={step === 2} direction={step > prevStep} appConfig={appConfig} setAppConfig={setAppConfig} templates={templates} />
-                    <Step3 isVisible={step === 3} isDeploying={isDeploying} deployedUrl={deployedUrl} error={deployError} />
+                    <Step3 isVisible={step === 3} deployment={deployment} />
                 </div>
             );
         }
@@ -352,24 +371,24 @@
             );
         }
 
-        function Step3({ isVisible, isDeploying, deployedUrl, error }) {
+        function Step3({ isVisible, deployment }) {
+            const { status, url, error } = deployment;
             const copyUrl = () => {
-                navigator.clipboard.writeText(deployedUrl);
+                navigator.clipboard.writeText(url);
                 tg.HapticFeedback.impactOccurred('light');
             };
 
             return (
                 <StepWrapper isVisible={isVisible} direction={true}>
                     <div className="flex flex-col h-full items-center justify-center text-center p-6">
-                        {isDeploying && <div className="final-container"><svg className="animate-spin h-12 w-12 text-[var(--tg-theme-button-color)] mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><h1 className="text-xl font-bold mt-4">Публикуем...</h1><p className="text-base text-[var(--tg-theme-hint-color)] mt-1">Это может занять до 30 секунд.</p></div>}
-                        {deployedUrl && <div className="final-container w-full max-w-sm"><div className="p-3 rounded-full final-icon-bg inline-block mb-3"><svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg></div><h1 className="text-2xl font-bold mb-1.5">Приложение опубликовано!</h1><p className="text-[var(--tg-theme-hint-color)] mb-4 text-base">Ваш Mini App доступен по ссылке ниже.</p><div className="url-container flex items-center p-1 rounded-lg"><input value={deployedUrl} type="text" readOnly className="w-full bg-transparent text-sm p-2 text-[var(--tg-theme-text-color)] outline-none" /><button onClick={copyUrl} className="copy-btn rounded-md px-3 py-2 text-sm font-semibold flex-shrink-0">Копировать</button></div><div className="text-left mt-6"><h2 className="font-bold text-base">Как добавить в Telegram:</h2><ol className="list-decimal list-inside text-sm mt-2 space-y-1.5 text-[var(--tg-theme-text-color)]"><li>Откройте <b>@BotFather</b> и отправьте <code className="bg-[var(--tg-theme-secondary-bg-color)] p-1 rounded-md text-xs">/mybots</code>.</li><li>Выберите бота, затем <b>Bot Settings &rarr; Menu Button</b>.</li><li>Нажмите <b>Configure Menu Button</b> и отправьте ссылку.</li><li>Придумайте название для кнопки.</li></ol></div></div>}
-                        {error && <div className="final-container w-full max-w-sm"><div className="p-3 rounded-full bg-red-100 text-red-600 inline-block mb-3"><svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div><h1 className="text-2xl font-bold mb-1.5">Ошибка публикации</h1><p className="text-[var(--tg-theme-hint-color)] text-base">{error}</p></div>}
+                        {status === 'pending' && <div className="final-container"><svg className="animate-spin h-12 w-12 text-[var(--tg-theme-button-color)] mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><h1 className="text-xl font-bold mt-4">Публикуем...</h1><p className="text-base text-[var(--tg-theme-hint-color)] mt-1">Ожидаем ответ от сервера...</p></div>}
+                        {status === 'success' && <div className="final-container w-full max-w-sm"><div className="p-3 rounded-full final-icon-bg inline-block mb-3"><svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg></div><h1 className="text-2xl font-bold mb-1.5">Приложение опубликовано!</h1><p className="text-[var(--tg-theme-hint-color)] mb-4 text-base">Ваш Mini App доступен по ссылке ниже.</p><div className="url-container flex items-center p-1 rounded-lg"><input value={url} type="text" readOnly className="w-full bg-transparent text-sm p-2 text-[var(--tg-theme-text-color)] outline-none" /><button onClick={copyUrl} className="copy-btn rounded-md px-3 py-2 text-sm font-semibold flex-shrink-0">Копировать</button></div><div className="text-left mt-6"><h2 className="font-bold text-base">Как добавить в Telegram:</h2><ol className="list-decimal list-inside text-sm mt-2 space-y-1.5 text-[var(--tg-theme-text-color)]"><li>Откройте <b>@BotFather</b> и отправьте <code className="bg-[var(--tg-theme-secondary-bg-color)] p-1 rounded-md text-xs">/mybots</code>.</li><li>Выберите бота, затем <b>Bot Settings &rarr; Menu Button</b>.</li><li>Нажмите <b>Configure Menu Button</b> и отправьте ссылку.</li><li>Придумайте название для кнопки.</li></ol></div></div>}
+                        {status === 'error' && <div className="final-container w-full max-w-sm"><div className="p-3 rounded-full bg-red-100 text-red-600 inline-block mb-3"><svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div><h1 className="text-2xl font-bold mb-1.5">Ошибка публикации</h1><p className="text-[var(--tg-theme-hint-color)] text-base">{error}</p></div>}
                     </div>
                 </StepWrapper>
             );
         }
 
-        // --- FIX: Use createRoot for React 18 ---
         const container = document.getElementById('root');
         const root = ReactDOM.createRoot(container);
         root.render(<App />);

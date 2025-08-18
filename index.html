@@ -214,12 +214,29 @@
         document.addEventListener('DOMContentLoaded', () => {
             const tg = window.Telegram.WebApp;
 
-            // --- ВАЖНО: ХРАНЕНИЕ ТОКЕНОВ НА КЛИЕНТЕ НЕБЕЗОПАСНО ---
-            // Этот код предназначен только для демонстрации.
-            // В реальном приложении эти ключи и вся логика работы с API
-            // должны находиться на вашем сервере (backend).
-            const GITHUB_TOKEN = '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'; // ЗАМЕНИТЕ СВОИМ ТОКЕНОМ
-            const NETLIFY_TOKEN = 'nfp_Yedi7SZwd3Urp5EBVSUbkSreq1x2o8xj505e'; // ЗАМЕНИТЕ СВОИМ ТОКЕНОМ
+            // --- ⚠️ ВАЖНО: ЗАМЕНИТЕ ЭТИ ЗАГЛУШКИ СВОИМИ ТОКЕНАМИ ⚠️ ---
+            // Хранение токенов на клиенте небезопасно и используется здесь только для демонстрации.
+            // В реальном приложении вся логика работы с API должна быть на вашем сервере.
+
+            // 1. GITHUB TOKEN
+            // Ошибка "Bad credentials" означает, что ваш GitHub токен недействителен.
+            // - Перейдите на https://github.com/settings/tokens
+            // - Создайте новый "classic" токен.
+            // - Убедитесь, что вы предоставили права (scope) "repo".
+            // - Скопируйте токен и вставьте его вместо пустой строки.
+            const GITHUB_TOKEN = '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'; // <-- 🔴 ВСТАВЬТЕ ВАШ GITHUB TOKEN СЮДА
+
+            // 2. NETLIFY TOKEN (для деплоя)
+            // - Перейдите на https://app.netlify.com/user/applications
+            // - Создайте "New personal access token".
+            // - Скопируйте токен и вставьте его сюда.
+            const NETLIFY_TOKEN = 'nfp_H6hMcnknNuGm2AWWMDfrdiReotnBQREfb957'; // <-- 🔴 ВСТАВЬТЕ ВАШ NETLIFY TOKEN СЮДА
+
+            // 3. GEMINI API KEY (для генерации кода)
+            // Ошибка "403" означает, что у вас нет доступа к API Gemini.
+            // - Перейдите на https://aistudio.google.com/app/apikey
+            // - Создайте и скопируйте ваш API ключ.
+            const GEMINI_API_KEY = "AIzaSyBuXjShdZFvr76OKsl7FaL789Dxl3i6bgc"; // <-- 🔴 ВСТАВЬТЕ ВАШ GEMINI API KEY СЮДА
 
             const ui = {
                 imageInput: document.getElementById('image-input'),
@@ -267,7 +284,6 @@
                 headerActionContainer: document.getElementById('header-action-container'),
                 headerActionButton: document.getElementById('header-action-button'),
                 deployButton: document.getElementById('deploy-button'),
-                // START: New UI elements for repo browser
                 repoBrowserModal: document.getElementById('repo-browser-modal'),
                 closeRepoBrowserModal: document.getElementById('close-repo-browser-modal'),
                 repoBrowserTitle: document.getElementById('repo-browser-title'),
@@ -277,7 +293,6 @@
                 repoFileContent: document.getElementById('repo-file-content'),
                 backToFileList: document.getElementById('back-to-file-list'),
                 repoBrowserLoader: document.getElementById('repo-browser-loader'),
-                // END: New UI elements
             };
 
             let attachedImageUrl = null;
@@ -287,12 +302,10 @@
             let isGenerating = false;
             let versionToRestore = null;
             let countdownInterval = null;
-            // START: New state for repo browser
             let currentRepo = {
                 fullName: null,
                 path: ''
             };
-            // END: New state
 
             tg.ready();
             tg.expand();
@@ -456,7 +469,17 @@
             };
 
             const callGeminiAPI = async (prompt) => {
-                const apiKey = ""; 
+                const apiKey = GEMINI_API_KEY;
+                if (!apiKey) {
+                    const errorMsg = "Ошибка конфигурации: Gemini API ключ не найден. Пожалуйста, добавьте его в константу GEMINI_API_KEY в коде.";
+                    console.error(errorMsg);
+                    addMessage(`❌ ${errorMsg}`, 'bot');
+                    isGenerating = false;
+                    updateInputState();
+                    closeModal();
+                    return { "error.html": `<!-- ${errorMsg} -->` };
+                }
+                
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                 
                 const payload = { 
@@ -529,6 +552,14 @@
                 ui.aiStatusContainer.appendChild(apiStatusDiv);
 
                 const generatedCodeObject = await callGeminiAPI(prompt);
+                
+                // Проверяем, вернулась ли ошибка из callGeminiAPI
+                if (generatedCodeObject['error.html']) {
+                    textSpan.textContent = 'Ошибка конфигурации API.';
+                    iconSpan.innerHTML = '❌';
+                    return; // Прерываем процесс
+                }
+
                 textSpan.textContent = 'Получение ответа...';
                 iconSpan.innerHTML = '✅';
                 
@@ -669,7 +700,6 @@
                 openModal(ui.profileModal);
             };
 
-            // START: MODIFIED renderRepoList and new Repo Browser functions
             const renderRepoList = () => {
                 ui.repoList.innerHTML = '';
                 const userRepos = Object.values(chats).filter(chat => chat.repoFullName);
@@ -719,9 +749,13 @@
             };
 
             const openRepoBrowser = (repoFullName) => {
+                if (!GITHUB_TOKEN) {
+                    addMessage('❌ Ошибка конфигурации: GitHub токен не указан. Невозможно просмотреть репозиторий.', 'bot');
+                    closeModal();
+                    return;
+                }
                 currentRepo.fullName = repoFullName;
                 ui.repoBrowserTitle.textContent = repoFullName.split('/')[1];
-                // Reset view
                 ui.repoFileContentView.classList.add('hidden');
                 ui.repoFileListView.classList.remove('hidden');
                 fetchRepoContents('');
@@ -834,7 +868,6 @@
                     showRepoLoader(false);
                 }
             };
-            // END: MODIFIED renderRepoList and new Repo Browser functions
 
             const createNewChat = () => {
                 const newId = Date.now().toString();
@@ -959,6 +992,10 @@
             };
             
             const createGitHubRepo = async (repoName, codeObject) => {
+                if (!GITHUB_TOKEN) {
+                    addMessage(`❌ Ошибка конфигурации: GitHub токен не указан. Пожалуйста, добавьте его в константу GITHUB_TOKEN в коде.`, 'bot');
+                    return;
+                }
                 const chat = chats[activeChatId];
                 addMessage(`Создаю репозиторий "${repoName}" на GitHub...`, 'bot');
                 try {
@@ -1040,6 +1077,10 @@
             };
             
             const deployToNetlify = async () => {
+                if (!NETLIFY_TOKEN) {
+                    addMessage(`❌ Ошибка конфигурации: Netlify токен не указан. Пожалуйста, добавьте его в константу NETLIFY_TOKEN в коде.`, 'bot');
+                    return;
+                }
                 const chat = chats[activeChatId];
                 if (!chat || !chat.repoFullName) {
                     addMessage('Ошибка: не найден репозиторий для деплоя.', 'bot');
@@ -1159,13 +1200,11 @@
                 });
                 if(ui.deployButton) ui.deployButton.addEventListener('click', deployToNetlify);
                 
-                // START: New Event Listeners
                 if(ui.closeRepoBrowserModal) ui.closeRepoBrowserModal.addEventListener('click', closeModal);
                 if(ui.backToFileList) ui.backToFileList.addEventListener('click', () => {
                     ui.repoFileContentView.classList.add('hidden');
                     ui.repoFileListView.classList.remove('hidden');
                 });
-                // END: New Event Listeners
 
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.repoBrowserModal].forEach(modal => {
                     if (modal) {

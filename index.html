@@ -247,40 +247,27 @@
             tg.ready();
             tg.expand();
             
-            // --- Начало изменений: Принудительное включение темной темы ---
-            // Эта функция жестко задает цвета для темной темы,
-            // игнорируя настройки темы пользователя в Telegram.
             const forceDarkTheme = () => {
-                // 1. Устанавливаем цвета для нативных элементов UI Telegram (шапка, фон за веб-приложением)
-                // Это важно для целостного вида.
-                tg.setHeaderColor('#1f2937'); // Цвет шапки (темно-серый)
-                tg.setBackgroundColor('#111827'); // Цвет фона (почти черный)
+                tg.setHeaderColor('#1f2937');
+                tg.setBackgroundColor('#111827');
 
-                // 2. Устанавливаем CSS переменные для нашего веб-приложения
                 const root = document.documentElement;
                 const darkThemeCssVars = {
                     '--tg-theme-bg-color': '#111827',
                     '--tg-theme-text-color': '#ffffff',
                     '--tg-theme-hint-color': '#9ca3af',
                     '--tg-theme-secondary-bg-color': '#1f2937',
-                    '--tg-theme-header-bg-color': '#1f2937', // Дублируем для надежности
+                    '--tg-theme-header-bg-color': '#1f2937',
                     '--tg-theme-button-color': '#8774e1',
                     '--tg-theme-button-text-color': '#ffffff',
                 };
 
-                // Применяем каждый цвет к root элементу
                 Object.entries(darkThemeCssVars).forEach(([key, value]) => {
                     root.style.setProperty(key, value);
                 });
             };
 
-            // Применяем нашу темную тему один раз при загрузке приложения.
             forceDarkTheme();
-
-            // Мы убираем слушатель событий 'themeChanged', чтобы тема,
-            // установленная пользователем в Telegram, не переопределяла нашу.
-            // tg.onEvent('themeChanged', applyTheme);
-            // --- Конец изменений ---
 
             const user = tg.initDataUnsafe.user;
             if (user && user.first_name) {
@@ -416,7 +403,9 @@
                 if(ui.messageInput) ui.messageInput.disabled = !isEnabled;
                 if(ui.sendButton) ui.sendButton.disabled = !isEnabled;
                 
-                if (hasContent && isEnabled) tg.MainButton.show(); else tg.MainButton.hide();
+                // --- Начало изменений: Удаление основной кнопки ---
+                // if (hasContent && isEnabled) tg.MainButton.show(); else tg.MainButton.hide();
+                // --- Конец изменений ---
             };
 
             const callGeminiAPI = async (prompt) => {
@@ -1010,8 +999,10 @@
                 createNewChat();
                 setupEventListeners();
                 updateInputState();
-                tg.MainButton.setText('Отправить');
-                tg.MainButton.onClick(sendMessage);
+                // --- Начало изменений: Удаление основной кнопки ---
+                // tg.MainButton.setText('Отправить');
+                // tg.MainButton.onClick(sendMessage);
+                // --- Конец изменений ---
             };
 
             initApp();

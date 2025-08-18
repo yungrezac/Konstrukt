@@ -67,10 +67,13 @@
         </header>
 
         <main id="chat-area" class="chat-area flex flex-col">
-             <div id="initial-greeting" class="m-auto text-center">
-                  <h2 class="text-3xl font-medium text-blue-400">Здравствуйте,</h2>
-                  <p id="greeting-name" class="text-base" style="color: var(--tg-hint-color);"></p>
+            <!-- Начало изменений: Обновленное приветствие -->
+             <div id="initial-greeting" class="m-auto text-center px-4">
+                  <h2 id="greeting-text" class="text-4xl font-extrabold bg-gradient-to-r from-purple-500 via-black to-gray-600 text-transparent bg-clip-text leading-tight">
+                      <!-- Содержимое будет вставлено из JS -->
+                  </h2>
              </div>
+            <!-- Конец изменений -->
         </main>
         
         <div id="loader" class="hidden p-3"><div class="message bot-message loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
@@ -111,7 +114,9 @@
     
     <!-- Modals & Popups -->
     <div id="modal-overlay" class="modal-overlay"></div>
-    <div id="history-modal" class="modal" style="height: 80%;">
+    <!-- Начало изменений: Высота модальных окон 90% -->
+    <div id="history-modal" class="modal" style="height: 90%;">
+    <!-- Конец изменений -->
         <div class="modal-handle"></div>
         <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
             <h2 class="text-lg font-bold">История</h2>
@@ -119,7 +124,9 @@
         </div>
         <div id="chat-list" class="overflow-y-auto p-3"></div>
     </div>
-    <div id="profile-modal" class="modal" style="max-height: 90%;">
+    <!-- Начало изменений: Высота модальных окон 90% -->
+    <div id="profile-modal" class="modal" style="height: 90%;">
+    <!-- Конец изменений -->
         <div class="modal-handle"></div>
         <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
             <h2 class="text-lg font-bold">Профиль</h2>
@@ -200,7 +207,9 @@
                 chatArea: document.getElementById('chat-area'),
                 loader: document.getElementById('loader'),
                 initialGreeting: document.getElementById('initial-greeting'),
-                greetingName: document.getElementById('greeting-name'),
+                // Начало изменений: Обновленный элемент приветствия
+                greetingText: document.getElementById('greeting-text'),
+                // Конец изменений
                 userPhoto: document.getElementById('user-photo'),
                 settingsButton: document.getElementById('settings-button'),
                 settingsPopup: document.getElementById('settings-popup'),
@@ -217,7 +226,7 @@
                 profileModalName: document.getElementById('profile-modal-name'),
                 profileModalUsername: document.getElementById('profile-modal-username'),
                 profileModalId: document.getElementById('profile-modal-id'),
-                repoList: document.getElementById('repo-list'), // NEW
+                repoList: document.getElementById('repo-list'),
                 codeModal: document.getElementById('code-modal'),
                 closeCodeModal: document.getElementById('close-code-modal'),
                 codeTabs: document.getElementById('code-tabs'),
@@ -237,7 +246,7 @@
             };
 
             let attachedImageUrl = null;
-            let currentMode = null; // Default mode is now null
+            let currentMode = null;
             let chats = {};
             let activeChatId = null;
             let isGenerating = false;
@@ -271,7 +280,11 @@
 
             const user = tg.initDataUnsafe.user;
             if (user && user.first_name) {
-                if (ui.greetingName) ui.greetingName.textContent = user.first_name;
+                // Начало изменений: Установка текста приветствия
+                if (ui.greetingText) {
+                    ui.greetingText.innerHTML = `Здравствуйте, ${user.first_name},<br>какое приложение хотите создать?`;
+                }
+                // Конец изменений
                 if (ui.userPhoto) ui.userPhoto.src = user.photo_url || `https://placehold.co/40x40/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
             }
             
@@ -283,6 +296,7 @@
             const addMessage = (text, sender, imageUrl = null, codeVersion = null) => {
                 const activeChat = chats[activeChatId];
                 if (!activeChat) return;
+                // Эта строка отвечает за скрытие приветствия после первого сообщения
                 if(ui.initialGreeting) ui.initialGreeting.style.display = 'none';
                 
                 const message = { id: Date.now(), text, sender, imageUrl, codeVersion };
@@ -299,7 +313,6 @@
                     activeChat.repoName = `${englishTitle.substring(0, 50)}-${Date.now().toString().slice(-5)}`;
                 }
                 renderMessages();
-                 // Don't simulate bot response for canvas/react modes
                 if (sender === 'user' && !currentMode) {
                     simulateBotResponse(`Это симуляция ответа на: "${text}".`);
                 }
@@ -309,7 +322,8 @@
                 const activeChat = chats[activeChatId];
                 ui.chatArea.innerHTML = '';
                 if (!activeChat || activeChat.messages.length === 0) {
-                    if(ui.initialGreeting) ui.initialGreeting.style.display = 'block';
+                    // Эта строка отвечает за показ приветствия, если в чате нет сообщений
+                    if(ui.initialGreeting) ui.initialGreeting.style.display = 'flex';
                     return;
                 }
                 if(ui.initialGreeting) ui.initialGreeting.style.display = 'none';
@@ -402,10 +416,6 @@
                 if(ui.sendButton) ui.sendButton.classList.toggle('hidden', !hasContent);
                 if(ui.messageInput) ui.messageInput.disabled = !isEnabled;
                 if(ui.sendButton) ui.sendButton.disabled = !isEnabled;
-                
-                // --- Начало изменений: Удаление основной кнопки ---
-                // if (hasContent && isEnabled) tg.MainButton.show(); else tg.MainButton.hide();
-                // --- Конец изменений ---
             };
 
             const callGeminiAPI = async (prompt) => {
@@ -999,10 +1009,6 @@
                 createNewChat();
                 setupEventListeners();
                 updateInputState();
-                // --- Начало изменений: Удаление основной кнопки ---
-                // tg.MainButton.setText('Отправить');
-                // tg.MainButton.onClick(sendMessage);
-                // --- Конец изменений ---
             };
 
             initApp();

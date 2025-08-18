@@ -9,15 +9,14 @@
     <!-- Подключение Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* --- Адаптация под тему Telegram --- */
         :root {
-            --tg-bg-color: var(--tg-theme-bg-color);
-            --tg-text-color: var(--tg-theme-text-color);
-            --tg-hint-color: var(--tg-theme-hint-color);
-            --tg-secondary-bg-color: var(--tg-theme-secondary-bg-color);
-            --tg-header-bg-color: var(--tg-theme-secondary-bg-color);
-            --tg-button-color: var(--tg-theme-button-color);
-            --tg-button-text-color: var(--tg-theme-button-text-color);
+            --tg-bg-color: var(--tg-theme-bg-color, #111827);
+            --tg-text-color: var(--tg-theme-text-color, #ffffff);
+            --tg-hint-color: var(--tg-theme-hint-color, #9ca3af);
+            --tg-secondary-bg-color: var(--tg-theme-secondary-bg-color, #1f2937);
+            --tg-header-bg-color: var(--tg-theme-secondary-bg-color, #1f2937);
+            --tg-button-color: var(--tg-theme-button-color, #8774e1);
+            --tg-button-text-color: var(--tg-theme-button-text-color, #ffffff);
         }
         /* Уменьшаем базовый размер шрифта */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: var(--tg-text-color); background-color: var(--tg-bg-color); overflow: hidden; font-size: 15px; }
@@ -37,21 +36,16 @@
         @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
         .modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.6); z-index: 40; opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none; }
         .modal-overlay.visible { opacity: 1; pointer-events: auto; }
-        .modal { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background-color: var(--tg-secondary-bg-color); border-top-left-radius: 1rem; border-top-right-radius: 1rem; transform: translateY(100%); transition: transform 0.3s ease-in-out; display: flex; flex-direction: column; }
+        .modal { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background-color: var(--tg-secondary-bg-color, #1f2937); border-top-left-radius: 1rem; border-top-right-radius: 1rem; transform: translateY(100%); transition: transform 0.3s ease-in-out; display: flex; flex-direction: column; }
         .modal.visible { transform: translateY(0); }
-        .modal-handle { width: 36px; height: 4px; background-color: var(--tg-hint-color); border-radius: 2px; margin: 6px auto; flex-shrink: 0; }
+        .modal-handle { width: 36px; height: 4px; background-color: var(--tg-hint-color, #9ca3af); border-radius: 2px; margin: 6px auto; flex-shrink: 0; }
         #code-modal .tab-button.active { border-bottom-color: var(--tg-button-color); color: var(--tg-text-color); }
         #code-output { white-space: pre-wrap; word-wrap: break-word; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; } /* Уменьшен шрифт кода */
         #preview-frame { flex-grow: 1; border: none; background-color: #fff; }
-        /* Адаптивный цвет фона для попапа настроек */
-        #settings-popup { position: absolute; bottom: 120px; left: 0.75rem; width: calc(100% - 1.5rem); max-width: 280px; background-color: var(--tg-secondary-bg-color); border: 1px solid var(--tg-hint-color); border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 100; transform: translateY(10px) scale(0.95); opacity: 0; transition: transform 0.2s ease-out, opacity 0.2s ease-out; pointer-events: none; }
+        #settings-popup { position: absolute; bottom: 120px; left: 0.75rem; width: calc(100% - 1.5rem); max-width: 280px; background-color: #2c3542; border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 100; transform: translateY(10px) scale(0.95); opacity: 0; transition: transform 0.2s ease-out, opacity 0.2s ease-out; pointer-events: none; }
         #settings-popup.visible { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
-        .spinner { border: 2px solid var(--tg-hint-color); border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
+        .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        /* Адаптивные цвета для кнопок и разделителей */
-        .themed-border { border-color: var(--tg-hint-color); }
-        .themed-bg-hover:hover { background-color: var(--tg-secondary-bg-color); }
-        .themed-button-secondary { background-color: var(--tg-secondary-bg-color); }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -59,14 +53,14 @@
 
     <div id="app" class="app-container">
         <!-- Уменьшены отступы и размеры элементов в шапке -->
-        <header class="flex items-center justify-between p-2 flex-shrink-0 themed-border border-b" style="background-color: var(--tg-header-bg-color);">
+        <header class="flex items-center justify-between p-2 flex-shrink-0" style="background-color: var(--tg-header-bg-color);">
             <div class="flex items-center space-x-2">
                 <svg id="menu-button" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
                 <h1 class="text-lg font-semibold">Devtol</h1>
             </div>
             <div class="flex items-center space-x-2">
                 <div id="header-action-container">
-                     <button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full themed-button-secondary">PRO</button>
+                     <button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">PRO</button>
                 </div>
                 <img id="user-photo" src="https://placehold.co/40x40/1a202c/ffffff?text=U" alt="User Avatar" class="w-7 h-7 rounded-full cursor-pointer">
             </div>
@@ -82,21 +76,21 @@
         <div id="loader" class="hidden p-3"><div class="message bot-message loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
 
         <!-- Уменьшены отступы и размеры элементов в футере -->
-        <footer class="p-2 flex-shrink-0 relative themed-border border-t">
+        <footer class="p-2 flex-shrink-0 relative">
             <div class="flex items-center mb-1.5 px-1">
-                <button id="attach-button" class="p-1.5 rounded-full themed-bg-hover flex-shrink-0">
+                <button id="attach-button" class="p-1.5 rounded-full hover:bg-gray-700 flex-shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-hint-color);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                 </button>
-                <button id="settings-button" class="p-1.5 rounded-full themed-bg-hover flex-shrink-0">
+                <button id="settings-button" class="p-1.5 rounded-full hover:bg-gray-700 flex-shrink-0">
                     <svg class="w-5 h-5" style="color: var(--tg-hint-color);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
                 </button>
-                <div id="mode-tag" class="hidden items-center themed-button-secondary rounded-lg px-2 py-0.5 ml-2 text-xs">
+                <div id="mode-tag" class="hidden items-center bg-gray-700 rounded-lg px-2 py-0.5 ml-2 text-xs">
                     <span id="mode-tag-text"></span>
                     <button id="remove-mode-tag" class="ml-1.5 text-gray-400 hover:text-white font-bold text-base">&times;</button>
                 </div>
             </div>
             
-            <div id="image-preview-container" class="hidden mb-2 p-1.5 themed-button-secondary rounded-lg relative w-20">
+            <div id="image-preview-container" class="hidden mb-2 p-1.5 bg-gray-700 rounded-lg relative w-20">
                 <img id="image-preview" class="rounded w-full h-full object-cover" src="">
                 <button id="remove-image-button" class="absolute -top-1.5 -right-1.5 bg-gray-800 rounded-full w-5 h-5 flex items-center justify-center text-white text-xs">&times;</button>
             </div>
@@ -104,10 +98,10 @@
             <div class="rounded-xl p-1.5 flex items-center" style="background-color: var(--tg-secondary-bg-color);">
                 <input id="message-input" type="text" placeholder="Спросить Devtol" class="flex-grow bg-transparent focus:outline-none mx-2 text-sm">
                 <div id="action-button-container" class="flex-shrink-0">
-                    <button id="mic-button" class="p-1.5 rounded-full themed-bg-hover">
+                    <button id="mic-button" class="p-1.5 rounded-full hover:bg-gray-700">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-hint-color);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
                     </button>
-                    <button id="send-button" class="p-1.5 rounded-full themed-bg-hover hidden">
+                    <button id="send-button" class="p-1.5 rounded-full hover:bg-gray-700 hidden">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     </button>
                 </div>
@@ -119,7 +113,7 @@
     <div id="modal-overlay" class="modal-overlay"></div>
     <div id="history-modal" class="modal" style="height: 80%;">
         <div class="modal-handle"></div>
-        <div class="p-3 flex-shrink-0 themed-border border-b flex justify-between items-center">
+        <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
             <h2 class="text-lg font-bold">История</h2>
             <button id="new-chat-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">+ Новый чат</button>
         </div>
@@ -127,7 +121,7 @@
     </div>
     <div id="profile-modal" class="modal" style="max-height: 90%;">
         <div class="modal-handle"></div>
-        <div class="p-3 flex-shrink-0 themed-border border-b flex justify-between items-center">
+        <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
             <h2 class="text-lg font-bold">Профиль</h2>
             <button id="close-profile-modal" class="text-2xl">&times;</button>
         </div>
@@ -135,8 +129,8 @@
             <div class="text-center">
                 <img id="profile-modal-photo" src="https://placehold.co/128x128/1a202c/ffffff?text=U" class="w-24 h-24 rounded-full mx-auto mb-3">
                 <h3 id="profile-modal-name" class="text-xl font-bold">Имя пользователя</h3>
-                <p id="profile-modal-username" class="text-sm" style="color: var(--tg-hint-color);">@username</p>
-                <p id="profile-modal-id" class="text-xs mt-1.5" style="color: var(--tg-hint-color);"></p>
+                <p id="profile-modal-username" class="text-gray-400 text-sm">@username</p>
+                <p id="profile-modal-id" class="text-xs text-gray-500 mt-1.5"></p>
             </div>
             <div id="repositories-section" class="mt-6">
                 <h4 class="text-base font-bold mb-3">Репозитории</h4>
@@ -147,16 +141,16 @@
         </div>
     </div>
     <div id="settings-popup">
-        <ul class="p-1.5 text-sm" style="color: var(--tg-text-color);">
-            <li data-mode="canvas" class="flex items-center p-2 rounded-md themed-bg-hover cursor-pointer"><svg class="w-4 h-4 mr-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Canvas (HTML)</li>
-            <li data-mode="react" class="flex items-center p-2 rounded-md themed-bg-hover cursor-pointer"><svg class="w-4 h-4 mr-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path><circle cx="12" cy="12" r="3"></circle></svg>React</li>
+        <ul class="p-1.5 text-white text-sm">
+            <li data-mode="canvas" class="flex items-center p-2 rounded-md hover:bg-gray-600 cursor-pointer"><svg class="w-4 h-4 mr-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Canvas (HTML)</li>
+            <li data-mode="react" class="flex items-center p-2 rounded-md hover:bg-gray-600 cursor-pointer"><svg class="w-4 h-4 mr-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path><circle cx="12" cy="12" r="3"></circle></svg>React</li>
         </ul>
     </div>
     <div id="code-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
-        <div id="code-modal-header" class="p-3 flex-shrink-0 themed-border border-b flex justify-between items-center">
+        <div id="code-modal-header" class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <div id="code-tabs" class="flex space-x-3 text-sm" style="color: var(--tg-hint-color);">
+                <div id="code-tabs" class="flex space-x-3 text-gray-400 text-sm">
                     <button data-tab="code" class="tab-button font-bold py-1 border-b-2 border-transparent">Код</button>
                     <button data-tab="preview" class="tab-button font-bold py-1 border-b-2 border-transparent">Просмотр</button>
                 </div>
@@ -165,7 +159,7 @@
             <button id="close-code-modal" class="text-2xl">&times;</button>
         </div>
         <div id="code-view" class="overflow-y-auto p-3 flex-grow">
-            <div id="ai-status-container" class="mb-3 space-y-1.5 text-sm" style="color: var(--tg-hint-color);"></div>
+            <div id="ai-status-container" class="mb-3 text-gray-400 space-y-1.5 text-sm"></div>
             <pre><code id="code-output"></code></pre>
         </div>
         <div id="preview-view" class="hidden flex-grow">
@@ -175,9 +169,9 @@
     <div id="confirm-restore-modal" class="modal" style="height: auto; max-height: 40%;">
         <div class="p-4 text-center">
             <h3 class="text-base font-bold mb-2">Восстановить эту версию?</h3>
-            <p class="mb-4 text-sm" style="color: var(--tg-hint-color);">Все более новые версии в этом чате будут удалены.</p>
+            <p class="text-gray-400 mb-4 text-sm">Все более новые версии в этом чате будут удалены.</p>
             <div class="flex justify-center space-x-3">
-                <button id="cancel-restore-button" class="px-5 py-2 rounded-lg themed-button-secondary text-sm">Нет</button>
+                <button id="cancel-restore-button" class="px-5 py-2 rounded-lg bg-gray-600 text-sm">Нет</button>
                 <button id="confirm-restore-button" class="px-5 py-2 rounded-lg text-sm" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Да</button>
             </div>
         </div>
@@ -223,7 +217,7 @@
                 profileModalName: document.getElementById('profile-modal-name'),
                 profileModalUsername: document.getElementById('profile-modal-username'),
                 profileModalId: document.getElementById('profile-modal-id'),
-                repoList: document.getElementById('repo-list'),
+                repoList: document.getElementById('repo-list'), // NEW
                 codeModal: document.getElementById('code-modal'),
                 closeCodeModal: document.getElementById('close-code-modal'),
                 codeTabs: document.getElementById('code-tabs'),
@@ -243,7 +237,7 @@
             };
 
             let attachedImageUrl = null;
-            let currentMode = null;
+            let currentMode = null; // Default mode is now null
             let chats = {};
             let activeChatId = null;
             let isGenerating = false;
@@ -252,15 +246,41 @@
 
             tg.ready();
             tg.expand();
-            const applyTheme = () => {
+            
+            // --- Начало изменений: Принудительное включение темной темы ---
+            // Эта функция жестко задает цвета для темной темы,
+            // игнорируя настройки темы пользователя в Telegram.
+            const forceDarkTheme = () => {
+                // 1. Устанавливаем цвета для нативных элементов UI Telegram (шапка, фон за веб-приложением)
+                // Это важно для целостного вида.
+                tg.setHeaderColor('#1f2937'); // Цвет шапки (темно-серый)
+                tg.setBackgroundColor('#111827'); // Цвет фона (почти черный)
+
+                // 2. Устанавливаем CSS переменные для нашего веб-приложения
                 const root = document.documentElement;
-                Object.entries(tg.themeParams).forEach(([key, value]) => {
-                    if (key.endsWith('_color')) root.style.setProperty(`--tg-theme-${key.replace(/_/g, '-')}`, value);
+                const darkThemeCssVars = {
+                    '--tg-theme-bg-color': '#111827',
+                    '--tg-theme-text-color': '#ffffff',
+                    '--tg-theme-hint-color': '#9ca3af',
+                    '--tg-theme-secondary-bg-color': '#1f2937',
+                    '--tg-theme-header-bg-color': '#1f2937', // Дублируем для надежности
+                    '--tg-theme-button-color': '#8774e1',
+                    '--tg-theme-button-text-color': '#ffffff',
+                };
+
+                // Применяем каждый цвет к root элементу
+                Object.entries(darkThemeCssVars).forEach(([key, value]) => {
+                    root.style.setProperty(key, value);
                 });
-                root.style.setProperty('--tg-theme-header-bg-color', tg.themeParams.secondary_bg_color || tg.themeParams.bg_color);
             };
-            applyTheme();
-            tg.onEvent('themeChanged', applyTheme);
+
+            // Применяем нашу темную тему один раз при загрузке приложения.
+            forceDarkTheme();
+
+            // Мы убираем слушатель событий 'themeChanged', чтобы тема,
+            // установленная пользователем в Telegram, не переопределяла нашу.
+            // tg.onEvent('themeChanged', applyTheme);
+            // --- Конец изменений ---
 
             const user = tg.initDataUnsafe.user;
             if (user && user.first_name) {
@@ -292,6 +312,7 @@
                     activeChat.repoName = `${englishTitle.substring(0, 50)}-${Date.now().toString().slice(-5)}`;
                 }
                 renderMessages();
+                 // Don't simulate bot response for canvas/react modes
                 if (sender === 'user' && !currentMode) {
                     simulateBotResponse(`Это симуляция ответа на: "${text}".`);
                 }
@@ -338,8 +359,8 @@
                             button.style.color = 'var(--tg-button-text-color)';
                             button.onclick = () => openCodeModal(true, msg.codeVersion);
                         } else {
-                            button.style.backgroundColor = 'var(--tg-secondary-bg-color)';
-                            button.style.color = 'var(--tg-text-color)';
+                            button.style.backgroundColor = '#4B5563'; // gray-600
+                            button.style.color = 'white';
                             button.onclick = () => showRestoreConfirmation(msg.codeVersion);
                         }
                         msgContent.appendChild(button);
@@ -394,6 +415,8 @@
                 if(ui.sendButton) ui.sendButton.classList.toggle('hidden', !hasContent);
                 if(ui.messageInput) ui.messageInput.disabled = !isEnabled;
                 if(ui.sendButton) ui.sendButton.disabled = !isEnabled;
+                
+                if (hasContent && isEnabled) tg.MainButton.show(); else tg.MainButton.hide();
             };
 
             const callGeminiAPI = async (prompt) => {
@@ -615,13 +638,13 @@
                 const userRepos = Object.values(chats).filter(chat => chat.repoFullName);
 
                 if (userRepos.length === 0) {
-                    ui.repoList.innerHTML = '<p class="text-center text-sm" style="color: var(--tg-hint-color);">У вас пока нет репозиториев.</p>';
+                    ui.repoList.innerHTML = '<p class="text-gray-500 text-center text-sm">У вас пока нет репозиториев.</p>';
                     return;
                 }
 
                 userRepos.reverse().forEach(chat => {
                     const repoDiv = document.createElement('div');
-                    repoDiv.className = 'p-3 rounded-lg themed-border border';
+                    repoDiv.className = 'p-3 rounded-lg border border-gray-700';
 
                     const repoName = chat.repoFullName.split('/')[1];
                     const repoUrl = `https://github.com/${chat.repoFullName}`;
@@ -629,24 +652,22 @@
                     repoDiv.innerHTML = `
                         <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" style="color: var(--tg-hint-color);" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 3.293a1 1 0 011.414 0L10 11.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
-                                <a href="${repoUrl}" target="_blank" class="font-semibold hover:underline text-sm" style="color: var(--tg-button-color);">${repoName}</a>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 3.293a1 1 0 011.414 0L10 11.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                                <a href="${repoUrl}" target="_blank" class="text-blue-400 font-semibold hover:underline text-sm">${repoName}</a>
                             </div>
-                            <span class="text-xs themed-border border px-1.5 py-0.5 rounded-full" style="color: var(--tg-hint-color);">${chat.mode === 'react' ? 'React' : 'HTML'}</span>
+                            <span class="text-xs text-gray-500 border border-gray-600 px-1.5 py-0.5 rounded-full">${chat.mode === 'react' ? 'React' : 'HTML'}</span>
                         </div>
-                        <p class="text-xs mt-1.5 truncate" style="color: var(--tg-hint-color);">${chat.title}</p>
+                        <p class="text-xs text-gray-400 mt-1.5 truncate">${chat.title}</p>
                         ${chat.deployUrl ? `
-                        <div class="mt-2 pt-2 themed-border border-t flex items-center space-x-2">
+                        <div class="mt-2 pt-2 border-t border-gray-700 flex items-center space-x-2">
                              <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
                              <a href="${chat.deployUrl}" target="_blank" class="text-green-400 text-xs hover:underline">Deployed on Netlify</a>
                         </div>
                         ` : ''}
                     `;
-                    repoDiv.querySelectorAll('a').forEach(a => {
-                        a.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            tg.openLink(e.target.href);
-                        });
+                    repoDiv.querySelector('a').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        tg.openLink(e.target.href);
                     });
                     ui.repoList.appendChild(repoDiv);
                 });
@@ -681,7 +702,7 @@
                 ui.chatList.innerHTML = '';
                 Object.values(chats).reverse().forEach(chat => {
                     const chatDiv = document.createElement('div');
-                    chatDiv.className = 'p-2.5 rounded-lg themed-bg-hover cursor-pointer';
+                    chatDiv.className = 'p-2.5 rounded-lg hover:bg-gray-800 cursor-pointer';
                     const title = document.createElement('p');
                     title.className = 'font-semibold truncate text-sm';
                     title.textContent = chat.title;
@@ -690,8 +711,7 @@
                     const lastMessage = chat.messages.slice().reverse().find(m => m.text);
                     if (lastMessage) {
                         const snippet = document.createElement('p');
-                        snippet.className = 'text-xs truncate';
-                        snippet.style.color = 'var(--tg-hint-color)';
+                        snippet.className = 'text-xs text-gray-400 truncate';
                         snippet.textContent = lastMessage.text;
                         chatDiv.appendChild(snippet);
                     }
@@ -735,9 +755,9 @@
                 if (chat.deployUrl) {
                     buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-500 text-white">Открыть</button>`;
                 } else if (chat.isDeploying) {
-                    buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full flex items-center themed-button-secondary" disabled><div class="spinner mr-1.5"></div>Деплой...</button>`;
+                    buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full flex items-center" style="background-color: var(--tg-secondary-bg-color);" disabled><div class="spinner mr-1.5"></div>Деплой...</button>`;
                 } else {
-                    buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full themed-button-secondary">PRO</button>`;
+                    buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">PRO</button>`;
                 }
                 ui.headerActionContainer.innerHTML = buttonHTML;
 
@@ -990,7 +1010,8 @@
                 createNewChat();
                 setupEventListeners();
                 updateInputState();
-                // Удалены строки, связанные с tg.MainButton
+                tg.MainButton.setText('Отправить');
+                tg.MainButton.onClick(sendMessage);
             };
 
             initApp();

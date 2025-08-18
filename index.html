@@ -8,18 +8,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Подключение Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Начало изменений: Подключение Supabase -->
+    <!-- Подключение Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Конец изменений -->
     <style>
         :root {
-            --tg-bg-color: var(--tg-theme-bg-color, #111827);
-            --tg-text-color: var(--tg-theme-text-color, #ffffff);
-            --tg-hint-color: var(--tg-theme-hint-color, #9ca3af);
-            --tg-secondary-bg-color: var(--tg-theme-secondary-bg-color, #1f2937);
-            --tg-header-bg-color: var(--tg-theme-secondary-bg-color, #1f2937);
-            --tg-button-color: var(--tg-theme-button-color, #8774e1);
-            --tg-button-text-color: var(--tg-theme-button-text-color, #ffffff);
+            --tg-bg-color: #111827;
+            --tg-text-color: #ffffff;
+            --tg-hint-color: #9ca3af;
+            --tg-secondary-bg-color: #1f2937;
+            --tg-header-bg-color: #1f2937;
+            --tg-button-color: #8774e1;
+            --tg-button-text-color: #ffffff;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: var(--tg-text-color); background-color: var(--tg-bg-color); overflow: hidden; font-size: 15px; }
         .app-container { display: flex; flex-direction: column; height: 100vh; }
@@ -68,8 +67,7 @@
 
         <main id="chat-area" class="chat-area flex flex-col">
              <div id="initial-greeting" class="m-auto text-center px-4">
-                  <h2 id="greeting-text" class="text-4xl font-extrabold bg-gradient-to-r from-purple-500 via-black to-gray-600 text-transparent bg-clip-text leading-tight">
-                  </h2>
+                  <h2 id="greeting-text" class="text-4xl font-extrabold bg-gradient-to-r from-purple-500 via-black to-gray-600 text-transparent bg-clip-text leading-tight"></h2>
              </div>
         </main>
         
@@ -133,8 +131,7 @@
             </div>
             <div id="repositories-section" class="mt-6">
                 <h4 class="text-base font-bold mb-3">Репозитории</h4>
-                <div id="repo-list" class="space-y-2">
-                </div>
+                <div id="repo-list" class="space-y-2"></div>
             </div>
         </div>
     </div>
@@ -176,49 +173,17 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const tg = window.Telegram.WebApp;
 
-            // --- Начало изменений: Интеграция Supabase ---
-
-            // SQL для создания таблицы в Supabase.
-            // Выполните этот код один раз в вашем SQL Editor на сайте supabase.com
-            /*
-            CREATE TABLE public.chats (
-                id TEXT PRIMARY KEY,
-                user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-                chat_data JSONB,
-                updated_at TIMESTAMPTZ DEFAULT NOW()
-            );
-
-            -- Эта функция будет автоматически обновлять поле updated_at при изменении чата
-            CREATE OR REPLACE FUNCTION public.handle_chat_update()
-            RETURNS TRIGGER AS $$
-            BEGIN
-                NEW.updated_at = NOW();
-                RETURN NEW;
-            END;
-            $$ LANGUAGE plpgsql;
-
-            -- Этот триггер вызывает функцию выше при каждом обновлении
-            CREATE TRIGGER on_chat_update
-            BEFORE UPDATE ON public.chats
-            FOR EACH ROW
-            EXECUTE PROCEDURE public.handle_chat_update();
-
-            -- ВАЖНО: Как вы и просили, Row Level Security (RLS) выключена.
-            -- Для продакшена НАСТОЯТЕЛЬНО рекомендуется включить RLS и добавить политики
-            -- безопасности, чтобы пользователи могли видеть только свои чаты.
-            */
-
+            // --- Инициализация Supabase ---
             const SUPABASE_URL = 'https://tqptazkadicujedoyykp.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxcHRhemthZGljdWplZG95eWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTU2ODUsImV4cCI6MjA3MTEzMTY4NX0.FaNU-OlO1yEo7e9ADUCbPWvK0RG90_GedlaXUXUM0Eo';
             const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-            // --- Конец изменений ---
-
-            const GITHUB_TOKEN = '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';
-            const NETLIFY_TOKEN = 'nfp_Yedi7SZwd3Urp5EBVSUbkSreq1x2o8xj505e';
+            // --- Константы и переменные состояния ---
+            const GITHUB_TOKEN = 'ghp_YOUR_TOKEN_HERE'; // ЗАМЕНИТЕ СВОИМ ТОКЕНОМ
+            const NETLIFY_TOKEN = 'nfp_YOUR_TOKEN_HERE'; // ЗАМЕНИТЕ СВОИМ ТОКЕНОМ
 
             const ui = {
                 imageInput: document.getElementById('image-input'),
@@ -275,49 +240,22 @@
             let isGenerating = false;
             let versionToRestore = null;
             let countdownInterval = null;
-
-            tg.ready();
-            tg.expand();
-            
-            const forceDarkTheme = () => {
-                tg.setHeaderColor('#1f2937');
-                tg.setBackgroundColor('#111827');
-                const root = document.documentElement;
-                const darkThemeCssVars = {
-                    '--tg-theme-bg-color': '#111827',
-                    '--tg-theme-text-color': '#ffffff',
-                    '--tg-theme-hint-color': '#9ca3af',
-                    '--tg-theme-secondary-bg-color': '#1f2937',
-                    '--tg-theme-header-bg-color': '#1f2937',
-                    '--tg-theme-button-color': '#8774e1',
-                    '--tg-theme-button-text-color': '#ffffff',
-                };
-                Object.entries(darkThemeCssVars).forEach(([key, value]) => root.style.setProperty(key, value));
-            };
-
-            forceDarkTheme();
-
             const user = tg.initDataUnsafe.user;
-            if (user && user.first_name) {
-                if (ui.greetingText) ui.greetingText.innerHTML = `Здравствуйте, ${user.first_name},<br>какое приложение хотите создать?`;
-                if (ui.userPhoto) ui.userPhoto.src = user.photo_url || `https://placehold.co/40x40/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
-            }
 
-            // --- Начало изменений: Функции для работы с Supabase ---
+            // --- Функции для работы с Supabase ---
 
             const signInWithTelegram = async (tgUser) => {
                 if (!tgUser || !tgUser.id) {
                     console.error("Telegram user data is missing.");
-                    alert("Не удалось получить данные пользователя Telegram для авторизации.");
                     return;
                 }
                 const email = `tg${tgUser.id}@telegram.user`;
                 const password = `tg_user_${tgUser.id}`;
 
-                let { error } = await supabase.auth.signInWithPassword({ email, password });
+                let { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
                 if (error && error.message === 'Invalid login credentials') {
-                    let { error: signUpError } = await supabase.auth.signUp({
+                    let { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                         email,
                         password,
                         options: { data: { full_name: tgUser.first_name || 'User' } }
@@ -330,52 +268,59 @@
 
             const saveActiveChat = async () => {
                 if (!activeChatId || !chats[activeChatId]) return;
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
+                const { data: { user: authUser } } = await supabase.auth.getUser();
+                if (!authUser) return;
 
                 const activeChat = chats[activeChatId];
                 const { error } = await supabase
                     .from('chats')
-                    .upsert({ id: activeChat.id, user_id: user.id, chat_data: activeChat }, { onConflict: 'id' });
+                    .upsert({ id: activeChat.id, user_id: authUser.id, chat_data: activeChat }, { onConflict: 'id' });
                 if (error) console.error("Error saving chat:", error);
             };
 
             const loadChatsFromSupabase = async () => {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
+                const { data: { user: authUser } } = await supabase.auth.getUser();
+                if (!authUser) return;
 
-                const { data, error } = await supabase.from('chats').select('chat_data').eq('user_id', user.id).order('updated_at', { ascending: false });
+                const { data, error } = await supabase.from('chats').select('chat_data').eq('user_id', authUser.id).order('updated_at', { ascending: false });
                 if (error) {
                     console.error("Error loading chats:", error);
-                    return;
+                    return false;
                 }
 
-                chats = {};
                 if (data && data.length > 0) {
+                    chats = {};
                     data.forEach(row => {
                         const chat = row.chat_data;
                         chats[chat.id] = chat;
                     });
-                    activeChatId = data[0].chat_data.id; // The most recently updated chat
+                    const latestChatId = data[0].chat_data.id;
+                    switchChat(latestChatId);
+                    return true;
                 }
-
-                if (!activeChatId) {
-                    await createNewChat();
-                } else {
-                    switchChat(activeChatId);
-                }
+                return false;
             };
 
-            // --- Конец изменений ---
+            // --- Основные функции приложения ---
+
+            const createNewChat = async () => {
+                const newId = Date.now().toString();
+                chats[newId] = { id: newId, title: 'Новый чат', mode: null, repoName: null, repoFullName: null, messages: [], codeHistory: [], deployUrl: null, isDeploying: false };
+                switchChat(newId);
+                await saveActiveChat();
+                closeModal();
+            };
+
+            const switchChat = (chatId) => {
+                activeChatId = chatId;
+                renderMessages();
+                updateHeaderButton();
+                closeModal();
+            };
             
-            const transliterate = (text) => {
-                const a = {"Ё":"YO","Й":"I","Ц":"TS","У":"U","К":"K","Е":"E","Н":"N","Г":"G","Ш":"SH","Щ":"SCH","З":"Z","Х":"H","Ъ":"","ё":"yo","й":"i","ц":"ts","у":"u","к":"k","е":"e","н":"n","г":"g","ш":"sh","щ":"sch","з":"z","х":"h","ъ":"","Ф":"F","Ы":"I","В":"V","А":"a","П":"P","Р":"R","О":"O","Л":"L","Д":"D","Ж":"ZH","Э":"E","ф":"f","ы":"i","в":"v","а":"a","п":"p","р":"r","о":"o","л":"l","д":"d","ж":"zh","э":"e","Я":"Ya","Ч":"CH","С":"S","М":"M","И":"I","Т":"T","Ь":"","Б":"B","Ю":"YU","я":"ya","ч":"ch","с":"s","м":"m","и":"i","т":"t","ь":"","б":"b","ю":"yu"};
-                return text.split('').map(char => a[char] || char).join('');
-            };
-
             const addMessage = async (text, sender, imageUrl = null, codeVersion = null) => {
+                if (!activeChatId) return;
                 const activeChat = chats[activeChatId];
-                if (!activeChat) return;
                 if(ui.initialGreeting) ui.initialGreeting.style.display = 'none';
                 
                 const message = { id: Date.now(), text, sender, imageUrl, codeVersion };
@@ -387,13 +332,14 @@
                     activeChat.repoName = `${englishTitle.substring(0, 50)}-${Date.now().toString().slice(-5)}`;
                 }
                 renderMessages();
-                await saveActiveChat(); // Сохраняем после добавления сообщения
+                await saveActiveChat();
                 if (sender === 'user' && !currentMode) {
                     simulateBotResponse(`Это симуляция ответа на: "${text}".`);
                 }
             };
 
             const renderMessages = () => {
+                if (!activeChatId) return;
                 const activeChat = chats[activeChatId];
                 ui.chatArea.innerHTML = '';
                 if (!activeChat || activeChat.messages.length === 0) {
@@ -445,16 +391,7 @@
                 });
                 ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
             };
-
-            const simulateBotResponse = (userInput) => {
-                ui.loader.classList.remove('hidden');
-                ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
-                setTimeout(() => {
-                    ui.loader.classList.add('hidden');
-                    addMessage(userInput, 'bot');
-                }, 1500);
-            };
-
+            
             const sendMessage = () => {
                 if (isGenerating) return;
                 const text = ui.messageInput.value.trim();
@@ -473,6 +410,32 @@
                     updateInputState();
                     tg.HapticFeedback.impactOccurred('light');
                 }
+            };
+
+            // --- Вспомогательные функции, UI и API ---
+
+            const setupUI = () => {
+                tg.ready();
+                tg.expand();
+                forceDarkTheme();
+                if (user && user.first_name) {
+                    if (ui.greetingText) ui.greetingText.innerHTML = `Здравствуйте, ${user.first_name},<br>какое приложение хотите создать?`;
+                    if (ui.userPhoto) ui.userPhoto.src = user.photo_url || `https://placehold.co/40x40/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
+                }
+            };
+            
+            const transliterate = (text) => {
+                const a = {"Ё":"YO","Й":"I","Ц":"TS","У":"U","К":"K","Е":"E","Н":"N","Г":"G","Ш":"SH","Щ":"SCH","З":"Z","Х":"H","Ъ":"","ё":"yo","й":"i","ц":"ts","у":"u","к":"k","е":"e","н":"n","г":"g","ш":"sh","щ":"sch","з":"z","х":"h","ъ":"","Ф":"F","Ы":"I","В":"V","А":"a","П":"P","Р":"R","О":"O","Л":"L","Д":"D","Ж":"ZH","Э":"E","ф":"f","ы":"i","в":"v","а":"a","п":"p","р":"r","о":"o","л":"l","д":"d","ж":"zh","э":"e","Я":"Ya","Ч":"CH","С":"S","М":"M","И":"I","Т":"T","Ь":"","Б":"B","Ю":"YU","я":"ya","ч":"ch","с":"s","м":"m","и":"i","т":"t","ь":"","б":"b","ю":"yu"};
+                return text.split('').map(char => a[char] || char).join('');
+            };
+
+            const simulateBotResponse = (userInput) => {
+                ui.loader.classList.remove('hidden');
+                ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
+                setTimeout(() => {
+                    ui.loader.classList.add('hidden');
+                    addMessage(userInput, 'bot');
+                }, 1500);
             };
             
             const resetImageAttachment = () => {
@@ -597,7 +560,7 @@
                         ui.codeView.scrollTop = ui.codeView.scrollHeight;
                     } else {
                         clearInterval(interval);
-                        await saveActiveChat(); // Сохраняем после генерации кода
+                        await saveActiveChat();
                         setTimeout(async () => {
                             if (activeChat.mode !== 'react') switchTab('preview');
                             await addMessage("Приложение сгенерировано.", 'bot', null, newVersion);
@@ -678,21 +641,6 @@
                 });
             };
 
-            const createNewChat = async () => {
-                const newId = Date.now().toString();
-                chats[newId] = { id: newId, title: 'Новый чат', mode: null, repoName: null, repoFullName: null, messages: [], codeHistory: [], deployUrl: null, isDeploying: false };
-                switchChat(newId);
-                await saveActiveChat(); // Сохраняем новый чат
-                closeModal();
-            };
-
-            const switchChat = (chatId) => {
-                activeChatId = chatId;
-                renderMessages();
-                updateHeaderButton();
-                closeModal();
-            };
-
             const renderChatList = () => {
                 if(!ui.chatList) return;
                 ui.chatList.innerHTML = '';
@@ -730,7 +678,7 @@
                 const lastValidMessageIndex = activeChat.messages.map(m => m.codeVersion).lastIndexOf(versionToRestore);
                 if(lastValidMessageIndex > -1) activeChat.messages.splice(lastValidMessageIndex + 1);
                 renderMessages();
-                await saveActiveChat(); // Сохраняем после восстановления
+                await saveActiveChat();
                 closeModal();
                 versionToRestore = null;
             };
@@ -950,10 +898,15 @@
                 });
             };
 
+            // --- Главная функция инициализации ---
             const initApp = async () => {
+                setupUI();
                 setupEventListeners();
                 await signInWithTelegram(user);
-                await loadChatsFromSupabase();
+                const chatsLoaded = await loadChatsFromSupabase();
+                if (!chatsLoaded) {
+                    await createNewChat();
+                }
                 updateInputState();
             };
 

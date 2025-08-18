@@ -8,23 +8,23 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Подключение Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Подключение Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --tg-bg-color: #111827;
-            --tg-text-color: #ffffff;
-            --tg-hint-color: #9ca3af;
-            --tg-secondary-bg-color: #1f2937;
-            --tg-header-bg-color: #1f2937;
-            --tg-button-color: #8774e1;
-            --tg-button-text-color: #ffffff;
+            --tg-bg-color: var(--tg-theme-bg-color, #111827);
+            --tg-text-color: var(--tg-theme-text-color, #ffffff);
+            --tg-hint-color: var(--tg-theme-hint-color, #9ca3af);
+            --tg-secondary-bg-color: var(--tg-theme-secondary-bg-color, #1f2937);
+            --tg-header-bg-color: var(--tg-theme-secondary-bg-color, #1f2937);
+            --tg-button-color: var(--tg-theme-button-color, #8774e1);
+            --tg-button-text-color: var(--tg-theme-button-text-color, #ffffff);
         }
+        /* Уменьшаем базовый размер шрифта */
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: var(--tg-text-color); background-color: var(--tg-bg-color); overflow: hidden; font-size: 15px; }
         .app-container { display: flex; flex-direction: column; height: 100vh; }
-        .chat-area { flex-grow: 1; overflow-y: auto; padding: 0.75rem; }
+        .chat-area { flex-grow: 1; overflow-y: auto; padding: 0.75rem; } /* Уменьшен padding */
         .message-container { animation: message-appear 0.3s ease-out; }
         @keyframes message-appear { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Уменьшены padding и margin сообщений */
         .message { max-width: 80%; padding: 0.4rem 0.8rem; border-radius: 1.15rem; margin-bottom: 0.5rem; word-wrap: break-word; line-height: 1.4; }
         .user-message { background-color: var(--tg-button-color); color: var(--tg-button-text-color); align-self: flex-end; margin-left: auto; border-bottom-right-radius: 0.25rem; }
         .bot-message { background-color: var(--tg-secondary-bg-color); align-self: flex-start; border-bottom-left-radius: 0.25rem; }
@@ -40,7 +40,7 @@
         .modal.visible { transform: translateY(0); }
         .modal-handle { width: 36px; height: 4px; background-color: var(--tg-hint-color, #9ca3af); border-radius: 2px; margin: 6px auto; flex-shrink: 0; }
         #code-modal .tab-button.active { border-bottom-color: var(--tg-button-color); color: var(--tg-text-color); }
-        #code-output { white-space: pre-wrap; word-wrap: break-word; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; }
+        #code-output { white-space: pre-wrap; word-wrap: break-word; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; } /* Уменьшен шрифт кода */
         #preview-frame { flex-grow: 1; border: none; background-color: #fff; }
         #settings-popup { position: absolute; bottom: 120px; left: 0.75rem; width: calc(100% - 1.5rem); max-width: 280px; background-color: #2c3542; border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 100; transform: translateY(10px) scale(0.95); opacity: 0; transition: transform 0.2s ease-out, opacity 0.2s ease-out; pointer-events: none; }
         #settings-popup.visible { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
@@ -52,6 +52,7 @@
     <input type="file" id="image-input" accept="image/*" class="hidden">
 
     <div id="app" class="app-container">
+        <!-- Уменьшены отступы и размеры элементов в шапке -->
         <header class="flex items-center justify-between p-2 flex-shrink-0" style="background-color: var(--tg-header-bg-color);">
             <div class="flex items-center space-x-2">
                 <svg id="menu-button" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
@@ -66,13 +67,18 @@
         </header>
 
         <main id="chat-area" class="chat-area flex flex-col">
+            <!-- Начало изменений: Обновленное приветствие -->
              <div id="initial-greeting" class="m-auto text-center px-4">
-                  <h2 id="greeting-text" class="text-4xl font-extrabold bg-gradient-to-r from-purple-500 via-black to-gray-600 text-transparent bg-clip-text leading-tight"></h2>
+                  <h2 id="greeting-text" class="text-4xl font-extrabold bg-gradient-to-r from-purple-500 via-black to-gray-600 text-transparent bg-clip-text leading-tight">
+                      <!-- Содержимое будет вставлено из JS -->
+                  </h2>
              </div>
+            <!-- Конец изменений -->
         </main>
         
         <div id="loader" class="hidden p-3"><div class="message bot-message loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
 
+        <!-- Уменьшены отступы и размеры элементов в футере -->
         <footer class="p-2 flex-shrink-0 relative">
             <div class="flex items-center mb-1.5 px-1">
                 <button id="attach-button" class="p-1.5 rounded-full hover:bg-gray-700 flex-shrink-0">
@@ -108,7 +114,9 @@
     
     <!-- Modals & Popups -->
     <div id="modal-overlay" class="modal-overlay"></div>
+    <!-- Начало изменений: Высота модальных окон 90% -->
     <div id="history-modal" class="modal" style="height: 90%;">
+    <!-- Конец изменений -->
         <div class="modal-handle"></div>
         <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
             <h2 class="text-lg font-bold">История</h2>
@@ -116,7 +124,9 @@
         </div>
         <div id="chat-list" class="overflow-y-auto p-3"></div>
     </div>
+    <!-- Начало изменений: Высота модальных окон 90% -->
     <div id="profile-modal" class="modal" style="height: 90%;">
+    <!-- Конец изменений -->
         <div class="modal-handle"></div>
         <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
             <h2 class="text-lg font-bold">Профиль</h2>
@@ -131,7 +141,9 @@
             </div>
             <div id="repositories-section" class="mt-6">
                 <h4 class="text-base font-bold mb-3">Репозитории</h4>
-                <div id="repo-list" class="space-y-2"></div>
+                <div id="repo-list" class="space-y-2">
+                    <!-- Repo items will be injected here -->
+                </div>
             </div>
         </div>
     </div>
@@ -173,17 +185,15 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener('DOMContentLoaded', () => {
             const tg = window.Telegram.WebApp;
 
-            // --- Инициализация Supabase ---
-            const SUPABASE_URL = 'https://tqptazkadicujedoyykp.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxcHRhemthZGljdWplZG95eWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTU2ODUsImV4cCI6MjA3MTEzMTY4NX0.FaNU-OlO1yEo7e9ADUCbPWvK0RG90_GedlaXUXUM0Eo';
-            const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-            // --- Константы и переменные состояния ---
-            const GITHUB_TOKEN = 'ghp_YOUR_TOKEN_HERE'; // ЗАМЕНИТЕ СВОИМ ТОКЕНОМ
-            const NETLIFY_TOKEN = 'nfp_YOUR_TOKEN_HERE'; // ЗАМЕНИТЕ СВОИМ ТОКЕНОМ
+            // --- ВАЖНО: ХРАНЕНИЕ ТОКЕНОВ НА КЛИЕНТЕ НЕБЕЗОПАСНО ---
+            // Этот код предназначен только для демонстрации.
+            // В реальном приложении эти ключи и вся логика работы с API
+            // должны находиться на вашем сервере (backend).
+            const GITHUB_TOKEN = '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'; // ЗАМЕНИТЕ СВОИМ ТОКЕНОМ
+            const NETLIFY_TOKEN = 'nfp_Yedi7SZwd3Urp5EBVSUbkSreq1x2o8xj505e'; // ЗАМЕНИТЕ СВОИМ ТОКЕНОМ
 
             const ui = {
                 imageInput: document.getElementById('image-input'),
@@ -197,7 +207,9 @@
                 chatArea: document.getElementById('chat-area'),
                 loader: document.getElementById('loader'),
                 initialGreeting: document.getElementById('initial-greeting'),
+                // Начало изменений: Обновленный элемент приветствия
                 greetingText: document.getElementById('greeting-text'),
+                // Конец изменений
                 userPhoto: document.getElementById('user-photo'),
                 settingsButton: document.getElementById('settings-button'),
                 settingsPopup: document.getElementById('settings-popup'),
@@ -240,109 +252,77 @@
             let isGenerating = false;
             let versionToRestore = null;
             let countdownInterval = null;
-            const user = tg.initDataUnsafe.user;
 
-            // --- Функции для работы с Supabase ---
-
-            const signInWithTelegram = async (tgUser) => {
-                if (!tgUser || !tgUser.id) {
-                    console.error("Telegram user data is missing.");
-                    return;
-                }
-                const email = `tg${tgUser.id}@telegram.user`;
-                const password = `tg_user_${tgUser.id}`;
-
-                let { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-                if (error && error.message === 'Invalid login credentials') {
-                    let { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                        email,
-                        password,
-                        options: { data: { full_name: tgUser.first_name || 'User' } }
-                    });
-                    if (signUpError) console.error("Error signing up:", signUpError);
-                } else if (error) {
-                    console.error("Error signing in:", error);
-                }
-            };
-
-            const saveActiveChat = async () => {
-                if (!activeChatId || !chats[activeChatId]) return;
-                const { data: { user: authUser } } = await supabase.auth.getUser();
-                if (!authUser) return;
-
-                const activeChat = chats[activeChatId];
-                const { error } = await supabase
-                    .from('chats')
-                    .upsert({ id: activeChat.id, user_id: authUser.id, chat_data: activeChat }, { onConflict: 'id' });
-                if (error) console.error("Error saving chat:", error);
-            };
-
-            const loadChatsFromSupabase = async () => {
-                const { data: { user: authUser } } = await supabase.auth.getUser();
-                if (!authUser) return;
-
-                const { data, error } = await supabase.from('chats').select('chat_data').eq('user_id', authUser.id).order('updated_at', { ascending: false });
-                if (error) {
-                    console.error("Error loading chats:", error);
-                    return false;
-                }
-
-                if (data && data.length > 0) {
-                    chats = {};
-                    data.forEach(row => {
-                        const chat = row.chat_data;
-                        chats[chat.id] = chat;
-                    });
-                    const latestChatId = data[0].chat_data.id;
-                    switchChat(latestChatId);
-                    return true;
-                }
-                return false;
-            };
-
-            // --- Основные функции приложения ---
-
-            const createNewChat = async () => {
-                const newId = Date.now().toString();
-                chats[newId] = { id: newId, title: 'Новый чат', mode: null, repoName: null, repoFullName: null, messages: [], codeHistory: [], deployUrl: null, isDeploying: false };
-                switchChat(newId);
-                await saveActiveChat();
-                closeModal();
-            };
-
-            const switchChat = (chatId) => {
-                activeChatId = chatId;
-                renderMessages();
-                updateHeaderButton();
-                closeModal();
-            };
+            tg.ready();
+            tg.expand();
             
-            const addMessage = async (text, sender, imageUrl = null, codeVersion = null) => {
-                if (!activeChatId) return;
+            const forceDarkTheme = () => {
+                tg.setHeaderColor('#1f2937');
+                tg.setBackgroundColor('#111827');
+
+                const root = document.documentElement;
+                const darkThemeCssVars = {
+                    '--tg-theme-bg-color': '#111827',
+                    '--tg-theme-text-color': '#ffffff',
+                    '--tg-theme-hint-color': '#9ca3af',
+                    '--tg-theme-secondary-bg-color': '#1f2937',
+                    '--tg-theme-header-bg-color': '#1f2937',
+                    '--tg-theme-button-color': '#8774e1',
+                    '--tg-theme-button-text-color': '#ffffff',
+                };
+
+                Object.entries(darkThemeCssVars).forEach(([key, value]) => {
+                    root.style.setProperty(key, value);
+                });
+            };
+
+            forceDarkTheme();
+
+            const user = tg.initDataUnsafe.user;
+            if (user && user.first_name) {
+                // Начало изменений: Установка текста приветствия
+                if (ui.greetingText) {
+                    ui.greetingText.innerHTML = `Здравствуйте, ${user.first_name},<br>какое приложение хотите создать?`;
+                }
+                // Конец изменений
+                if (ui.userPhoto) ui.userPhoto.src = user.photo_url || `https://placehold.co/40x40/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
+            }
+            
+            const transliterate = (text) => {
+                const a = {"Ё":"YO","Й":"I","Ц":"TS","У":"U","К":"K","Е":"E","Н":"N","Г":"G","Ш":"SH","Щ":"SCH","З":"Z","Х":"H","Ъ":"","ё":"yo","й":"i","ц":"ts","у":"u","к":"k","е":"e","н":"n","г":"g","ш":"sh","щ":"sch","з":"z","х":"h","ъ":"","Ф":"F","Ы":"I","В":"V","А":"a","П":"P","Р":"R","О":"O","Л":"L","Д":"D","Ж":"ZH","Э":"E","ф":"f","ы":"i","в":"v","а":"a","п":"p","р":"r","о":"o","л":"l","д":"d","ж":"zh","э":"e","Я":"Ya","Ч":"CH","С":"S","М":"M","И":"I","Т":"T","Ь":"","Б":"B","Ю":"YU","я":"ya","ч":"ch","с":"s","м":"m","и":"i","т":"t","ь":"","б":"b","ю":"yu"};
+                return text.split('').map(char => a[char] || char).join('');
+            };
+
+            const addMessage = (text, sender, imageUrl = null, codeVersion = null) => {
                 const activeChat = chats[activeChatId];
+                if (!activeChat) return;
+                // Эта строка отвечает за скрытие приветствия после первого сообщения
                 if(ui.initialGreeting) ui.initialGreeting.style.display = 'none';
                 
                 const message = { id: Date.now(), text, sender, imageUrl, codeVersion };
                 activeChat.messages.push(message);
 
                 if (sender === 'user' && activeChat.messages.filter(m => m.sender === 'user').length === 1 && text) {
-                    const englishTitle = transliterate(text).toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
+                    const englishTitle = transliterate(text)
+                        .toLowerCase()
+                        .replace(/[^a-z0-9\s-]/g, '') 
+                        .replace(/\s+/g, '-') 
+                        .replace(/-+/g, '-');
+                    
                     activeChat.title = text;
                     activeChat.repoName = `${englishTitle.substring(0, 50)}-${Date.now().toString().slice(-5)}`;
                 }
                 renderMessages();
-                await saveActiveChat();
                 if (sender === 'user' && !currentMode) {
                     simulateBotResponse(`Это симуляция ответа на: "${text}".`);
                 }
             };
 
             const renderMessages = () => {
-                if (!activeChatId) return;
                 const activeChat = chats[activeChatId];
                 ui.chatArea.innerHTML = '';
                 if (!activeChat || activeChat.messages.length === 0) {
+                    // Эта строка отвечает за показ приветствия, если в чате нет сообщений
                     if(ui.initialGreeting) ui.initialGreeting.style.display = 'flex';
                     return;
                 }
@@ -380,18 +360,28 @@
                             button.style.color = 'var(--tg-button-text-color)';
                             button.onclick = () => openCodeModal(true, msg.codeVersion);
                         } else {
-                            button.style.backgroundColor = '#4B5563';
+                            button.style.backgroundColor = '#4B5563'; // gray-600
                             button.style.color = 'white';
                             button.onclick = () => showRestoreConfirmation(msg.codeVersion);
                         }
                         msgContent.appendChild(button);
                     }
+
                     msgDiv.appendChild(msgContent);
                     ui.chatArea.appendChild(msgDiv);
                 });
                 ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
             };
-            
+
+            const simulateBotResponse = (userInput) => {
+                ui.loader.classList.remove('hidden');
+                ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
+                setTimeout(() => {
+                    ui.loader.classList.add('hidden');
+                    addMessage(userInput, 'bot');
+                }, 1500);
+            };
+
             const sendMessage = () => {
                 if (isGenerating) return;
                 const text = ui.messageInput.value.trim();
@@ -410,32 +400,6 @@
                     updateInputState();
                     tg.HapticFeedback.impactOccurred('light');
                 }
-            };
-
-            // --- Вспомогательные функции, UI и API ---
-
-            const setupUI = () => {
-                tg.ready();
-                tg.expand();
-                forceDarkTheme();
-                if (user && user.first_name) {
-                    if (ui.greetingText) ui.greetingText.innerHTML = `Здравствуйте, ${user.first_name},<br>какое приложение хотите создать?`;
-                    if (ui.userPhoto) ui.userPhoto.src = user.photo_url || `https://placehold.co/40x40/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
-                }
-            };
-            
-            const transliterate = (text) => {
-                const a = {"Ё":"YO","Й":"I","Ц":"TS","У":"U","К":"K","Е":"E","Н":"N","Г":"G","Ш":"SH","Щ":"SCH","З":"Z","Х":"H","Ъ":"","ё":"yo","й":"i","ц":"ts","у":"u","к":"k","е":"e","н":"n","г":"g","ш":"sh","щ":"sch","з":"z","х":"h","ъ":"","Ф":"F","Ы":"I","В":"V","А":"a","П":"P","Р":"R","О":"O","Л":"L","Д":"D","Ж":"ZH","Э":"E","ф":"f","ы":"i","в":"v","а":"a","п":"p","р":"r","о":"o","л":"l","д":"d","ж":"zh","э":"e","Я":"Ya","Ч":"CH","С":"S","М":"M","И":"I","Т":"T","Ь":"","Б":"B","Ю":"YU","я":"ya","ч":"ch","с":"s","м":"m","и":"i","т":"t","ь":"","б":"b","ю":"yu"};
-                return text.split('').map(char => a[char] || char).join('');
-            };
-
-            const simulateBotResponse = (userInput) => {
-                ui.loader.classList.remove('hidden');
-                ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
-                setTimeout(() => {
-                    ui.loader.classList.add('hidden');
-                    addMessage(userInput, 'bot');
-                }, 1500);
             };
             
             const resetImageAttachment = () => {
@@ -457,16 +421,22 @@
             const callGeminiAPI = async (prompt) => {
                 const apiKey = ""; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                
                 const payload = { 
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
-                    generationConfig: { responseMimeType: "application/json" }
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                    }
                 };
+
                 try {
                     const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     const result = await response.json();
+                    
                     const responseText = result.candidates[0].content.parts[0].text;
                     return JSON.parse(responseText);
+
                 } catch (error) {
                     console.error("Ошибка API:", error);
                     return { "error.html": `<!-- Ошибка при генерации кода: ${error.message} -->` };
@@ -476,19 +446,25 @@
             const formatCodeForDisplay = (codeObject) => {
                 if (typeof codeObject === 'string') return codeObject;
                 if (codeObject['error.html']) return codeObject['error.html'];
-                return Object.entries(codeObject).map(([filename, code]) => `//--- ${filename} ---\n\n${code}`).join('\n\n\n');
+                
+                return Object.entries(codeObject)
+                    .map(([filename, code]) => `//--- ${filename} ---\n\n${code}`)
+                    .join('\n\n\n');
             };
 
             const runAiProcess = async (steps, prompt) => {
                 isGenerating = true;
                 updateInputState();
                 openModal(ui.codeModal);
+                
                 const activeChat = chats[activeChatId];
                 const isReact = activeChat.mode === 'react';
                 document.querySelector('[data-tab="preview"]').style.display = isReact ? 'none' : 'block';
                 switchTab('code');
+
                 ui.codeOutput.textContent = '';
                 ui.aiStatusContainer.innerHTML = '';
+
                 for (let i = 0; i < steps.length; i++) {
                     const step = steps[i];
                     const statusDiv = document.createElement('div');
@@ -500,9 +476,11 @@
                     textSpan.textContent = step;
                     statusDiv.appendChild(textSpan);
                     ui.aiStatusContainer.appendChild(statusDiv);
+                    
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     iconSpan.innerHTML = '✅';
                 }
+                
                 const apiStatusDiv = document.createElement('div');
                 apiStatusDiv.className = 'flex items-center space-x-2';
                 const iconSpan = document.createElement('span');
@@ -512,9 +490,11 @@
                 textSpan.textContent = 'Отправка запроса в Gemini...';
                 apiStatusDiv.appendChild(textSpan);
                 ui.aiStatusContainer.appendChild(apiStatusDiv);
+
                 const generatedCodeObject = await callGeminiAPI(prompt);
                 textSpan.textContent = 'Получение ответа...';
                 iconSpan.innerHTML = '✅';
+                
                 const formattedCode = formatCodeForDisplay(generatedCodeObject);
                 typeCode(generatedCodeObject, formattedCode);
             };
@@ -522,11 +502,25 @@
             const initiateAiGeneration = (prompt) => {
                 const activeChat = chats[activeChatId];
                 activeChat.mode = currentMode;
+
                 let fullPrompt;
                 if (currentMode === 'react') {
-                    fullPrompt = `Ты - эксперт по React. Создай полноценное, красивое, минималистичное мобильное React-приложение. Требования: 1. Используй функциональные компоненты и хуки. 2. Используй Tailwind CSS для стилей (предполагается, что он настроен). 3. Создай нижний навбар с 3-4 иконками (SVG). 4. Приложение должно быть полностью функциональным на JavaScript. 5. Тема приложения: "${prompt}". Твой ответ должен быть СТРОГО в формате JSON, содержащий три ключа: "package.json", "public/index.html", и "src/App.js". - "package.json" должен содержать зависимости: react, react-dom. - "public/index.html" должен быть базовым HTML с div id="root" и подключением Tailwind. - "src/App.js" должен содержать всю логику и JSX приложения. Не добавляй никаких объяснений, только JSON.`;
+                    fullPrompt = `Ты - эксперт по React. Создай полноценное, красивое, минималистичное мобильное React-приложение.
+                    Требования:
+                    1.  Используй функциональные компоненты и хуки.
+                    2.  Используй Tailwind CSS для стилей (предполагается, что он настроен).
+                    3.  Создай нижний навбар с 3-4 иконками (SVG).
+                    4.  Приложение должно быть полностью функциональным на JavaScript.
+                    5.  Тема приложения: "${prompt}".
+
+                    Твой ответ должен быть СТРОГО в формате JSON, содержащий три ключа: "package.json", "public/index.html", и "src/App.js".
+                    - "package.json" должен содержать зависимости: react, react-dom.
+                    - "public/index.html" должен быть базовым HTML с div id="root" и подключением Tailwind.
+                    - "src/App.js" должен содержать всю логику и JSX приложения.
+                    Не добавляй никаких объяснений, только JSON.`;
                 } else {
-                     fullPrompt = `Ты - эксперт по фронтенд-разработке. Создай полноценное, красивое, минималистичное мобильное приложение в виде одного HTML-файла. Используй Tailwind CSS для стилей. Обязательно добавь нижний навбар с 3-4 иконками. Приложение должно быть полностью функциональным на JavaScript. Тема приложения: "${prompt}". Твой ответ должен быть СТРОГО в формате JSON, содержащий один ключ: "index.html". Не добавляй никаких объяснений, только JSON.`;
+                     fullPrompt = `Ты - эксперт по фронтенд-разработке. Создай полноценное, красивое, минималистичное мобильное приложение в виде одного HTML-файла. Используй Tailwind CSS для стилей. Обязательно добавь нижний навбар с 3-4 иконками. Приложение должно быть полностью функциональным на JavaScript. Тема приложения: "${prompt}".
+                     Твой ответ должен быть СТРОГО в формате JSON, содержащий один ключ: "index.html". Не добавляй никаких объяснений, только JSON.`;
                 }
                 runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], fullPrompt);
             };
@@ -539,11 +533,14 @@
                 }
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
                 const codeString = JSON.stringify(latestCodeObject, null, 2);
+
                 let fullPrompt;
                 if (activeChat.mode === 'react') {
-                    fullPrompt = `Ты - эксперт по React. Вот существующий код React-приложения в формате JSON:\n\n${codeString}\n\nТеперь, пожалуйста, внеси следующее улучшение: "${prompt}". Не меняй общую структуру, если это не требуется. Твой ответ должен содержать ТОЛЬКО полный и обновленный JSON с ключами "package.json", "public/index.html", и "src/App.js", без каких-либо объяснений.`;
+                    fullPrompt = `Ты - эксперт по React. Вот существующий код React-приложения в формате JSON:\n\n${codeString}\n\nТеперь, пожалуйста, внеси следующее улучшение: "${prompt}".
+                    Не меняй общую структуру, если это не требуется. Твой ответ должен содержать ТОЛЬКО полный и обновленный JSON с ключами "package.json", "public/index.html", и "src/App.js", без каких-либо объяснений.`;
                 } else {
-                    fullPrompt = `Ты - эксперт по фронтенд-разработке. Вот существующий HTML-код приложения в формате JSON:\n\n${codeString}\n\nТеперь, пожалуйста, внеси следующее улучшение: "${prompt}". Не меняй общую структуру, если это не требуется. Твой ответ должен содержать ТОЛЬКО полный и обновленный JSON с ключом "index.html", без каких-либо объяснений.`;
+                    fullPrompt = `Ты - эксперт по фронтенд-разработке. Вот существующий HTML-код приложения в формате JSON:\n\n${codeString}\n\nТеперь, пожалуйста, внеси следующее улучшение: "${prompt}".
+                    Не меняй общую структуру, если это не требуется. Твой ответ должен содержать ТОЛЬКО полный и обновленный JSON с ключом "index.html", без каких-либо объяснений.`;
                 }
                 runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], fullPrompt);
             };
@@ -552,21 +549,25 @@
                 const activeChat = chats[activeChatId];
                 const newVersion = activeChat.codeHistory.length + 1;
                 activeChat.codeHistory.push({ version: newVersion, code: codeObject });
+                
                 let index = 0;
-                const interval = setInterval(async () => {
+                const interval = setInterval(() => {
                     if (index < formattedCode.length) {
                         ui.codeOutput.textContent += formattedCode[index];
                         index++;
                         ui.codeView.scrollTop = ui.codeView.scrollHeight;
                     } else {
                         clearInterval(interval);
-                        await saveActiveChat();
-                        setTimeout(async () => {
-                            if (activeChat.mode !== 'react') switchTab('preview');
-                            await addMessage("Приложение сгенерировано.", 'bot', null, newVersion);
+                        setTimeout(() => {
+                            if (activeChat.mode !== 'react') {
+                                switchTab('preview');
+                            }
+                            addMessage("Приложение сгенерировано.", 'bot', null, newVersion);
                             isGenerating = false;
                             updateInputState();
-                            if (newVersion === 1) createGitHubRepo(activeChat.repoName, codeObject);
+                            if (newVersion === 1) {
+                                createGitHubRepo(activeChat.repoName, codeObject);
+                            }
                         }, 500);
                     }
                 }, 5);
@@ -589,13 +590,21 @@
                 const activeChat = chats[activeChatId];
                 const codeHistoryItem = activeChat.codeHistory.find(h => h.version === version);
                 if (!codeHistoryItem) return;
+
                 const codeObject = codeHistoryItem.code;
                 ui.codeOutput.textContent = formatCodeForDisplay(codeObject);
+                
                 const isReact = activeChat.mode === 'react';
                 document.querySelector('[data-tab="preview"]').style.display = isReact ? 'none' : 'block';
+
                 updateDeployButtonState();
-                if (isReact) switchTab('code');
-                else switchTab(switchToPreview ? 'preview' : 'code');
+                
+                if (isReact) {
+                    switchTab('code');
+                } else {
+                    switchTab(switchToPreview ? 'preview' : 'code');
+                }
+
                 openModal(ui.codeModal);
             };
 
@@ -626,32 +635,78 @@
             const renderRepoList = () => {
                 ui.repoList.innerHTML = '';
                 const userRepos = Object.values(chats).filter(chat => chat.repoFullName);
+
                 if (userRepos.length === 0) {
                     ui.repoList.innerHTML = '<p class="text-gray-500 text-center text-sm">У вас пока нет репозиториев.</p>';
                     return;
                 }
+
                 userRepos.reverse().forEach(chat => {
                     const repoDiv = document.createElement('div');
                     repoDiv.className = 'p-3 rounded-lg border border-gray-700';
+
                     const repoName = chat.repoFullName.split('/')[1];
                     const repoUrl = `https://github.com/${chat.repoFullName}`;
-                    repoDiv.innerHTML = `<div class="flex items-center justify-between"><div class="flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 3.293a1 1 0 011.414 0L10 11.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg><a href="${repoUrl}" target="_blank" class="text-blue-400 font-semibold hover:underline text-sm">${repoName}</a></div><span class="text-xs text-gray-500 border border-gray-600 px-1.5 py-0.5 rounded-full">${chat.mode === 'react' ? 'React' : 'HTML'}</span></div><p class="text-xs text-gray-400 mt-1.5 truncate">${chat.title}</p>${chat.deployUrl ? `<div class="mt-2 pt-2 border-t border-gray-700 flex items-center space-x-2"><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span><a href="${chat.deployUrl}" target="_blank" class="text-green-400 text-xs hover:underline">Deployed on Netlify</a></div>` : ''}`;
-                    repoDiv.querySelector('a').addEventListener('click', (e) => { e.preventDefault(); tg.openLink(e.target.href); });
+
+                    repoDiv.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 3.293a1 1 0 011.414 0L10 11.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                                <a href="${repoUrl}" target="_blank" class="text-blue-400 font-semibold hover:underline text-sm">${repoName}</a>
+                            </div>
+                            <span class="text-xs text-gray-500 border border-gray-600 px-1.5 py-0.5 rounded-full">${chat.mode === 'react' ? 'React' : 'HTML'}</span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1.5 truncate">${chat.title}</p>
+                        ${chat.deployUrl ? `
+                        <div class="mt-2 pt-2 border-t border-gray-700 flex items-center space-x-2">
+                             <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                             <a href="${chat.deployUrl}" target="_blank" class="text-green-400 text-xs hover:underline">Deployed on Netlify</a>
+                        </div>
+                        ` : ''}
+                    `;
+                    repoDiv.querySelector('a').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        tg.openLink(e.target.href);
+                    });
                     ui.repoList.appendChild(repoDiv);
                 });
+            };
+
+            const createNewChat = () => {
+                const newId = Date.now().toString();
+                chats[newId] = {
+                    id: newId,
+                    title: 'Новый чат',
+                    mode: null,
+                    repoName: null,
+                    repoFullName: null,
+                    messages: [],
+                    codeHistory: [],
+                    deployUrl: null,
+                    isDeploying: false,
+                };
+                switchChat(newId);
+                closeModal();
+            };
+
+            const switchChat = (chatId) => {
+                activeChatId = chatId;
+                renderMessages();
+                updateHeaderButton();
+                closeModal();
             };
 
             const renderChatList = () => {
                 if(!ui.chatList) return;
                 ui.chatList.innerHTML = '';
-                const sortedChats = Object.values(chats).sort((a, b) => (b.messages.slice(-1)[0]?.id || 0) - (a.messages.slice(-1)[0]?.id || 0));
-                sortedChats.forEach(chat => {
+                Object.values(chats).reverse().forEach(chat => {
                     const chatDiv = document.createElement('div');
                     chatDiv.className = 'p-2.5 rounded-lg hover:bg-gray-800 cursor-pointer';
                     const title = document.createElement('p');
                     title.className = 'font-semibold truncate text-sm';
                     title.textContent = chat.title;
                     chatDiv.appendChild(title);
+                    
                     const lastMessage = chat.messages.slice().reverse().find(m => m.text);
                     if (lastMessage) {
                         const snippet = document.createElement('p');
@@ -659,6 +714,7 @@
                         snippet.textContent = lastMessage.text;
                         chatDiv.appendChild(snippet);
                     }
+
                     chatDiv.onclick = () => switchChat(chat.id);
                     ui.chatList.appendChild(chatDiv);
                 });
@@ -669,30 +725,45 @@
                 openModal(ui.confirmRestoreModal);
             };
 
-            const confirmRestore = async () => {
+            const confirmRestore = () => {
                 const activeChat = chats[activeChatId];
                 if (!activeChat || versionToRestore === null) return;
+                
                 const versionIndex = activeChat.codeHistory.findIndex(h => h.version === versionToRestore);
                 if (versionIndex === -1) return;
+
                 activeChat.codeHistory.splice(versionIndex + 1);
+                
                 const lastValidMessageIndex = activeChat.messages.map(m => m.codeVersion).lastIndexOf(versionToRestore);
-                if(lastValidMessageIndex > -1) activeChat.messages.splice(lastValidMessageIndex + 1);
+                if(lastValidMessageIndex > -1) {
+                    activeChat.messages.splice(lastValidMessageIndex + 1);
+                }
+                
                 renderMessages();
-                await saveActiveChat();
                 closeModal();
                 versionToRestore = null;
             };
 
+            // --- Deployment Logic ---
+
             const updateHeaderButton = () => {
                 const chat = chats[activeChatId];
                 if (!chat) return;
+
                 let buttonHTML = '';
-                if (chat.deployUrl) buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-500 text-white">Открыть</button>`;
-                else if (chat.isDeploying) buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full flex items-center" style="background-color: var(--tg-secondary-bg-color);" disabled><div class="spinner mr-1.5"></div>Деплой...</button>`;
-                else buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">PRO</button>`;
+                if (chat.deployUrl) {
+                    buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-500 text-white">Открыть</button>`;
+                } else if (chat.isDeploying) {
+                    buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full flex items-center" style="background-color: var(--tg-secondary-bg-color);" disabled><div class="spinner mr-1.5"></div>Деплой...</button>`;
+                } else {
+                    buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">PRO</button>`;
+                }
                 ui.headerActionContainer.innerHTML = buttonHTML;
+
                 const newButton = document.getElementById('header-action-button');
-                if (chat.deployUrl) newButton.onclick = () => tg.openLink(chat.deployUrl);
+                if (chat.deployUrl) {
+                    newButton.onclick = () => tg.openLink(chat.deployUrl);
+                }
             };
             
             const startDeployCountdown = () => {
@@ -700,6 +771,7 @@
                 ui.deployButton.disabled = true;
                 let seconds = 60;
                 ui.deployButton.textContent = `Деплой через ${seconds} сек.`;
+
                 countdownInterval = setInterval(() => {
                     seconds--;
                     ui.deployButton.textContent = `Деплой через ${seconds} сек.`;
@@ -724,22 +796,34 @@
             
             const createGitHubRepo = async (repoName, codeObject) => {
                 const chat = chats[activeChatId];
-                await addMessage(`Создаю репозиторий "${repoName}" на GitHub...`, 'bot');
+                addMessage(`Создаю репозиторий "${repoName}" на GitHub...`, 'bot');
                 try {
-                    const repoResponse = await fetch('https://api.github.com/user/repos', { method: 'POST', headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }, body: JSON.stringify({ name: repoName, description: 'Created by Devtol Mini App', private: false }) });
+                    const repoResponse = await fetch('https://api.github.com/user/repos', {
+                        method: 'POST',
+                        headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' },
+                        body: JSON.stringify({ name: repoName, description: 'Created by Devtol Mini App', private: false }),
+                    });
                     if (!repoResponse.ok) throw new Error(`Ошибка GitHub: ${ (await repoResponse.json()).message }`);
                     const repoData = await repoResponse.json();
                     chat.repoFullName = repoData.full_name;
-                    await addMessage('Загружаю файлы в репозиторий...', 'bot');
+
+                    addMessage('Загружаю файлы в репозиторий...', 'bot');
+                    
                     for (const [filePath, fileContent] of Object.entries(codeObject)) {
                         const content = btoa(unescape(encodeURIComponent(fileContent)));
-                        const fileResponse = await fetch(`https://api.github.com/repos/${chat.repoFullName}/contents/${filePath}`, { method: 'PUT', headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }, body: JSON.stringify({ message: 'Initial commit', content: content }) });
+                        const fileResponse = await fetch(`https://api.github.com/repos/${chat.repoFullName}/contents/${filePath}`, {
+                            method: 'PUT',
+                            headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' },
+                            body: JSON.stringify({ message: 'Initial commit', content: content }),
+                        });
                         if (!fileResponse.ok) throw new Error(`Ошибка загрузки файла ${filePath}: ${ (await fileResponse.json()).message }`);
                     }
-                    await addMessage('✅ Репозиторий создан. Деплой будет доступен через минуту.', 'bot');
+                    
+                    addMessage('✅ Репозиторий создан. Деплой будет доступен через минуту.', 'bot');
                     startDeployCountdown();
+
                 } catch (error) {
-                     await addMessage(`❌ Ошибка создания репозитория: ${error.message}`, 'bot');
+                     addMessage(`❌ Ошибка создания репозитория: ${error.message}`, 'bot');
                 }
             };
             
@@ -747,38 +831,43 @@
                 const chat = chats[activeChatId];
                 let attempts = 0;
                 const maxAttempts = 24;
+
                 const intervalId = setInterval(async () => {
                     if (attempts >= maxAttempts) {
                         clearInterval(intervalId);
-                        await addMessage(`❌ Ошибка: Деплой не завершился за 2 минуты.`, 'bot');
+                        addMessage(`❌ Ошибка: Деплой не завершился за 2 минуты.`, 'bot');
                         chat.isDeploying = false;
                         updateHeaderButton();
                         return;
                     }
+                    
                     try {
-                        const response = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys`, { headers: { 'Authorization': `Bearer ${NETLIFY_TOKEN}` } });
-                        if (!response.ok) throw new Error(`Ошибка API Netlify: ${response.statusText}`);
+                        const response = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys`, {
+                            headers: { 'Authorization': `Bearer ${NETLIFY_TOKEN}` }
+                        });
+                        if (!response.ok) { 
+                            throw new Error(`Ошибка API Netlify: ${response.statusText}`);
+                        }
                         const deploys = await response.json();
                         if (deploys && deploys.length > 0) {
                             const latestDeploy = deploys[0];
                             if (latestDeploy.state === 'ready') {
                                 clearInterval(intervalId);
                                 chat.deployUrl = liveUrl;
-                                await addMessage(`✅ Успех! Ваш сайт доступен по адресу: ${liveUrl}`, 'bot');
+                                addMessage(`✅ Успех! Ваш сайт доступен по адресу: ${liveUrl}`, 'bot');
                                 tg.HapticFeedback.notificationOccurred('success');
                                 chat.isDeploying = false;
                                 updateHeaderButton();
-                                await saveActiveChat();
                             } else if (latestDeploy.state === 'error') {
                                  clearInterval(intervalId);
-                                 await addMessage(`❌ Ошибка деплоя на Netlify: ${latestDeploy.error_message}`, 'bot');
+                                 addMessage(`❌ Ошибка деплоя на Netlify: ${latestDeploy.error_message}`, 'bot');
                                  chat.isDeploying = false;
                                  updateHeaderButton();
                             }
                         }
                     } catch (error) {
                         clearInterval(intervalId);
-                        await addMessage(`❌ Ошибка при проверке статуса деплоя: ${error.message}`, 'bot');
+                        addMessage(`❌ Ошибка при проверке статуса деплоя: ${error.message}`, 'bot');
                         chat.isDeploying = false;
                         updateHeaderButton();
                     }
@@ -789,29 +878,47 @@
             const deployToNetlify = async () => {
                 const chat = chats[activeChatId];
                 if (!chat || !chat.repoFullName) {
-                    await addMessage('Ошибка: не найден репозиторий для деплоя.', 'bot');
+                    addMessage('Ошибка: не найден репозиторий для деплоя.', 'bot');
                     return;
                 }
+                
                 chat.isDeploying = true;
                 updateHeaderButton();
                 ui.deployButton.classList.add('hidden');
-                await addMessage(`Начинаю деплой проекта "${chat.repoName}"...`, 'bot');
+                addMessage(`Начинаю деплой проекта "${chat.repoName}"...`, 'bot');
+
                 try {
-                    await addMessage('1/2 Создаю сайт на Netlify...', 'bot');
-                    const sitePayload = { repo: { provider: 'github', repo: chat.repoFullName, private: false, branch: 'main' } };
+                    addMessage('1/2 Создаю сайт на Netlify...', 'bot');
+                    
+                    const sitePayload = {
+                        repo: {
+                            provider: 'github',
+                            repo: chat.repoFullName,
+                            private: false,
+                            branch: 'main'
+                        }
+                    };
+
                     if (chat.mode === 'react') {
                         sitePayload.repo.cmd = 'npm run build';
                         sitePayload.repo.dir = 'build/';
                     }
-                    const siteResponse = await fetch('https://api.netlify.com/api/v1/sites', { method: 'POST', headers: { 'Authorization': `Bearer ${NETLIFY_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(sitePayload) });
+
+                    const siteResponse = await fetch('https://api.netlify.com/api/v1/sites', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${NETLIFY_TOKEN}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(sitePayload),
+                    });
                     if (!siteResponse.ok) throw new Error(`Ошибка Netlify: ${ (await siteResponse.json()).message }`);
                     const siteData = await siteResponse.json();
-                    await addMessage('2/2 Ожидаю завершения деплоя...', 'bot');
+                    
+                    addMessage('2/2 Ожидаю завершения деплоя...', 'bot');
                     const liveUrl = siteData.ssl_url || siteData.url;
                     pollDeployStatus(siteData.id, liveUrl);
+
                 } catch (error) {
                     console.error('Ошибка деплоя:', error);
-                    await addMessage(`❌ Ошибка деплоя: ${error.message}`, 'bot');
+                    addMessage(`❌ Ошибка деплоя: ${error.message}`, 'bot');
                     tg.HapticFeedback.notificationOccurred('error');
                     chat.isDeploying = false;
                     updateHeaderButton();
@@ -898,15 +1005,9 @@
                 });
             };
 
-            // --- Главная функция инициализации ---
-            const initApp = async () => {
-                setupUI();
+            const initApp = () => {
+                createNewChat();
                 setupEventListeners();
-                await signInWithTelegram(user);
-                const chatsLoaded = await loadChatsFromSupabase();
-                if (!chatsLoaded) {
-                    await createNewChat();
-                }
                 updateInputState();
             };
 

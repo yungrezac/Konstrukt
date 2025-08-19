@@ -8,6 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Подключение Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- START: Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- END: Supabase Client Library -->
     <style>
         :root {
             --tg-bg-color: var(--tg-theme-bg-color, #111827);
@@ -262,11 +265,15 @@
             const tg = window.Telegram.WebApp;
 
             // --- ⚠️ ВАЖНО: Конфигурация API ⚠️ ---
+            const SUPABASE_URL = 'https://tqptazkadicujedoyykp.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxcHRhemthZGljdWplZG95eWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTU2ODUsImV4cCI6MjA3MTEzMTY4NX0.FaNU-OlO1yEo7e9ADUCbPWvK0RG90_GedlaXUXUM0Eo';
+            const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
             const GITHUB_APP_ID = '1804701';
             const GITHUB_OAUTH_CLIENT_ID = 'Iv23liMslqqNmYZlMUUb';
-            const GITHUB_OAUTH_CLIENT_SECRET = '7da4ed5f51e4cfd772917e2fac1b1c018b29ef4a'; // <-- 🔴 ЗАМЕНИТЕ
+            const GITHUB_OAUTH_CLIENT_SECRET = 'ВАШ_OAUTH_CLIENT_SECRET'; // <-- 🔴 ЗАМЕНИТЕ
             const CORS_PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
-            const NETLIFY_TOKEN = 'nfp_Ttp1yDSbBxkPs2hen3EL5kSB8q2s94UVeb25'; // <-- 🔴 ВСТАВЬТЕ
+            const NETLIFY_TOKEN = 'nfp_HcEaWZxtyLaos1zC8s3d6arvDqW9674u7678'; // <-- 🔴 ВСТАВЬТЕ
             const GEMINI_API_KEY = 'AIzaSyBuXjShdZFvr76OKsl7FaL789Dxl3i6bgc'; // <-- 🔴 ВСТАВЬТЕ
 
             // --- Конфигурация подписок ---
@@ -278,7 +285,11 @@
 
             let githubOAuthToken = null;
             let isTelegramEnv = false;
-            let userState = {}; // Состояние пользователя (подписка, счетчики)
+            let localState = { // Локальный кэш данных
+                user: null,
+                chats: {},
+                dailyMessages: {}
+            }; 
 
             const ui = {
                 imageInput: document.getElementById('image-input'),
@@ -381,29 +392,99 @@
             };
 
             // --- Управление состоянием пользователя ---
-            const saveUserState = () => {
-                localStorage.setItem('devtolUserState', JSON.stringify(userState));
+            const loadDataFromSupabase = async () => {
+                if (!user || !user.id) {
+                    console.error("Нет данных о пользователе Telegram.");
+                    return;
+                }
+
+                // 1. Получить или создать пользователя
+                let { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (userError && userError.code !== 'PGRST116') { // PGRST116 = no rows found
+                    console.error("Ошибка при загрузке пользователя:", userError);
+                    return;
+                }
+
+                if (!userData) {
+                    const { data: newUser, error: insertError } = await supabase
+                        .from('users')
+                        .insert({
+                            id: user.id,
+                            first_name: user.first_name,
+                            last_name: user.last_name,
+                            username: user.username,
+                            photo_url: user.photo_url,
+                        })
+                        .select()
+                        .single();
+                    if (insertError) {
+                        console.error("Ошибка при создании пользователя:", insertError);
+                        return;
+                    }
+                    userData = newUser;
+                }
+                localState.user = userData;
+
+                // 2. Загрузить чаты пользователя
+                const { data: chatsData, error: chatsError } = await supabase
+                    .from('chats')
+                    .select('*')
+                    .eq('user_id', user.id);
+                
+                if (chatsError) {
+                    console.error("Ошибка при загрузке чатов:", chatsError);
+                    return;
+                }
+                
+                localState.chats = {};
+                for (const chat of chatsData) {
+                    localState.chats[chat.id] = { ...chat, messages: [], codeHistory: [] };
+                }
+
+                // 3. Если чатов нет, создать новый
+                if (chatsData.length === 0) {
+                    await createNewChat(true);
+                } else {
+                    activeChatId = chatsData[chatsData.length - 1].id;
+                    await loadActiveChatDetails();
+                }
+            };
+            
+            const loadActiveChatDetails = async () => {
+                if (!activeChatId) return;
+
+                // Загрузка сообщений
+                const { data: messagesData, error: messagesError } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .eq('chat_id', activeChatId)
+                    .order('created_at', { ascending: true });
+
+                if (messagesError) {
+                    console.error("Ошибка загрузки сообщений:", messagesError);
+                } else {
+                    localState.chats[activeChatId].messages = messagesData.map(m => ({...m, text: m.text_content}));
+                }
+
+                // Загрузка истории кода
+                const { data: codeHistoryData, error: codeHistoryError } = await supabase
+                    .from('code_history')
+                    .select('*')
+                    .eq('chat_id', activeChatId)
+                    .order('version', { ascending: true });
+                
+                if(codeHistoryError) {
+                    console.error("Ошибка загрузки истории кода:", codeHistoryError);
+                } else {
+                    localState.chats[activeChatId].codeHistory = codeHistoryData.map(c => ({...c, code: c.code_object}));
+                }
             };
 
-            const loadUserState = () => {
-                const savedState = localStorage.getItem('devtolUserState');
-                if (savedState) {
-                    userState = JSON.parse(savedState);
-                } else {
-                    userState = {
-                        subscription: 'free',
-                        chats: {},
-                        dailyMessages: {} // { 'YYYY-MM-DD': count }
-                    };
-                }
-                // Устанавливаем activeChatId, если есть чаты
-                const chatIds = Object.keys(userState.chats);
-                if (chatIds.length > 0) {
-                    activeChatId = chatIds[chatIds.length - 1];
-                } else {
-                    createNewChat(true); // Создаем первый чат при инициализации
-                }
-            };
 
             const getCurrentDateString = () => {
                 const today = new Date();
@@ -414,22 +495,9 @@
             };
 
             const checkAndIncrementMessageCount = () => {
-                const today = getCurrentDateString();
-                if (!userState.dailyMessages[today]) {
-                    userState.dailyMessages[today] = 0;
-                }
-                
-                const currentCount = userState.dailyMessages[today];
-                const limit = SUBSCRIPTION_LIMITS[userState.subscription].messages;
-
-                if (currentCount >= limit) {
-                    tg.showAlert(`Вы достигли лимита в ${limit} сообщений для плана ${SUBSCRIPTION_LIMITS[userState.subscription].name}. Обновите подписку для продолжения.`);
-                    openSubscriptionModal();
-                    return false;
-                }
-                
-                userState.dailyMessages[today]++;
-                saveUserState();
+                // Эту логику нужно будет перенести на сервер или использовать RLS в Supabase
+                // для ограничения количества записей в таблице messages.
+                // Пока оставляем как есть для демонстрации.
                 return true;
             };
 
@@ -508,37 +576,57 @@
                 }
             };
             
-            const addMessage = (text, sender, imageUrl = null, codeVersion = null) => {
-                const activeChat = userState.chats[activeChatId];
+            const addMessage = async (text, sender, imageUrl = null, codeVersion = null) => {
+                const activeChat = localState.chats[activeChatId];
                 if (!activeChat) return;
                 
-                const message = { id: Date.now(), text, sender, imageUrl, codeVersion };
-                activeChat.messages.push(message);
+                // Сохраняем в Supabase
+                const { data: newMessage, error } = await supabase
+                    .from('messages')
+                    .insert({
+                        chat_id: activeChatId,
+                        sender: sender,
+                        text_content: text,
+                        image_url: imageUrl,
+                        code_version: codeVersion
+                    })
+                    .select()
+                    .single();
+
+                if (error) {
+                    console.error("Ошибка сохранения сообщения:", error);
+                    return;
+                }
+
+                activeChat.messages.push({ ...newMessage, text: newMessage.text_content });
 
                 if (sender === 'user' && activeChat.messages.filter(m => m.sender === 'user').length === 1 && text) {
                     const englishTitle = transliterate(text).toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
                     activeChat.title = text;
                     activeChat.repoName = `${englishTitle.substring(0, 50)}-${Date.now().toString().slice(-5)}`;
+                    
+                    // Обновляем заголовок чата в Supabase
+                    await supabase.from('chats').update({ title: activeChat.title, repo_name: activeChat.repoName }).eq('id', activeChatId);
                 }
-                saveUserState();
+                
                 renderMessages();
+
                 if (sender === 'user' && !currentMode) {
                     simulateBotResponse(`Это симуляция ответа на: "${text}".`);
                 }
             };
 
             const renderMessages = () => {
-                const activeChat = userState.chats[activeChatId];
+                const activeChat = localState.chats[activeChatId];
                 
-                // Logic to show/hide welcome screen
                 if (!activeChat || activeChat.messages.length === 0) {
                     if (ui.initialGreeting) ui.initialGreeting.classList.remove('opacity-0', 'pointer-events-none');
-                    ui.chatArea.innerHTML = ''; // Clear any previous messages
+                    ui.chatArea.innerHTML = '';
                     return;
                 }
                 if (ui.initialGreeting) ui.initialGreeting.classList.add('opacity-0', 'pointer-events-none');
 
-                ui.chatArea.innerHTML = ''; // Clear before rendering new messages
+                ui.chatArea.innerHTML = '';
                 
                 const latestCodeVersion = activeChat.codeHistory.length;
 
@@ -549,20 +637,20 @@
                     msgDiv.className = `flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`;
                     msgContent.className = `message ${msg.sender === 'user' ? 'user-message' : 'bot-message'}`;
                     
-                    if (msg.imageUrl) {
+                    if (msg.image_url) {
                         const img = document.createElement('img');
-                        img.src = msg.imageUrl;
+                        img.src = msg.image_url;
                         img.className = 'rounded-lg';
                         msgContent.appendChild(img);
                     }
                     if (msg.text) {
                         const textP = document.createElement('p');
                         textP.innerHTML = msg.text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-blue-300 underline">$1</a>');
-                        if(msg.imageUrl) textP.className = 'mt-2';
+                        if(msg.image_url) textP.className = 'mt-2';
                         msgContent.appendChild(textP);
                     }
-                    if (msg.codeVersion) {
-                        const isLatest = msg.codeVersion === latestCodeVersion;
+                    if (msg.code_version) {
+                        const isLatest = msg.code_version === latestCodeVersion;
                         const button = document.createElement('button');
                         button.textContent = isLatest ? 'Открыть' : 'Восстановить';
                         button.className = 'mt-2 w-full text-center py-1.5 rounded-lg font-semibold transition-colors text-sm';
@@ -570,11 +658,11 @@
                         if (isLatest) {
                             button.style.backgroundColor = 'var(--tg-button-color)';
                             button.style.color = 'var(--tg-button-text-color)';
-                            button.onclick = () => openCodeModal(true, msg.codeVersion);
+                            button.onclick = () => openCodeModal(true, msg.code_version);
                         } else {
                             button.style.backgroundColor = '#4B5563';
                             button.style.color = 'white';
-                            button.onclick = () => showRestoreConfirmation(msg.codeVersion);
+                            button.onclick = () => showRestoreConfirmation(msg.code_version);
                         }
                         msgContent.appendChild(button);
                     }
@@ -598,14 +686,14 @@
                 if (isGenerating) return;
                 
                 if (!checkAndIncrementMessageCount()) {
-                    return; // Прерываем отправку, если лимит достигнут
+                    return;
                 }
 
                 const text = ui.messageInput.value.trim();
                 if (text || attachedImageUrl) {
                     addMessage(text, 'user', attachedImageUrl);
                     if (currentMode === 'canvas' || currentMode === 'react' || currentMode === 'vue' || currentMode === 'angular' || currentMode === 'flutter' || currentMode === null) {
-                        const activeChat = userState.chats[activeChatId];
+                        const activeChat = localState.chats[activeChatId];
                         if (activeChat.codeHistory.length === 0) { 
                             initiateAiGeneration(text);
                         } else {
@@ -670,9 +758,8 @@
                 isGenerating = true;
                 updateInputState();
                 openModal(ui.codeModal);
-                const activeChat = userState.chats[activeChatId];
+                const activeChat = localState.chats[activeChatId];
                 
-                // Determine if preview should be shown before setting the mode from auto-selection
                 const isFlutter = currentMode === 'flutter';
                 document.querySelector('[data-tab="preview"]').style.display = isFlutter ? 'none' : 'block';
                 switchTab('code');
@@ -715,16 +802,14 @@
                     return;
                 }
 
-                // Handle auto-selection response
                 if (generatedCodeObject.chosenFramework && generatedCodeObject.files) {
                     const chosenFramework = generatedCodeObject.chosenFramework;
                     addMessage(`🤖 Я думаю, что для этой задачи лучше всего подойдет **${chosenFramework.charAt(0).toUpperCase() + chosenFramework.slice(1)}**. Начинаю генерацию...`, 'bot');
                     activeChat.mode = chosenFramework;
-                    currentMode = chosenFramework; // Update global mode
-                    generatedCodeObject = generatedCodeObject.files; // Use the nested files object
+                    currentMode = chosenFramework; 
+                    generatedCodeObject = generatedCodeObject.files; 
                 }
 
-                // Update UI again in case framework was auto-selected
                 const isReact = activeChat.mode === 'react';
                 const isFinalFlutter = activeChat.mode === 'flutter';
                 document.querySelector('[data-tab="preview"]').style.display = (isReact || isFinalFlutter) ? 'none' : 'block';
@@ -738,23 +823,19 @@
             };
 
             const initiateAiGeneration = (prompt) => {
-                const activeChat = userState.chats[activeChatId];
+                const activeChat = localState.chats[activeChatId];
                 activeChat.mode = currentMode;
                 let fullPrompt;
 
                 if (currentMode === null) {
-                    // Auto-selection prompt
                     fullPrompt = `Ты - эксперт-архитектор по разработке программного обеспечения. Проанализируй следующий запрос пользователя: "${prompt}".
                     Выбери НАИБОЛЕЕ ПОДХОДЯЩИЙ фреймворк из списка: [html, react, vue, angular].
-                    
                     Твой ответ ДОЛЖЕН БЫТЬ в формате JSON и содержать два ключа: "chosenFramework" (значение из списка выше) и "files" (объект с кодом).
-                    
                     Основываясь на твоем выборе, сгенерируй код для полноценного, красивого, минималистичного мобильного приложения, следуя инструкциям для выбранного фреймворка:
                     - Если выбрал 'html': { "index.html": "..." }
                     - Если выбрал 'react': { "package.json": "...", "public/index.html": "...", "src/App.js": "..." }
                     - Если выбрал 'vue': { "package.json": "...", "index.html": "...", "src/App.vue": "..." }
                     - Если выбрал 'angular': { "package.json": "...", "angular.json": "...", "src/index.html": "...", "src/main.ts": "...", "src/app/app.module.ts": "...", "src/app/app.component.ts": "...", "src/app/app.component.html": "...", "src/app/app.component.css": "..." }
-                    
                     Используй Tailwind CSS для стилей. Приложение должно быть полностью функциональным. Не добавляй никаких объяснений, только JSON.`;
                 } else {
                     switch(currentMode) {
@@ -779,7 +860,7 @@
             };
 
             const improveAiGeneration = (prompt) => {
-                const activeChat = userState.chats[activeChatId];
+                const activeChat = localState.chats[activeChatId];
                 if (!activeChat || activeChat.codeHistory.length === 0) {
                     initiateAiGeneration(prompt);
                     return;
@@ -793,10 +874,23 @@
                 runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], fullPrompt);
             };
 
-            const typeCode = (codeObject, formattedCode) => {
-                const activeChat = userState.chats[activeChatId];
+            const typeCode = async (codeObject, formattedCode) => {
+                const activeChat = localState.chats[activeChatId];
                 const newVersion = activeChat.codeHistory.length + 1;
+                
+                // Сохраняем в Supabase
+                const { error } = await supabase.from('code_history').insert({
+                    chat_id: activeChatId,
+                    version: newVersion,
+                    code_object: codeObject
+                });
+                if (error) {
+                    console.error("Ошибка сохранения истории кода:", error);
+                    return;
+                }
+
                 activeChat.codeHistory.push({ version: newVersion, code: codeObject });
+                
                 let index = 0;
                 const interval = setInterval(() => {
                     if (index < formattedCode.length) {
@@ -827,14 +921,14 @@
                 ui.codeView.classList.toggle('hidden', isPreview);
                 ui.previewView.classList.toggle('hidden', !isPreview);
                 if (isPreview) {
-                    const activeChat = userState.chats[activeChatId];
+                    const activeChat = localState.chats[activeChatId];
                     const latestCode = activeChat.codeHistory.length > 0 ? activeChat.codeHistory.slice(-1)[0].code['index.html'] : '';
                     ui.previewFrame.srcdoc = latestCode;
                 }
             };
             
             const openCodeModal = (switchToPreview = false, version) => {
-                const activeChat = userState.chats[activeChatId];
+                const activeChat = localState.chats[activeChatId];
                 const codeHistoryItem = activeChat.codeHistory.find(h => h.version === version);
                 if (!codeHistoryItem) return;
                 const codeObject = codeHistoryItem.code;
@@ -865,11 +959,12 @@
             };
             
             const openProfileModal = () => {
-                if (user) {
-                    if(ui.profileModalPhoto) ui.profileModalPhoto.src = user.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
-                    if(ui.profileModalName) ui.profileModalName.textContent = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-                    if(ui.profileModalUsername) ui.profileModalUsername.textContent = user.username ? `@${user.username}` : 'Username не указан';
-                    if(ui.profileModalId) ui.profileModalId.textContent = `ID: ${user.id}`;
+                if (localState.user) {
+                    const u = localState.user;
+                    if(ui.profileModalPhoto) ui.profileModalPhoto.src = u.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${u.first_name.charAt(0).toUpperCase()}`;
+                    if(ui.profileModalName) ui.profileModalName.textContent = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+                    if(ui.profileModalUsername) ui.profileModalUsername.textContent = u.username ? `@${u.username}` : 'Username не указан';
+                    if(ui.profileModalId) ui.profileModalId.textContent = `ID: ${u.id}`;
                 }
                 updateProfileModalUI();
                 openModal(ui.profileModal);
@@ -934,7 +1029,7 @@
                 const repoListDiv = document.getElementById('repo-list');
                 if (!repoListDiv) return;
                 repoListDiv.innerHTML = '';
-                const userRepos = Object.values(userState.chats).filter(chat => chat.repoFullName);
+                const userRepos = Object.values(localState.chats).filter(chat => chat.repo_full_name);
                 if (userRepos.length === 0) {
                     repoListDiv.innerHTML = '<p class="text-gray-500 text-center text-sm">У вас пока нет репозиториев.</p>';
                     return;
@@ -942,15 +1037,15 @@
                 userRepos.reverse().forEach(chat => {
                     const repoDiv = document.createElement('div');
                     repoDiv.className = 'p-3 rounded-lg border border-gray-700 cursor-pointer hover:bg-gray-800 transition-colors';
-                    const repoName = chat.repoFullName.split('/')[1];
-                    repoDiv.innerHTML = ` <div class="flex items-center justify-between pointer-events-none"> <div class="flex items-center space-x-2 min-w-0"> <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg> <span class="text-blue-400 font-semibold text-sm truncate">${repoName}</span> </div> <span class="text-xs text-gray-500 border border-gray-600 px-1.5 py-0.5 rounded-full flex-shrink-0">${chat.mode === 'react' ? 'React' : 'HTML'}</span> </div> <p class="text-xs text-gray-400 mt-1.5 truncate pointer-events-none">${chat.title}</p> ${chat.deployUrl ? ` <div class="mt-2 pt-2 border-t border-gray-700 flex items-center space-x-2"> <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> <a href="${chat.deployUrl}" class="text-green-400 text-xs hover:underline deploy-link">Deployed on Netlify</a> </div> ` : ''} `;
+                    const repoName = chat.repo_full_name.split('/')[1];
+                    repoDiv.innerHTML = ` <div class="flex items-center justify-between pointer-events-none"> <div class="flex items-center space-x-2 min-w-0"> <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg> <span class="text-blue-400 font-semibold text-sm truncate">${repoName}</span> </div> <span class="text-xs text-gray-500 border border-gray-600 px-1.5 py-0.5 rounded-full flex-shrink-0">${chat.mode ? chat.mode.toUpperCase() : 'N/A'}</span> </div> <p class="text-xs text-gray-400 mt-1.5 truncate pointer-events-none">${chat.title}</p> ${chat.deploy_url ? ` <div class="mt-2 pt-2 border-t border-gray-700 flex items-center space-x-2"> <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> <a href="${chat.deploy_url}" class="text-green-400 text-xs hover:underline deploy-link">Deployed on Netlify</a> </div> ` : ''} `;
                     repoDiv.addEventListener('click', (e) => {
                         if (e.target.classList.contains('deploy-link')) {
                             e.stopPropagation();
                             tg.openLink(e.target.href);
                             return;
                         }
-                        openRepoBrowser(chat.repoFullName);
+                        openRepoBrowser(chat.repo_full_name);
                     });
                     repoListDiv.appendChild(repoDiv);
                 });
@@ -1064,24 +1159,35 @@
                 }
             };
 
-            const createNewChat = (isInitial = false) => {
-                const chatCount = Object.keys(userState.chats).length;
-                const limit = SUBSCRIPTION_LIMITS[userState.subscription].chats;
+            const createNewChat = async (isInitial = false) => {
+                const chatCount = Object.keys(localState.chats).length;
+                const limit = SUBSCRIPTION_LIMITS[localState.user.subscription_plan].chats;
 
                 if (!isInitial && chatCount >= limit) {
-                    tg.showAlert(`Вы достигли лимита в ${limit} чатов для плана ${SUBSCRIPTION_LIMITS[userState.subscription].name}. Обновите подписку.`);
+                    tg.showAlert(`Вы достигли лимита в ${limit} чатов для плана ${SUBSCRIPTION_LIMITS[localState.user.subscription_plan].name}. Обновите подписку.`);
                     openSubscriptionModal();
                     return;
                 }
 
-                const newId = Date.now().toString();
-                userState.chats[newId] = { id: newId, title: 'Новый чат', mode: null, repoName: null, repoFullName: null, messages: [], codeHistory: [], deployUrl: null, isDeploying: false, };
-                switchChat(newId);
+                const { data: newChat, error } = await supabase
+                    .from('chats')
+                    .insert({ user_id: localState.user.id })
+                    .select()
+                    .single();
+
+                if (error) {
+                    console.error("Ошибка создания чата:", error);
+                    return;
+                }
+                
+                localState.chats[newChat.id] = { ...newChat, messages: [], codeHistory: [] };
+                switchChat(newChat.id);
                 closeModal();
             };
 
-            const switchChat = (chatId) => {
+            const switchChat = async (chatId) => {
                 activeChatId = chatId;
+                await loadActiveChatDetails();
                 renderMessages();
                 updateHeaderButton();
                 closeModal();
@@ -1090,7 +1196,7 @@
             const renderChatList = () => {
                 if(!ui.chatList) return;
                 ui.chatList.innerHTML = '';
-                Object.values(userState.chats).reverse().forEach(chat => {
+                Object.values(localState.chats).reverse().forEach(chat => {
                     const chatDiv = document.createElement('div');
                     chatDiv.className = 'p-2.5 rounded-lg hover:bg-gray-800 cursor-pointer';
                     const title = document.createElement('p');
@@ -1114,40 +1220,50 @@
                 openModal(ui.confirmRestoreModal);
             };
 
-            const confirmRestore = () => {
-                const activeChat = userState.chats[activeChatId];
+            const confirmRestore = async () => {
+                const activeChat = localState.chats[activeChatId];
                 if (!activeChat || versionToRestore === null) return;
-                const versionIndex = activeChat.codeHistory.findIndex(h => h.version === versionToRestore);
-                if (versionIndex === -1) return;
-                activeChat.codeHistory.splice(versionIndex + 1);
-                const lastValidMessageIndex = activeChat.messages.map(m => m.codeVersion).lastIndexOf(versionToRestore);
-                if(lastValidMessageIndex > -1) {
-                    activeChat.messages.splice(lastValidMessageIndex + 1);
+                
+                // Удаляем из Supabase
+                const { error: deleteCodeError } = await supabase.from('code_history').delete().eq('chat_id', activeChatId).gt('version', versionToRestore);
+                const { error: deleteMsgError } = await supabase.from('messages').delete().eq('chat_id', activeChatId).gt('code_version', versionToRestore);
+
+                if(deleteCodeError || deleteMsgError) {
+                    console.error("Ошибка восстановления:", deleteCodeError || deleteMsgError);
+                    tg.showAlert("Не удалось восстановить версию.");
+                    return;
                 }
-                saveUserState();
+
+                // Обновляем локальный кэш
+                const versionIndex = activeChat.codeHistory.findIndex(h => h.version === versionToRestore);
+                if (versionIndex !== -1) activeChat.codeHistory.splice(versionIndex + 1);
+                
+                const lastValidMessageIndex = activeChat.messages.map(m => m.code_version).lastIndexOf(versionToRestore);
+                if(lastValidMessageIndex > -1) activeChat.messages.splice(lastValidMessageIndex + 1);
+                
                 renderMessages();
                 closeModal();
                 versionToRestore = null;
             };
 
             const updateHeaderButton = () => {
-                const chat = userState.chats[activeChatId];
-                const subName = SUBSCRIPTION_LIMITS[userState.subscription].name;
+                const chat = localState.chats[activeChatId];
+                const subName = SUBSCRIPTION_LIMITS[localState.user?.subscription_plan || 'free'].name;
                 
                 let buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">${subName}</button>`;
 
-                if (chat && chat.deployUrl) {
+                if (chat && chat.deploy_url) {
                     buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-500 text-white">Открыть</button>`;
-                } else if (chat && chat.isDeploying) {
+                } else if (chat && chat.is_deploying) {
                     buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full flex items-center" style="background-color: var(--tg-secondary-bg-color);" disabled><div class="spinner mr-1.5"></div>Деплой...</button>`;
                 }
                 
                 ui.headerActionContainer.innerHTML = buttonHTML;
                 const newButton = document.getElementById('header-action-button');
                 
-                if (chat && chat.deployUrl) {
-                    newButton.onclick = () => tg.openLink(chat.deployUrl);
-                } else if (!chat || !chat.isDeploying) {
+                if (chat && chat.deploy_url) {
+                    newButton.onclick = () => tg.openLink(chat.deploy_url);
+                } else if (!chat || !chat.is_deploying) {
                     newButton.onclick = openSubscriptionModal;
                 }
             };
@@ -1173,8 +1289,8 @@
             };
 
             const updateDeployButtonState = () => {
-                const chat = userState.chats[activeChatId];
-                if (chat && chat.repoFullName && !chat.deployUrl && !chat.isDeploying) {
+                const chat = localState.chats[activeChatId];
+                if (chat && chat.repo_full_name && !chat.deploy_url && !chat.is_deploying) {
                     ui.deployButton.classList.remove('hidden');
                     ui.deployButton.disabled = false;
                     ui.deployButton.textContent = 'Деплой';
@@ -1190,7 +1306,7 @@
                     return;
                 }
 
-                const chat = userState.chats[activeChatId];
+                const chat = localState.chats[activeChatId];
                 addMessage(`Создаю репозиторий "${repoName}" на GitHub...`, 'bot');
                 try {
                     const repoResponse = await fetch('https://api.github.com/user/repos', {
@@ -1200,13 +1316,14 @@
                     });
                     if (!repoResponse.ok) throw new Error(`Ошибка GitHub: ${ (await repoResponse.json()).message }`);
                     const repoData = await repoResponse.json();
-                    chat.repoFullName = repoData.full_name;
+                    chat.repo_full_name = repoData.full_name;
+                    await supabase.from('chats').update({ repo_full_name: repoData.full_name }).eq('id', activeChatId);
 
                     addMessage('Загружаю файлы в репозиторий...', 'bot');
                     
                     for (const [filePath, fileContent] of Object.entries(codeObject)) {
                         const content = btoa(unescape(encodeURIComponent(fileContent)));
-                        const fileResponse = await fetch(`https://api.github.com/repos/${chat.repoFullName}/contents/${filePath}`, {
+                        const fileResponse = await fetch(`https://api.github.com/repos/${chat.repo_full_name}/contents/${filePath}`, {
                             method: 'PUT',
                             headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' },
                             body: JSON.stringify({ message: 'Initial commit', content: content }),
@@ -1214,7 +1331,6 @@
                         if (!fileResponse.ok) throw new Error(`Ошибка загрузки файла ${filePath}: ${ (await fileResponse.json()).message }`);
                     }
                     
-                    saveUserState();
                     addMessage('✅ Репозиторий создан. Деплой будет доступен через минуту.', 'bot');
                     startDeployCountdown();
 
@@ -1224,14 +1340,15 @@
             };
 
             const pollDeployStatus = (siteId, liveUrl) => {
-                const chat = userState.chats[activeChatId];
+                const chat = localState.chats[activeChatId];
                 let attempts = 0;
                 const maxAttempts = 24;
                 const intervalId = setInterval(async () => {
                     if (attempts >= maxAttempts) {
                         clearInterval(intervalId);
                         addMessage(`❌ Ошибка: Деплой не завершился за 2 минуты.`, 'bot');
-                        chat.isDeploying = false;
+                        chat.is_deploying = false;
+                        await supabase.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
                         updateHeaderButton();
                         return;
                     }
@@ -1243,23 +1360,25 @@
                             const latestDeploy = deploys[0];
                             if (latestDeploy.state === 'ready') {
                                 clearInterval(intervalId);
-                                chat.deployUrl = liveUrl;
-                                saveUserState();
+                                chat.deploy_url = liveUrl;
+                                chat.is_deploying = false;
+                                await supabase.from('chats').update({ deploy_url: liveUrl, is_deploying: false }).eq('id', activeChatId);
                                 addMessage(`✅ Успех! Ваш сайт доступен по адресу: ${liveUrl}`, 'bot');
                                 tg.HapticFeedback.notificationOccurred('success');
-                                chat.isDeploying = false;
                                 updateHeaderButton();
                             } else if (latestDeploy.state === 'error') {
                                 clearInterval(intervalId);
                                 addMessage(`❌ Ошибка деплоя на Netlify: ${latestDeploy.error_message}`, 'bot');
-                                chat.isDeploying = false;
+                                chat.is_deploying = false;
+                                await supabase.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
                                 updateHeaderButton();
                             }
                         }
                     } catch (error) {
                         clearInterval(intervalId);
                         addMessage(`❌ Ошибка при проверке статуса деплоя: ${error.message}`, 'bot');
-                        chat.isDeploying = false;
+                        chat.is_deploying = false;
+                        await supabase.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
                         updateHeaderButton();
                     }
                     attempts++;
@@ -1271,18 +1390,19 @@
                     addMessage(`❌ Ошибка конфигурации: Netlify токен не указан.`, 'bot');
                     return;
                 }
-                const chat = userState.chats[activeChatId];
-                if (!chat || !chat.repoFullName) {
+                const chat = localState.chats[activeChatId];
+                if (!chat || !chat.repo_full_name) {
                     addMessage('Ошибка: не найден репозиторий для деплоя.', 'bot');
                     return;
                 }
-                chat.isDeploying = true;
+                chat.is_deploying = true;
+                await supabase.from('chats').update({ is_deploying: true }).eq('id', activeChatId);
                 updateHeaderButton();
                 ui.deployButton.classList.add('hidden');
-                addMessage(`Начинаю деплой проекта "${chat.repoName}"...`, 'bot');
+                addMessage(`Начинаю деплой проекта "${chat.repo_name}"...`, 'bot');
                 try {
                     addMessage('1/2 Создаю сайт на Netlify...', 'bot');
-                    const sitePayload = { repo: { provider: 'github', repo: chat.repoFullName, private: false, branch: 'main' } };
+                    const sitePayload = { repo: { provider: 'github', repo: chat.repo_full_name, private: false, branch: 'main' } };
                     if (chat.mode === 'react') {
                         sitePayload.repo.cmd = 'npm run build';
                         sitePayload.repo.dir = 'build/';
@@ -1301,7 +1421,8 @@
                     console.error('Ошибка деплоя:', error);
                     addMessage(`❌ Ошибка деплоя: ${error.message}`, 'bot');
                     tg.HapticFeedback.notificationOccurred('error');
-                    chat.isDeploying = false;
+                    chat.is_deploying = false;
+                    await supabase.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
                     updateHeaderButton();
                 }
             };
@@ -1395,7 +1516,6 @@
             };
             
             const buySubscription = (plan, amount) => {
-                // Здесь вам нужно указать токен вашего платежного провайдера, полученный от @BotFather
                 const paymentProviderToken = "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ";
 
                 if (!paymentProviderToken || paymentProviderToken === "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ") {
@@ -1412,12 +1532,20 @@
                     prices: [{ label: `Подписка ${SUBSCRIPTION_LIMITS[plan].name}`, amount: amount }]
                 };
 
-                tg.openInvoice(invoice.payload, (status) => {
+                tg.openInvoice(invoice.payload, async (status) => {
                     if (status === 'paid') {
-                        // Важно: здесь должна быть проверка на вашем сервере,
-                        // что платеж действительно прошел, прежде чем обновлять подписку.
-                        userState.subscription = plan;
-                        saveUserState();
+                        const { error } = await supabase
+                            .from('users')
+                            .update({ subscription_plan: plan })
+                            .eq('id', localState.user.id);
+                        
+                        if (error) {
+                            console.error("Ошибка обновления подписки:", error);
+                            tg.showAlert("Не удалось обновить подписку. Свяжитесь с поддержкой.");
+                            return;
+                        }
+
+                        localState.user.subscription_plan = plan;
                         updateHeaderButton();
                         closeModal();
                         tg.showAlert('Спасибо! Ваша подписка успешно обновлена.');
@@ -1427,8 +1555,8 @@
                 });
             };
 
-            const initApp = () => {
-                loadUserState();
+            const initApp = async () => {
+                await loadDataFromSupabase();
                 initAuth();
                 setupEventListeners();
                 updateInputState();

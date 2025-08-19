@@ -269,11 +269,10 @@
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxcHRhemthZGljdWplZG95eWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTU2ODUsImV4cCI6MjA3MTEzMTY4NX0.FaNU-OlO1yEo7e9ADUCbPWvK0RG90_GedlaXUXUM0Eo';
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-            // --- ОБНОВЛЕННЫЕ ДАННЫЕ GITHUB APP ---
+            // --- ДАННЫЕ ВАШЕГО GITHUB APP ---
             const GITHUB_APP_ID = '1807677';
             const GITHUB_OAUTH_CLIENT_ID = 'Iv23li96yFTkcIaOloCh';
             const GITHUB_OAUTH_CLIENT_SECRET = '90afeaec97c80e5f955671472c9d57106db41bec';
-            // --- КОНЕЦ ОБНОВЛЕННЫХ ДАННЫХ ---
             
             const CORS_PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
             const NETLIFY_TOKEN = 'nfp_HcEaWZxtyLaos1zC8s3d6arvDqW9674u7678';
@@ -508,9 +507,8 @@
 
             const initAuth = () => {
                 isTelegramEnv = tg.platform !== 'unknown';
-                if (!isTelegramEnv) {
-                    initGitHubOAuth();
-                }
+                // В любом случае инициализируем OAuth, так как он теперь наш основной метод
+                initGitHubOAuth();
             };
 
             const initGitHubOAuth = () => {
@@ -530,7 +528,12 @@
 
             const loginWithGitHub = () => {
                 const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_OAUTH_CLIENT_ID}&scope=repo,user`;
-                window.location.href = authUrl;
+                // Используем tg.openLink для совместимости с Telegram
+                if (isTelegramEnv) {
+                    tg.openLink(authUrl);
+                } else {
+                    window.location.href = authUrl;
+                }
             };
 
             const logoutFromGitHub = () => {
@@ -565,18 +568,21 @@
                 }
             };
             
-            const getGitHubAppInstallationToken = async () => {
-                console.error("Вызов функции-заглушки getGitHubAppInstallationToken. Необходимо реализовать бэкенд.");
-                addMessage("❌ **Ошибка конфигурации:** Для работы с GitHub в Telegram требуется настройка серверной части (бэкенда). Обратитесь к разработчику.", 'bot');
-                return null;
-            };
-
+            // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОЛУЧЕНИЯ ТОКЕНА ---
             const getGitHubToken = async () => {
-                if (isTelegramEnv) {
-                    return await getGitHubAppInstallationToken();
-                } else {
+                // ПРЕДУПРЕЖДЕНИЕ: Эта реализация использует только OAuth-поток,
+                // который требует от пользователя входа через браузер. Для полноценной
+                // работы GitHub App внутри Telegram без редиректа требуется 
+                // серверная часть (бэкенд) для безопасной генерации токенов установки.
+                
+                if (githubOAuthToken) {
                     return githubOAuthToken;
                 }
+
+                // Если токена нет, сообщаем пользователю, что нужно войти
+                addMessage('Для создания репозитория необходимо войти в GitHub. Пожалуйста, откройте ваш профиль (иконка в правом верхнем углу) и нажмите "Войти через GitHub".', 'bot');
+                openProfileModal(); // Открываем модальное окно профиля, где есть кнопка входа
+                return null;
             };
             
             const addMessage = async (text, sender, imageUrl = null, codeVersion = null) => {
@@ -977,12 +983,18 @@
             const updateProfileModalUI = () => {
                 ui.repositoriesSection.innerHTML = ''; // Очищаем секцию
                 
-                if (isTelegramEnv) {
-                    // Внутри Telegram используем GitHub App
+                // Этот блок теперь одинаков для Telegram и браузера, так как мы используем OAuth
+                if (githubOAuthToken) {
                     const header = document.createElement('div');
                     header.className = 'flex justify-between items-center mb-3';
                     header.innerHTML = '<h4 class="text-base font-bold">Репозитории</h4>';
                     
+                    const logoutButton = document.createElement('button');
+                    logoutButton.textContent = 'Выйти';
+                    logoutButton.className = 'text-xs text-red-400 hover:underline';
+                    logoutButton.onclick = logoutFromGitHub;
+                    header.appendChild(logoutButton);
+
                     const repoListDiv = document.createElement('div');
                     repoListDiv.id = 'repo-list';
                     repoListDiv.className = 'space-y-2';
@@ -990,44 +1002,23 @@
                     ui.repositoriesSection.appendChild(header);
                     ui.repositoriesSection.appendChild(repoListDiv);
                     renderRepoList();
-
                 } else {
-                    // В браузере используем OAuth
-                    if (githubOAuthToken) {
-                        const header = document.createElement('div');
-                        header.className = 'flex justify-between items-center mb-3';
-                        header.innerHTML = '<h4 class="text-base font-bold">Репозитории</h4>';
-                        
-                        const logoutButton = document.createElement('button');
-                        logoutButton.textContent = 'Выйти';
-                        logoutButton.className = 'text-xs text-red-400 hover:underline';
-                        logoutButton.onclick = logoutFromGitHub;
-                        header.appendChild(logoutButton);
-
-                        const repoListDiv = document.createElement('div');
-                        repoListDiv.id = 'repo-list';
-                        repoListDiv.className = 'space-y-2';
-
-                        ui.repositoriesSection.appendChild(header);
-                        ui.repositoriesSection.appendChild(repoListDiv);
-                        renderRepoList();
-                    } else {
-                        const loginContainer = document.createElement('div');
-                        loginContainer.className = 'text-center p-4 border border-dashed border-gray-600 rounded-lg';
-                        loginContainer.innerHTML = '<p class="mb-3 text-sm text-gray-400">Войдите в GitHub, чтобы управлять репозиториями.</p>';
-                        
-                        const loginButton = document.createElement('button');
-                        loginButton.className = 'w-full py-2 px-4 rounded-lg font-semibold text-sm flex items-center justify-center';
-                        loginButton.style.backgroundColor = '#24292e';
-                        loginButton.style.color = 'white';
-                        loginButton.innerHTML = `<svg class="w-5 h-5 mr-2" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>Войти через GitHub`;
-                        loginButton.onclick = loginWithGitHub;
-                        
-                        loginContainer.appendChild(loginButton);
-                        ui.repositoriesSection.appendChild(loginContainer);
-                    }
+                    const loginContainer = document.createElement('div');
+                    loginContainer.className = 'text-center p-4 border border-dashed border-gray-600 rounded-lg';
+                    loginContainer.innerHTML = '<p class="mb-3 text-sm text-gray-400">Войдите в GitHub, чтобы управлять репозиториями.</p>';
+                    
+                    const loginButton = document.createElement('button');
+                    loginButton.className = 'w-full py-2 px-4 rounded-lg font-semibold text-sm flex items-center justify-center';
+                    loginButton.style.backgroundColor = '#24292e';
+                    loginButton.style.color = 'white';
+                    loginButton.innerHTML = `<svg class="w-5 h-5 mr-2" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>Войти через GitHub`;
+                    loginButton.onclick = loginWithGitHub;
+                    
+                    loginContainer.appendChild(loginButton);
+                    ui.repositoriesSection.appendChild(loginContainer);
                 }
             };
+
 
             const renderRepoList = () => {
                 const repoListDiv = document.getElementById('repo-list');
@@ -1062,7 +1053,7 @@
             const openRepoBrowser = async (repoFullName) => {
                 const token = await getGitHubToken();
                 if (!token) {
-                    addMessage('❌ Ошибка аутентификации. Не удалось получить токен доступа к GitHub.', 'bot');
+                    // Сообщение пользователю уже отправлено из getGitHubToken
                     closeModal();
                     return;
                 }
@@ -1306,7 +1297,7 @@
             const createGitHubRepo = async (repoName, codeObject) => {
                 const token = await getGitHubToken();
                 if (!token) {
-                    addMessage(`❌ Ошибка аутентификации. Не удалось получить токен доступа к GitHub.`, 'bot');
+                    // Сообщение пользователю уже было отправлено из getGitHubToken
                     return;
                 }
 

@@ -451,7 +451,7 @@
                     const msgDiv = document.createElement('div');
                     msgDiv.className = 'message-container';
                     const msgContent = document.createElement('div');
-                    msgDiv.className = `flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`;
+                    msgContent.className = `flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`;
                     msgContent.className = `message ${msg.sender === 'user' ? 'user-message' : 'bot-message'}`;
                     
                     if (msg.imageUrl) {
@@ -708,6 +708,17 @@
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.repoBrowserModal].forEach(modal => {
                     if (modal) modal.classList.remove('visible');
                 });
+            };
+            
+            const openProfileModal = () => {
+                if (user) {
+                    if(ui.profileModalPhoto) ui.profileModalPhoto.src = user.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
+                    if(ui.profileModalName) ui.profileModalName.textContent = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+                    if(ui.profileModalUsername) ui.profileModalUsername.textContent = user.username ? `@${user.username}` : 'Username не указан';
+                    if(ui.profileModalId) ui.profileModalId.textContent = `ID: ${user.id}`;
+                }
+                updateProfileModalUI();
+                openModal(ui.profileModal);
             };
             
             const updateProfileModalUI = () => {
@@ -997,6 +1008,45 @@
                     ui.deployButton.textContent = 'Деплой';
                 } else {
                     ui.deployButton.classList.add('hidden');
+                }
+            };
+
+            const createGitHubRepo = async (repoName, codeObject) => {
+                const token = await getGitHubToken();
+                if (!token) {
+                    addMessage(`❌ Ошибка аутентификации. Не удалось получить токен доступа к GitHub.`, 'bot');
+                    return;
+                }
+
+                const chat = chats[activeChatId];
+                addMessage(`Создаю репозиторий "${repoName}" на GitHub...`, 'bot');
+                try {
+                    const repoResponse = await fetch('https://api.github.com/user/repos', {
+                        method: 'POST',
+                        headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                        body: JSON.stringify({ name: repoName, description: 'Created by Devtol Mini App', private: false }),
+                    });
+                    if (!repoResponse.ok) throw new Error(`Ошибка GitHub: ${ (await repoResponse.json()).message }`);
+                    const repoData = await repoResponse.json();
+                    chat.repoFullName = repoData.full_name;
+
+                    addMessage('Загружаю файлы в репозиторий...', 'bot');
+                    
+                    for (const [filePath, fileContent] of Object.entries(codeObject)) {
+                        const content = btoa(unescape(encodeURIComponent(fileContent)));
+                        const fileResponse = await fetch(`https://api.github.com/repos/${chat.repoFullName}/contents/${filePath}`, {
+                            method: 'PUT',
+                            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                            body: JSON.stringify({ message: 'Initial commit', content: content }),
+                        });
+                        if (!fileResponse.ok) throw new Error(`Ошибка загрузки файла ${filePath}: ${ (await fileResponse.json()).message }`);
+                    }
+                    
+                    addMessage('✅ Репозиторий создан. Деплой будет доступен через минуту.', 'bot');
+                    startDeployCountdown();
+
+                } catch (error) {
+                     addMessage(`❌ Ошибка создания репозитория: ${error.message}`, 'bot');
                 }
             };
 

@@ -497,9 +497,6 @@
             };
 
             const checkAndIncrementMessageCount = () => {
-                // Эту логику нужно будет перенести на сервер или использовать RLS в Supabase
-                // для ограничения количества записей в таблице messages.
-                // Пока оставляем как есть для демонстрации.
                 return true;
             };
 
@@ -507,7 +504,6 @@
 
             const initAuth = () => {
                 isTelegramEnv = tg.platform !== 'unknown';
-                // В любом случае инициализируем OAuth, так как он теперь наш основной метод
                 initGitHubOAuth();
             };
 
@@ -528,7 +524,6 @@
 
             const loginWithGitHub = () => {
                 const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_OAUTH_CLIENT_ID}&scope=repo,user`;
-                // Используем tg.openLink для совместимости с Telegram
                 if (isTelegramEnv) {
                     tg.openLink(authUrl);
                 } else {
@@ -568,20 +563,15 @@
                 }
             };
             
-            // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОЛУЧЕНИЯ ТОКЕНА ---
+            // --- УПРОЩЕННАЯ ФУНКЦИЯ ПОЛУЧЕНИЯ ТОКЕНА ---
             const getGitHubToken = async () => {
-                // ПРЕДУПРЕЖДЕНИЕ: Эта реализация использует только OAuth-поток,
-                // который требует от пользователя входа через браузер. Для полноценной
-                // работы GitHub App внутри Telegram без редиректа требуется 
-                // серверная часть (бэкенд) для безопасной генерации токенов установки.
-                
                 if (githubOAuthToken) {
                     return githubOAuthToken;
                 }
-
-                // Если токена нет, сообщаем пользователю, что нужно войти
+                
+                // Если токена нет, просим пользователя войти
                 addMessage('Для создания репозитория необходимо войти в GitHub. Пожалуйста, откройте ваш профиль (иконка в правом верхнем углу) и нажмите "Войти через GitHub".', 'bot');
-                openProfileModal(); // Открываем модальное окно профиля, где есть кнопка входа
+                openProfileModal();
                 return null;
             };
             
@@ -983,7 +973,6 @@
             const updateProfileModalUI = () => {
                 ui.repositoriesSection.innerHTML = ''; // Очищаем секцию
                 
-                // Этот блок теперь одинаков для Telegram и браузера, так как мы используем OAuth
                 if (githubOAuthToken) {
                     const header = document.createElement('div');
                     header.className = 'flex justify-between items-center mb-3';
@@ -1053,7 +1042,6 @@
             const openRepoBrowser = async (repoFullName) => {
                 const token = await getGitHubToken();
                 if (!token) {
-                    // Сообщение пользователю уже отправлено из getGitHubToken
                     closeModal();
                     return;
                 }
@@ -1297,7 +1285,6 @@
             const createGitHubRepo = async (repoName, codeObject) => {
                 const token = await getGitHubToken();
                 if (!token) {
-                    // Сообщение пользователю уже было отправлено из getGitHubToken
                     return;
                 }
 

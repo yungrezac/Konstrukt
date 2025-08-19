@@ -267,14 +267,14 @@
             // --- ⚠️ ВАЖНО: Конфигурация API ⚠️ ---
             const SUPABASE_URL = 'https://tqptazkadicujedoyykp.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxcHRhemthZGljdWplZG95eWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTU2ODUsImV4cCI6MjA3MTEzMTY4NX0.FaNU-OlO1yEo7e9ADUCbPWvK0RG90_GedlaXUXUM0Eo';
-            const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
             const GITHUB_APP_ID = '1804701';
             const GITHUB_OAUTH_CLIENT_ID = 'Iv23liMslqqNmYZlMUUb';
             const GITHUB_OAUTH_CLIENT_SECRET = 'ВАШ_OAUTH_CLIENT_SECRET'; // <-- 🔴 ЗАМЕНИТЕ
             const CORS_PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
-            const NETLIFY_TOKEN = 'nfp_HcEaWZxtyLaos1zC8s3d6arvDqW9674u7678'; // <-- 🔴 ВСТАВЬТЕ
-            const GEMINI_API_KEY = 'AIzaSyBuXjShdZFvr76OKsl7FaL789Dxl3i6bgc'; // <-- 🔴 ВСТАВЬТЕ
+            const NETLIFY_TOKEN = ''; // <-- 🔴 ВСТАВЬТЕ
+            const GEMINI_API_KEY = ""; // <-- 🔴 ВСТАВЬТЕ
 
             // --- Конфигурация подписок ---
             const SUBSCRIPTION_LIMITS = {
@@ -399,7 +399,7 @@
                 }
 
                 // 1. Получить или создать пользователя
-                let { data: userData, error: userError } = await supabase
+                let { data: userData, error: userError } = await supabaseClient
                     .from('users')
                     .select('*')
                     .eq('id', user.id)
@@ -411,7 +411,7 @@
                 }
 
                 if (!userData) {
-                    const { data: newUser, error: insertError } = await supabase
+                    const { data: newUser, error: insertError } = await supabaseClient
                         .from('users')
                         .insert({
                             id: user.id,
@@ -431,7 +431,7 @@
                 localState.user = userData;
 
                 // 2. Загрузить чаты пользователя
-                const { data: chatsData, error: chatsError } = await supabase
+                const { data: chatsData, error: chatsError } = await supabaseClient
                     .from('chats')
                     .select('*')
                     .eq('user_id', user.id);
@@ -459,7 +459,7 @@
                 if (!activeChatId) return;
 
                 // Загрузка сообщений
-                const { data: messagesData, error: messagesError } = await supabase
+                const { data: messagesData, error: messagesError } = await supabaseClient
                     .from('messages')
                     .select('*')
                     .eq('chat_id', activeChatId)
@@ -472,7 +472,7 @@
                 }
 
                 // Загрузка истории кода
-                const { data: codeHistoryData, error: codeHistoryError } = await supabase
+                const { data: codeHistoryData, error: codeHistoryError } = await supabaseClient
                     .from('code_history')
                     .select('*')
                     .eq('chat_id', activeChatId)
@@ -581,7 +581,7 @@
                 if (!activeChat) return;
                 
                 // Сохраняем в Supabase
-                const { data: newMessage, error } = await supabase
+                const { data: newMessage, error } = await supabaseClient
                     .from('messages')
                     .insert({
                         chat_id: activeChatId,
@@ -606,7 +606,7 @@
                     activeChat.repoName = `${englishTitle.substring(0, 50)}-${Date.now().toString().slice(-5)}`;
                     
                     // Обновляем заголовок чата в Supabase
-                    await supabase.from('chats').update({ title: activeChat.title, repo_name: activeChat.repoName }).eq('id', activeChatId);
+                    await supabaseClient.from('chats').update({ title: activeChat.title, repo_name: activeChat.repoName }).eq('id', activeChatId);
                 }
                 
                 renderMessages();
@@ -619,14 +619,15 @@
             const renderMessages = () => {
                 const activeChat = localState.chats[activeChatId];
                 
+                // Logic to show/hide welcome screen
                 if (!activeChat || activeChat.messages.length === 0) {
                     if (ui.initialGreeting) ui.initialGreeting.classList.remove('opacity-0', 'pointer-events-none');
-                    ui.chatArea.innerHTML = '';
+                    ui.chatArea.innerHTML = ''; // Clear any previous messages
                     return;
                 }
                 if (ui.initialGreeting) ui.initialGreeting.classList.add('opacity-0', 'pointer-events-none');
 
-                ui.chatArea.innerHTML = '';
+                ui.chatArea.innerHTML = ''; // Clear before rendering new messages
                 
                 const latestCodeVersion = activeChat.codeHistory.length;
 
@@ -879,7 +880,7 @@
                 const newVersion = activeChat.codeHistory.length + 1;
                 
                 // Сохраняем в Supabase
-                const { error } = await supabase.from('code_history').insert({
+                const { error } = await supabaseClient.from('code_history').insert({
                     chat_id: activeChatId,
                     version: newVersion,
                     code_object: codeObject
@@ -1169,7 +1170,7 @@
                     return;
                 }
 
-                const { data: newChat, error } = await supabase
+                const { data: newChat, error } = await supabaseClient
                     .from('chats')
                     .insert({ user_id: localState.user.id })
                     .select()
@@ -1225,8 +1226,8 @@
                 if (!activeChat || versionToRestore === null) return;
                 
                 // Удаляем из Supabase
-                const { error: deleteCodeError } = await supabase.from('code_history').delete().eq('chat_id', activeChatId).gt('version', versionToRestore);
-                const { error: deleteMsgError } = await supabase.from('messages').delete().eq('chat_id', activeChatId).gt('code_version', versionToRestore);
+                const { error: deleteCodeError } = await supabaseClient.from('code_history').delete().eq('chat_id', activeChatId).gt('version', versionToRestore);
+                const { error: deleteMsgError } = await supabaseClient.from('messages').delete().eq('chat_id', activeChatId).gt('code_version', versionToRestore);
 
                 if(deleteCodeError || deleteMsgError) {
                     console.error("Ошибка восстановления:", deleteCodeError || deleteMsgError);
@@ -1317,7 +1318,7 @@
                     if (!repoResponse.ok) throw new Error(`Ошибка GitHub: ${ (await repoResponse.json()).message }`);
                     const repoData = await repoResponse.json();
                     chat.repo_full_name = repoData.full_name;
-                    await supabase.from('chats').update({ repo_full_name: repoData.full_name }).eq('id', activeChatId);
+                    await supabaseClient.from('chats').update({ repo_full_name: repoData.full_name }).eq('id', activeChatId);
 
                     addMessage('Загружаю файлы в репозиторий...', 'bot');
                     
@@ -1348,7 +1349,7 @@
                         clearInterval(intervalId);
                         addMessage(`❌ Ошибка: Деплой не завершился за 2 минуты.`, 'bot');
                         chat.is_deploying = false;
-                        await supabase.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
+                        await supabaseClient.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
                         updateHeaderButton();
                         return;
                     }
@@ -1362,7 +1363,7 @@
                                 clearInterval(intervalId);
                                 chat.deploy_url = liveUrl;
                                 chat.is_deploying = false;
-                                await supabase.from('chats').update({ deploy_url: liveUrl, is_deploying: false }).eq('id', activeChatId);
+                                await supabaseClient.from('chats').update({ deploy_url: liveUrl, is_deploying: false }).eq('id', activeChatId);
                                 addMessage(`✅ Успех! Ваш сайт доступен по адресу: ${liveUrl}`, 'bot');
                                 tg.HapticFeedback.notificationOccurred('success');
                                 updateHeaderButton();
@@ -1370,7 +1371,7 @@
                                 clearInterval(intervalId);
                                 addMessage(`❌ Ошибка деплоя на Netlify: ${latestDeploy.error_message}`, 'bot');
                                 chat.is_deploying = false;
-                                await supabase.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
+                                await supabaseClient.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
                                 updateHeaderButton();
                             }
                         }
@@ -1378,7 +1379,7 @@
                         clearInterval(intervalId);
                         addMessage(`❌ Ошибка при проверке статуса деплоя: ${error.message}`, 'bot');
                         chat.is_deploying = false;
-                        await supabase.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
+                        await supabaseClient.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
                         updateHeaderButton();
                     }
                     attempts++;
@@ -1396,7 +1397,7 @@
                     return;
                 }
                 chat.is_deploying = true;
-                await supabase.from('chats').update({ is_deploying: true }).eq('id', activeChatId);
+                await supabaseClient.from('chats').update({ is_deploying: true }).eq('id', activeChatId);
                 updateHeaderButton();
                 ui.deployButton.classList.add('hidden');
                 addMessage(`Начинаю деплой проекта "${chat.repo_name}"...`, 'bot');
@@ -1422,7 +1423,7 @@
                     addMessage(`❌ Ошибка деплоя: ${error.message}`, 'bot');
                     tg.HapticFeedback.notificationOccurred('error');
                     chat.is_deploying = false;
-                    await supabase.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
+                    await supabaseClient.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
                     updateHeaderButton();
                 }
             };
@@ -1534,7 +1535,7 @@
 
                 tg.openInvoice(invoice.payload, async (status) => {
                     if (status === 'paid') {
-                        const { error } = await supabase
+                        const { error } = await supabaseClient
                             .from('users')
                             .update({ subscription_plan: plan })
                             .eq('id', localState.user.id);

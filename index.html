@@ -20,7 +20,7 @@
         }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: var(--tg-text-color); background-color: var(--tg-bg-color); overflow: hidden; font-size: 15px; }
         .app-container { display: flex; flex-direction: column; height: 100vh; }
-        .chat-area { flex-grow: 1; overflow-y: auto; padding: 0.75rem; }
+        .chat-area { flex-grow: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column;}
         .message-container { animation: message-appear 0.3s ease-out; }
         @keyframes message-appear { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .message { max-width: 80%; padding: 0.4rem 0.8rem; border-radius: 1.15rem; margin-bottom: 0.5rem; word-wrap: break-word; line-height: 1.4; }
@@ -44,6 +44,27 @@
         #settings-popup.visible { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
         .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* START: Animated Gradient Text Styles */
+        #animated-greeting {
+            font-size: 4.5rem; /* 72px */
+            font-weight: 800; /* extrabold */
+            line-height: 1;
+            background: linear-gradient(90deg, #a855f7, #ec4899, #ef4444, #ec4899, #a855f7);
+            background-size: 200% auto;
+            color: #fff;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient-animation 5s linear infinite;
+        }
+
+        @keyframes gradient-animation {
+            to {
+                background-position: 200% center;
+            }
+        }
+        /* END: Animated Gradient Text Styles */
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -65,10 +86,21 @@
         </header>
 
         <!-- Основная часть (чат) -->
-        <main id="chat-area" class="chat-area flex flex-col">
-              <div id="initial-greeting" class="m-auto text-center px-4">
-                  <h2 id="greeting-text" class="text-4xl font-extrabold bg-gradient-to-r from-purple-500 via-black to-gray-600 text-transparent bg-clip-text leading-tight"></h2>
-              </div>
+        <main class="flex-grow relative overflow-hidden">
+            <!-- START: Welcome Screen -->
+            <div id="initial-greeting" class="absolute inset-0 flex flex-col items-center justify-center text-center px-4 transition-opacity duration-300 z-10" style="background-color: var(--tg-bg-color);">
+                <h2 id="animated-greeting" class="mb-6">Здравствуйте</h2>
+                <p id="greeting-text" class="text-xl font-semibold mb-4">
+                    <!-- Имя пользователя будет вставлено сюда -->
+                </p>
+                <p class="text-gray-400 max-w-md text-sm">
+                    Я могу сгенерировать для вас веб-приложение на HTML или React, создать для него репозиторий на GitHub и даже опубликовать его в интернете. Просто опишите свою идею.
+                </p>
+            </div>
+            <!-- END: Welcome Screen -->
+            <div id="chat-area" class="chat-area h-full w-full absolute inset-0">
+                <!-- Сообщения будут вставлены сюда -->
+            </div>
         </main>
         
         <div id="loader" class="hidden p-3"><div class="message bot-message loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
@@ -333,7 +365,7 @@
 
             const user = tg.initDataUnsafe.user;
             if (user && user.first_name) {
-                if (ui.greetingText) ui.greetingText.innerHTML = `Здравствуйте, ${user.first_name},<br>какое приложение хотите создать?`;
+                if (ui.greetingText) ui.greetingText.textContent = `${user.first_name}, что создадим сегодня?`;
                 if (ui.userPhoto) ui.userPhoto.src = user.photo_url || `https://placehold.co/40x40/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
             }
             
@@ -473,7 +505,6 @@
             const addMessage = (text, sender, imageUrl = null, codeVersion = null) => {
                 const activeChat = userState.chats[activeChatId];
                 if (!activeChat) return;
-                if(ui.initialGreeting) ui.initialGreeting.style.display = 'none';
                 
                 const message = { id: Date.now(), text, sender, imageUrl, codeVersion };
                 activeChat.messages.push(message);
@@ -492,13 +523,17 @@
 
             const renderMessages = () => {
                 const activeChat = userState.chats[activeChatId];
-                ui.chatArea.innerHTML = '';
+                
+                // Logic to show/hide welcome screen
                 if (!activeChat || activeChat.messages.length === 0) {
-                    if(ui.initialGreeting) ui.initialGreeting.style.display = 'flex';
+                    if (ui.initialGreeting) ui.initialGreeting.classList.remove('opacity-0', 'pointer-events-none');
+                    ui.chatArea.innerHTML = ''; // Clear any previous messages
                     return;
                 }
-                if(ui.initialGreeting) ui.initialGreeting.style.display = 'none';
+                if (ui.initialGreeting) ui.initialGreeting.classList.add('opacity-0', 'pointer-events-none');
 
+                ui.chatArea.innerHTML = ''; // Clear before rendering new messages
+                
                 const latestCodeVersion = activeChat.codeHistory.length;
 
                 activeChat.messages.forEach(msg => {

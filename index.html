@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>Devtol Mini App</title>
-    <!-- Подключение Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Подключение Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --tg-bg-color: var(--tg-theme-bg-color, #111827);
@@ -44,11 +43,9 @@
         #settings-popup.visible { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
         .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* START: Animated Gradient Text Styles */
         #animated-greeting {
-            font-size: 4.5rem; /* 72px */
-            font-weight: 800; /* extrabold */
+            font-size: 4.5rem;
+            font-weight: 800;
             line-height: 1;
             background: linear-gradient(90deg, #a855f7, #ec4899, #ef4444, #ec4899, #a855f7);
             background-size: 200% auto;
@@ -58,13 +55,7 @@
             -webkit-text-fill-color: transparent;
             animation: gradient-animation 5s linear infinite;
         }
-
-        @keyframes gradient-animation {
-            to {
-                background-position: 200% center;
-            }
-        }
-        /* END: Animated Gradient Text Styles */
+        @keyframes gradient-animation { to { background-position: 200% center; } }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -87,20 +78,14 @@
 
         <!-- Основная часть (чат) -->
         <main class="flex-grow relative overflow-hidden">
-            <!-- START: Welcome Screen -->
             <div id="initial-greeting" class="absolute inset-0 flex flex-col items-center justify-center text-center px-4 transition-opacity duration-300 z-10" style="background-color: var(--tg-bg-color);">
                 <h2 id="animated-greeting" class="mb-6">Здравствуйте</h2>
-                <p id="greeting-text" class="text-xl font-semibold mb-4">
-                    <!-- Имя пользователя будет вставлено сюда -->
-                </p>
+                <p id="greeting-text" class="text-xl font-semibold mb-4"></p>
                 <p class="text-gray-400 max-w-md text-sm">
                     Я могу сгенерировать для вас веб-приложение на HTML или React, создать для него репозиторий на GitHub и даже опубликовать его в интернете. Просто опишите свою идею.
                 </p>
             </div>
-            <!-- END: Welcome Screen -->
-            <div id="chat-area" class="chat-area h-full w-full absolute inset-0">
-                <!-- Сообщения будут вставлены сюда -->
-            </div>
+            <div id="chat-area" class="chat-area h-full w-full absolute inset-0"></div>
         </main>
         
         <div id="loader" class="hidden p-3"><div class="message bot-message loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
@@ -165,14 +150,11 @@
             <div id="repositories-section" class="mt-6"></div>
         </div>
     </div>
-
-    <!-- START: Subscription Modal -->
     <div id="subscription-modal" class="modal" style="height: auto; max-height: 80%;">
         <div class="modal-handle"></div>
         <div class="p-4">
             <h2 class="text-xl font-bold text-center mb-4">Выберите план</h2>
             <div class="space-y-3">
-                <!-- Pro Plan -->
                 <div class="p-4 rounded-lg border-2 border-purple-500 bg-gray-800">
                     <h3 class="text-lg font-bold text-purple-400">Pro</h3>
                     <p class="text-sm text-gray-300 mt-1">10 чатов и 15 сообщений в день</p>
@@ -181,7 +163,6 @@
                         <button id="buy-pro-button" class="px-5 py-2 rounded-lg text-sm font-semibold" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Выбрать</button>
                     </div>
                 </div>
-                <!-- Ultima Plan -->
                 <div class="p-4 rounded-lg border border-gray-600 bg-gray-800">
                     <h3 class="text-lg font-bold">Ultima</h3>
                     <p class="text-sm text-gray-300 mt-1">Безлимит чатов и сообщений</p>
@@ -193,8 +174,6 @@
             </div>
         </div>
     </div>
-    <!-- END: Subscription Modal -->
-
     <div id="repo-browser-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
         <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
@@ -213,8 +192,6 @@
             </div>
         </div>
     </div>
-
-    <!-- START: Updated Settings Popup -->
     <div id="settings-popup">
         <ul class="p-1.5 text-white text-sm">
             <li data-mode="canvas" class="flex items-center p-2 rounded-md hover:bg-gray-600 cursor-pointer"><svg class="w-4 h-4 mr-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Canvas (HTML)</li>
@@ -224,8 +201,6 @@
             <li data-mode="flutter" class="flex items-center p-2 rounded-md hover:bg-gray-600 cursor-pointer"><svg class="w-4 h-4 mr-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l-7-7 3-3 4 4 4-4 3 3-7 7zM5 8l7 7 7-7"/></svg>Flutter (без предпросмотра)</li>
         </ul>
     </div>
-    <!-- END: Updated Settings Popup -->
-
     <div id="code-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
         <div id="code-modal-header" class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
@@ -258,1186 +233,773 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const tg = window.Telegram.WebApp;
+    document.addEventListener('DOMContentLoaded', () => {
+        const tg = window.Telegram.WebApp;
 
-            // --- ⚠️ ВАЖНО: Конфигурация API ⚠️ ---
-            const GITHUB_APP_ID = '1804701';
-            const GITHUB_OAUTH_CLIENT_ID = 'Iv23liMslqqNmYZlMUUb';
-            const GITHUB_OAUTH_CLIENT_SECRET = 'ВАШ_OAUTH_CLIENT_SECRET'; // <-- 🔴 ЗАМЕНИТЕ
-            const CORS_PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
-            const NETLIFY_TOKEN = ''; // <-- 🔴 ВСТАВЬТЕ
-            const GEMINI_API_KEY = ""; // <-- 🔴 ВСТАВЬТЕ
+        // --- ⚠️ ВАЖНО: Конфигурация API и Supabase ⚠️ ---
+        const SUPABASE_URL = 'https://tqptazkadicujedoyykp.supabase.co'; // <-- 🔴 ЗАМЕНИТЕ НА ВАШ URL
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxcHRhemthZGljdWplZG95eWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTU2ODUsImV4cCI6MjA3MTEzMTY4NX0.FaNU-OlO1yEo7e9ADUCbPWvK0RG90_GedlaXUXUM0Eo'; // <-- 🔴 ЗАМЕНИТЕ НА ВАШ ANON KEY
+        const GEMINI_API_KEY = "AIzaSyBuXjShdZFvr76OKsl7FaL789Dxl3i6bgc"; // <-- 🔴 ВСТАВЬТЕ ВАШ КЛЮЧ GEMINI
+        const GITHUB_OAUTH_CLIENT_ID = 'Iv23liMslqqNmYZlMUUb';
+        // 🔴 ВАЖНО: Для GitHub OAuth вам понадобится сервер-посредник (CORS proxy) или бэкенд для обмена кода на токен.
+        const CORS_PROXY_URL = 'https://cors-anywhere.herokuapp.com/'; 
+        const GITHUB_OAUTH_CLIENT_SECRET = 'f4797cac783ef0772091dca833d7ac268455a21e'; // <-- 🔴 ЗАМЕНИТЕ (НЕБЕЗОПАСНО НА КЛИЕНТЕ!)
+        const NETLIFY_TOKEN = 'YOUR_NETLIFY_TOKEN'; // <-- 🔴 ВСТАВЬТЕ ТОКЕН NETLIFY
 
-            // --- Конфигурация подписок ---
-            const SUBSCRIPTION_LIMITS = {
-                free: { chats: 1, messages: 5, name: 'FREE' },
-                pro: { chats: 10, messages: 15, name: 'PRO' },
-                ultima: { chats: Infinity, messages: Infinity, name: 'ULTIMA' }
-            };
+        // --- Конфигурация подписок ---
+        const SUBSCRIPTION_LIMITS = {
+            free: { chats: 3, messages: 10, name: 'FREE' },
+            pro: { chats: 15, messages: 50, name: 'PRO' },
+            ultima: { chats: Infinity, messages: Infinity, name: 'ULTIMA' }
+        };
 
-            let githubOAuthToken = null;
-            let isTelegramEnv = false;
-            let userState = {}; // Состояние пользователя (подписка, счетчики)
-
-            const ui = {
-                imageInput: document.getElementById('image-input'),
-                attachButton: document.getElementById('attach-button'),
-                imagePreviewContainer: document.getElementById('image-preview-container'),
-                imagePreview: document.getElementById('image-preview'),
-                removeImageButton: document.getElementById('remove-image-button'),
-                messageInput: document.getElementById('message-input'),
-                micButton: document.getElementById('mic-button'),
-                sendButton: document.getElementById('send-button'),
-                chatArea: document.getElementById('chat-area'),
-                loader: document.getElementById('loader'),
-                initialGreeting: document.getElementById('initial-greeting'),
-                greetingText: document.getElementById('greeting-text'),
-                userPhoto: document.getElementById('user-photo'),
-                settingsButton: document.getElementById('settings-button'),
-                settingsPopup: document.getElementById('settings-popup'),
-                settingsItems: document.querySelectorAll('#settings-popup li'),
-                modeTag: document.getElementById('mode-tag'),
-                modeTagText: document.getElementById('mode-tag-text'),
-                removeModeTag: document.getElementById('remove-mode-tag'),
-                menuButton: document.getElementById('menu-button'),
-                modalOverlay: document.getElementById('modal-overlay'),
-                historyModal: document.getElementById('history-modal'),
-                profileModal: document.getElementById('profile-modal'),
-                closeProfileModal: document.getElementById('close-profile-modal'),
-                profileModalPhoto: document.getElementById('profile-modal-photo'),
-                profileModalName: document.getElementById('profile-modal-name'),
-                profileModalUsername: document.getElementById('profile-modal-username'),
-                profileModalId: document.getElementById('profile-modal-id'),
-                repositoriesSection: document.getElementById('repositories-section'),
-                codeModal: document.getElementById('code-modal'),
-                closeCodeModal: document.getElementById('close-code-modal'),
-                codeTabs: document.getElementById('code-tabs'),
-                codeView: document.getElementById('code-view'),
-                previewView: document.getElementById('preview-view'),
-                codeOutput: document.getElementById('code-output'),
-                previewFrame: document.getElementById('preview-frame'),
-                aiStatusContainer: document.getElementById('ai-status-container'),
-                newChatButton: document.getElementById('new-chat-button'),
-                chatList: document.getElementById('chat-list'),
-                confirmRestoreModal: document.getElementById('confirm-restore-modal'),
-                confirmRestoreButton: document.getElementById('confirm-restore-button'),
-                cancelRestoreButton: document.getElementById('cancel-restore-button'),
-                headerActionContainer: document.getElementById('header-action-container'),
-                headerActionButton: document.getElementById('header-action-button'),
-                deployButton: document.getElementById('deploy-button'),
-                repoBrowserModal: document.getElementById('repo-browser-modal'),
-                closeRepoBrowserModal: document.getElementById('close-repo-browser-modal'),
-                repoBrowserTitle: document.getElementById('repo-browser-title'),
-                repoBrowserNav: document.getElementById('repo-browser-nav'),
-                repoFileListView: document.getElementById('repo-file-list-view'),
-                repoFileContentView: document.getElementById('repo-file-content-view'),
-                repoFileContent: document.getElementById('repo-file-content'),
-                backToFileList: document.getElementById('back-to-file-list'),
-                repoBrowserLoader: document.getElementById('repo-browser-loader'),
-                subscriptionModal: document.getElementById('subscription-modal'),
-                buyProButton: document.getElementById('buy-pro-button'),
-                buyUltimaButton: document.getElementById('buy-ultima-button'),
-            };
-
-            let attachedImageUrl = null;
-            let currentMode = null;
-            let isGenerating = false;
-            let versionToRestore = null;
-            let countdownInterval = null;
-            let currentRepo = { fullName: null, path: '' };
-            let activeChatId = null;
-
-            tg.ready();
-            tg.expand();
-            
-            const forceDarkTheme = () => {
-                tg.setHeaderColor('#1f2937');
-                tg.setBackgroundColor('#111827');
-                const root = document.documentElement;
-                const darkThemeCssVars = {
-                    '--tg-theme-bg-color': '#111827',
-                    '--tg-theme-text-color': '#ffffff',
-                    '--tg-theme-hint-color': '#9ca3af',
-                    '--tg-theme-secondary-bg-color': '#1f2937',
-                    '--tg-theme-header-bg-color': '#1f2937',
-                    '--tg-theme-button-color': '#8774e1',
-                    '--tg-theme-button-text-color': '#ffffff',
-                };
-                Object.entries(darkThemeCssVars).forEach(([key, value]) => root.style.setProperty(key, value));
-            };
-
-            forceDarkTheme();
-
-            const user = tg.initDataUnsafe.user;
-            if (user && user.first_name) {
-                if (ui.greetingText) ui.greetingText.textContent = `${user.first_name}, что создадим сегодня?`;
-                if (ui.userPhoto) ui.userPhoto.src = user.photo_url || `https://placehold.co/40x40/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
+        let supabase;
+        try {
+            if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
+                throw new Error("Supabase URL или Anon Key не установлены.");
             }
-            
-            const transliterate = (text) => {
-                const a = {"Ё":"YO","Й":"I","Ц":"TS","У":"U","К":"K","Е":"E","Н":"N","Г":"G","Ш":"SH","Щ":"SCH","З":"Z","Х":"H","Ъ":"","ё":"yo","й":"i","ц":"ts","у":"u","к":"k","е":"e","н":"n","г":"g","ш":"sh","щ":"sch","з":"z","х":"h","ъ":"","Ф":"F","Ы":"I","В":"V","А":"a","П":"P","Р":"R","О":"O","Л":"L","Д":"D","Ж":"ZH","Э":"E","ф":"f","ы":"i","в":"v","а":"a","п":"p","р":"r","о":"o","л":"l","д":"d","ж":"zh","э":"e","Я":"Ya","Ч":"CH","С":"S","М":"M","И":"I","Т":"T","Ь":"","Б":"B","Ю":"YU","я":"ya","ч":"ch","с":"s","м":"m","и":"i","т":"t","ь":"","б":"b","ю":"yu"};
-                return text.split('').map(char => a[char] || char).join('');
+            supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (error) {
+            console.error("Ошибка инициализации Supabase:", error);
+            document.body.innerHTML = `<div class="p-4 text-center text-red-400"><b>Ошибка конфигурации:</b> Не удалось подключиться к базе данных. Проверьте переменные SUPABASE_URL и SUPABASE_ANON_KEY в коде.</div>`;
+            return;
+        }
+
+        // --- Глобальные переменные состояния ---
+        let userProfile = null;
+        let chats = [];
+        let activeChat = null;
+        let isGenerating = false;
+        let currentMode = null;
+        let attachedImageUrl = null;
+        let versionToRestore = null;
+        let isTelegramEnv = false;
+        let currentRepo = { fullName: null, path: '' };
+        let countdownInterval = null;
+
+        const ui = {
+            imageInput: document.getElementById('image-input'),
+            attachButton: document.getElementById('attach-button'),
+            imagePreviewContainer: document.getElementById('image-preview-container'),
+            imagePreview: document.getElementById('image-preview'),
+            removeImageButton: document.getElementById('remove-image-button'),
+            messageInput: document.getElementById('message-input'),
+            micButton: document.getElementById('mic-button'),
+            sendButton: document.getElementById('send-button'),
+            chatArea: document.getElementById('chat-area'),
+            loader: document.getElementById('loader'),
+            initialGreeting: document.getElementById('initial-greeting'),
+            greetingText: document.getElementById('greeting-text'),
+            userPhoto: document.getElementById('user-photo'),
+            settingsButton: document.getElementById('settings-button'),
+            settingsPopup: document.getElementById('settings-popup'),
+            settingsItems: document.querySelectorAll('#settings-popup li'),
+            modeTag: document.getElementById('mode-tag'),
+            modeTagText: document.getElementById('mode-tag-text'),
+            removeModeTag: document.getElementById('remove-mode-tag'),
+            menuButton: document.getElementById('menu-button'),
+            modalOverlay: document.getElementById('modal-overlay'),
+            historyModal: document.getElementById('history-modal'),
+            profileModal: document.getElementById('profile-modal'),
+            closeProfileModal: document.getElementById('close-profile-modal'),
+            profileModalPhoto: document.getElementById('profile-modal-photo'),
+            profileModalName: document.getElementById('profile-modal-name'),
+            profileModalUsername: document.getElementById('profile-modal-username'),
+            profileModalId: document.getElementById('profile-modal-id'),
+            repositoriesSection: document.getElementById('repositories-section'),
+            codeModal: document.getElementById('code-modal'),
+            closeCodeModal: document.getElementById('close-code-modal'),
+            codeTabs: document.getElementById('code-tabs'),
+            codeView: document.getElementById('code-view'),
+            previewView: document.getElementById('preview-view'),
+            codeOutput: document.getElementById('code-output'),
+            previewFrame: document.getElementById('preview-frame'),
+            aiStatusContainer: document.getElementById('ai-status-container'),
+            newChatButton: document.getElementById('new-chat-button'),
+            chatList: document.getElementById('chat-list'),
+            confirmRestoreModal: document.getElementById('confirm-restore-modal'),
+            confirmRestoreButton: document.getElementById('confirm-restore-button'),
+            cancelRestoreButton: document.getElementById('cancel-restore-button'),
+            headerActionContainer: document.getElementById('header-action-container'),
+            deployButton: document.getElementById('deploy-button'),
+            repoBrowserModal: document.getElementById('repo-browser-modal'),
+            closeRepoBrowserModal: document.getElementById('close-repo-browser-modal'),
+            repoBrowserTitle: document.getElementById('repo-browser-title'),
+            repoBrowserNav: document.getElementById('repo-browser-nav'),
+            repoFileListView: document.getElementById('repo-file-list-view'),
+            repoFileContentView: document.getElementById('repo-file-content-view'),
+            repoFileContent: document.getElementById('repo-file-content'),
+            backToFileList: document.getElementById('back-to-file-list'),
+            repoBrowserLoader: document.getElementById('repo-browser-loader'),
+            subscriptionModal: document.getElementById('subscription-modal'),
+            buyProButton: document.getElementById('buy-pro-button'),
+            buyUltimaButton: document.getElementById('buy-ultima-button'),
+        };
+
+        tg.ready();
+        tg.expand();
+
+        const forceDarkTheme = () => {
+            tg.setHeaderColor('#1f2937');
+            tg.setBackgroundColor('#111827');
+            const root = document.documentElement;
+            const darkThemeCssVars = {
+                '--tg-theme-bg-color': '#111827',
+                '--tg-theme-text-color': '#ffffff',
+                '--tg-theme-hint-color': '#9ca3af',
+                '--tg-theme-secondary-bg-color': '#1f2937',
+                '--tg-theme-header-bg-color': '#1f2937',
+                '--tg-theme-button-color': '#8774e1',
+                '--tg-theme-button-text-color': '#ffffff',
             };
+            Object.entries(darkThemeCssVars).forEach(([key, value]) => root.style.setProperty(key, value));
+        };
 
-            // --- Управление состоянием пользователя ---
-            const saveUserState = () => {
-                localStorage.setItem('devtolUserState', JSON.stringify(userState));
-            };
+        forceDarkTheme();
 
-            const loadUserState = () => {
-                const savedState = localStorage.getItem('devtolUserState');
-                if (savedState) {
-                    userState = JSON.parse(savedState);
-                } else {
-                    userState = {
-                        subscription: 'free',
-                        chats: {},
-                        dailyMessages: {} // { 'YYYY-MM-DD': count }
-                    };
-                }
-                // Устанавливаем activeChatId, если есть чаты
-                const chatIds = Object.keys(userState.chats);
-                if (chatIds.length > 0) {
-                    activeChatId = chatIds[chatIds.length - 1];
-                } else {
-                    createNewChat(true); // Создаем первый чат при инициализации
-                }
-            };
+        const transliterate = (text) => {
+            const a = {"Ё":"YO","Й":"I","Ц":"TS","У":"U","К":"K","Е":"E","Н":"N","Г":"G","Ш":"SH","Щ":"SCH","З":"Z","Х":"H","Ъ":"","ё":"yo","й":"i","ц":"ts","у":"u","к":"k","е":"e","н":"n","г":"g","ш":"sh","щ":"sch","з":"z","х":"h","ъ":"","Ф":"F","Ы":"I","В":"V","А":"a","П":"P","Р":"R","О":"O","Л":"L","Д":"D","Ж":"ZH","Э":"E","ф":"f","ы":"i","в":"v","а":"a","п":"p","р":"r","о":"o","л":"l","д":"d","ж":"zh","э":"e","Я":"Ya","Ч":"CH","С":"S","М":"M","И":"I","Т":"T","Ь":"","Б":"B","Ю":"YU","я":"ya","ч":"ch","с":"s","м":"m","и":"i","т":"t","ь":"","б":"b","ю":"yu"};
+            return text.split('').map(char => a[char] || char).join('');
+        };
 
-            const getCurrentDateString = () => {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = String(today.getMonth() + 1).padStart(2, '0');
-                const day = String(today.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            };
-
-            const checkAndIncrementMessageCount = () => {
-                const today = getCurrentDateString();
-                if (!userState.dailyMessages[today]) {
-                    userState.dailyMessages[today] = 0;
-                }
-                
-                const currentCount = userState.dailyMessages[today];
-                const limit = SUBSCRIPTION_LIMITS[userState.subscription].messages;
-
-                if (currentCount >= limit) {
-                    tg.showAlert(`Вы достигли лимита в ${limit} сообщений для плана ${SUBSCRIPTION_LIMITS[userState.subscription].name}. Обновите подписку для продолжения.`);
-                    openSubscriptionModal();
-                    return false;
-                }
-                
-                userState.dailyMessages[today]++;
-                saveUserState();
-                return true;
-            };
-
-            // --- Логика аутентификации ---
-
-            const initAuth = () => {
-                isTelegramEnv = tg.platform !== 'unknown';
-                if (!isTelegramEnv) {
-                    initGitHubOAuth();
-                }
-            };
-
-            const initGitHubOAuth = () => {
-                const storedToken = localStorage.getItem('githubOAuthToken');
-                if (storedToken) {
-                    githubOAuthToken = storedToken;
-                    return;
-                }
-                const urlParams = new URLSearchParams(window.location.search);
-                const code = urlParams.get('code');
-                if (code) {
-                    const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-                    window.history.replaceState({path: newUrl}, '', newUrl);
-                    getGitHubOAuthToken(code);
-                }
-            };
-
-            const loginWithGitHub = () => {
-                const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_OAUTH_CLIENT_ID}&scope=repo,user`;
-                window.location.href = authUrl;
-            };
-
-            const logoutFromGitHub = () => {
-                githubOAuthToken = null;
-                localStorage.removeItem('githubOAuthToken');
-                updateProfileModalUI();
-            };
-
-            const getGitHubOAuthToken = async (code) => {
-                ui.repositoriesSection.innerHTML = '<div class="flex justify-center items-center p-4"><div class="spinner mr-2"></div><span>Аутентификация...</span></div>';
-                try {
-                    const response = await fetch(`${CORS_PROXY_URL}https://github.com/login/oauth/access_token`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                        body: JSON.stringify({
-                            client_id: GITHUB_OAUTH_CLIENT_ID,
-                            client_secret: GITHUB_OAUTH_CLIENT_SECRET,
-                            code: code
-                        })
-                    });
-                    const data = await response.json();
-                    if (data.access_token) {
-                        githubOAuthToken = data.access_token;
-                        localStorage.setItem('githubOAuthToken', githubOAuthToken);
-                        updateProfileModalUI();
-                    } else {
-                        throw new Error(data.error_description || 'Не удалось получить токен доступа.');
-                    }
-                } catch (error) {
-                    console.error('Ошибка аутентификации GitHub:', error);
-                    ui.repositoriesSection.innerHTML = `<p class="text-red-400 text-center">Ошибка входа: ${error.message}</p>`;
-                }
-            };
-            
-            const getGitHubAppInstallationToken = async () => {
-                console.error("Вызов функции-заглушки getGitHubAppInstallationToken. Необходимо реализовать бэкенд.");
-                addMessage("❌ **Ошибка конфигурации:** Для работы с GitHub в Telegram требуется настройка серверной части (бэкенда). Обратитесь к разработчику.", 'bot');
+        // --- Supabase Helper Functions ---
+        async function getOrCreateUserProfile(tgUser) {
+            if (!tgUser) return null;
+            let { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', tgUser.id)
+                .single();
+            if (error && error.code !== 'PGRST116') {
+                console.error('Ошибка при получении профиля:', error);
                 return null;
-            };
-
-            const getGitHubToken = async () => {
-                if (isTelegramEnv) {
-                    return await getGitHubAppInstallationToken();
-                } else {
-                    return githubOAuthToken;
+            }
+            if (!data) {
+                const { data: newUser, error: insertError } = await supabase
+                    .from('users')
+                    .insert({
+                        id: tgUser.id,
+                        first_name: tgUser.first_name,
+                        last_name: tgUser.last_name,
+                        username: tgUser.username,
+                        photo_url: tgUser.photo_url
+                    })
+                    .select()
+                    .single();
+                if (insertError) {
+                    console.error('Ошибка при создании профиля:', insertError);
+                    return null;
                 }
-            };
-            
-            const addMessage = (text, sender, imageUrl = null, codeVersion = null) => {
-                const activeChat = userState.chats[activeChatId];
-                if (!activeChat) return;
-                
-                const message = { id: Date.now(), text, sender, imageUrl, codeVersion };
-                activeChat.messages.push(message);
+                data = newUser;
+            }
+            return data;
+        }
 
-                if (sender === 'user' && activeChat.messages.filter(m => m.sender === 'user').length === 1 && text) {
-                    const englishTitle = transliterate(text).toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
-                    activeChat.title = text;
-                    activeChat.repoName = `${englishTitle.substring(0, 50)}-${Date.now().toString().slice(-5)}`;
+        async function loadUserChats(userId) {
+            if (!userId) return [];
+            const { data: chatsData, error } = await supabase
+                .from('chats')
+                .select(`*, messages (*), code_history (*)`)
+                .eq('user_id', userId)
+                .order('created_at', { ascending: true });
+            if (error) {
+                console.error('Ошибка при загрузке чатов:', error);
+                return [];
+            }
+            chatsData.forEach(chat => {
+                chat.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                chat.code_history.sort((a, b) => a.version - b.version);
+            });
+            return chatsData;
+        }
+        
+        // --- Core Application Logic ---
+        async function initApp() {
+            const tgUser = tg.initDataUnsafe.user;
+            if (!tgUser) {
+                document.body.innerHTML = '<div class="p-4 text-center text-gray-400">Пожалуйста, откройте это приложение внутри Telegram.</div>';
+                return;
+            }
+            userProfile = await getOrCreateUserProfile(tgUser);
+            if (!userProfile) {
+                tg.showAlert('Не удалось загрузить или создать ваш профиль.');
+                return;
+            }
+            chats = await loadUserChats(userProfile.id);
+            if (chats.length > 0) {
+                activeChat = chats[chats.length - 1];
+            } else {
+                await createNewChat(true);
+            }
+            initAuth();
+            setupEventListeners();
+            updateUIForUser(tgUser);
+            renderMessages();
+            updateHeaderButton();
+            updateInputState();
+        }
+
+        function updateUIForUser(tgUser) {
+            if (tgUser && tgUser.first_name) {
+                ui.greetingText.textContent = `${tgUser.first_name}, что создадим сегодня?`;
+                ui.userPhoto.src = tgUser.photo_url || `https://placehold.co/40x40/7c3aed/ffffff?text=${tgUser.first_name.charAt(0).toUpperCase()}`;
+            }
+        }
+        
+        // --- UI Rendering ---
+        function renderMessages() {
+            if (!activeChat || activeChat.messages.length === 0) {
+                ui.initialGreeting.classList.remove('opacity-0', 'pointer-events-none');
+                ui.chatArea.innerHTML = '';
+                return;
+            }
+            ui.initialGreeting.classList.add('opacity-0', 'pointer-events-none');
+            ui.chatArea.innerHTML = '';
+            const latestCodeVersion = activeChat.code_history.length;
+            activeChat.messages.forEach(msg => {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'message-container';
+                const msgContent = document.createElement('div');
+                msgDiv.className = `flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`;
+                msgContent.className = `message ${msg.sender === 'user' ? 'user-message' : 'bot-message'}`;
+                if (msg.image_url) {
+                    const img = document.createElement('img');
+                    img.src = msg.image_url;
+                    img.className = 'rounded-lg';
+                    msgContent.appendChild(img);
                 }
-                saveUserState();
+                if (msg.text_content) {
+                    const textP = document.createElement('p');
+                    textP.innerHTML = msg.text_content.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-blue-300 underline">$1</a>');
+                    if(msg.image_url) textP.className = 'mt-2';
+                    msgContent.appendChild(textP);
+                }
+                if (msg.code_version) {
+                    const isLatest = msg.code_version === latestCodeVersion;
+                    const button = document.createElement('button');
+                    button.textContent = isLatest ? 'Открыть' : 'Восстановить';
+                    button.className = 'mt-2 w-full text-center py-1.5 rounded-lg font-semibold transition-colors text-sm';
+                    if (isLatest) {
+                        button.style.backgroundColor = 'var(--tg-button-color)';
+                        button.style.color = 'var(--tg-button-text-color)';
+                        button.onclick = () => openCodeModal(true, msg.code_version);
+                    } else {
+                        button.style.backgroundColor = '#4B5563';
+                        button.style.color = 'white';
+                        button.onclick = () => showRestoreConfirmation(msg.code_version);
+                    }
+                    msgContent.appendChild(button);
+                }
+                msgDiv.appendChild(msgContent);
+                ui.chatArea.appendChild(msgDiv);
+            });
+            ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
+        }
+
+        // --- Chat Management ---
+        async function addMessage(text, sender, imageUrl = null, codeVersion = null) {
+            if (!activeChat) return;
+            const messageData = { chat_id: activeChat.id, sender, text_content: text, image_url: imageUrl, code_version: codeVersion };
+            const { data: newMessage, error } = await supabase.from('messages').insert(messageData).select().single();
+            if (error) {
+                console.error('Ошибка при сохранении сообщения:', error);
+                tg.showAlert('Не удалось сохранить сообщение.');
+                return;
+            }
+            activeChat.messages.push(newMessage);
+            if (sender === 'user' && activeChat.messages.filter(m => m.sender === 'user').length === 1 && text) {
+                const newTitle = text.substring(0, 50);
+                const englishTitle = transliterate(text).toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
+                const newRepoName = `${englishTitle.substring(0, 50)}-${Date.now().toString().slice(-5)}`;
+                const { error: updateError } = await supabase.from('chats').update({ title: newTitle, repo_name: newRepoName }).eq('id', activeChat.id);
+                if (updateError) console.error("Ошибка обновления заголовка чата:", updateError);
+                else {
+                    activeChat.title = newTitle;
+                    activeChat.repo_name = newRepoName;
+                }
+            }
+            renderMessages();
+        }
+
+        async function createNewChat(isInitial = false) {
+            const limit = SUBSCRIPTION_LIMITS[userProfile.subscription_plan].chats;
+            if (!isInitial && chats.length >= limit) {
+                tg.showAlert(`Вы достигли лимита в ${limit} чатов для плана ${SUBSCRIPTION_LIMITS[userProfile.subscription_plan].name}.`);
+                openSubscriptionModal();
+                return;
+            }
+            const { data: newChatData, error } = await supabase.from('chats').insert({ user_id: userProfile.id }).select().single();
+            if (error) {
+                console.error("Ошибка создания нового чата:", error);
+                tg.showAlert("Не удалось создать новый чат.");
+                return;
+            }
+            newChatData.messages = [];
+            newChatData.code_history = [];
+            chats.push(newChatData);
+            switchChat(newChatData.id);
+            closeModal();
+        }
+
+        function switchChat(chatId) {
+            const foundChat = chats.find(c => c.id === chatId);
+            if (foundChat) {
+                activeChat = foundChat;
                 renderMessages();
-                if (sender === 'user' && !currentMode) {
-                    simulateBotResponse(`Это симуляция ответа на: "${text}".`);
-                }
-            };
-
-            const renderMessages = () => {
-                const activeChat = userState.chats[activeChatId];
-                
-                // Logic to show/hide welcome screen
-                if (!activeChat || activeChat.messages.length === 0) {
-                    if (ui.initialGreeting) ui.initialGreeting.classList.remove('opacity-0', 'pointer-events-none');
-                    ui.chatArea.innerHTML = ''; // Clear any previous messages
-                    return;
-                }
-                if (ui.initialGreeting) ui.initialGreeting.classList.add('opacity-0', 'pointer-events-none');
-
-                ui.chatArea.innerHTML = ''; // Clear before rendering new messages
-                
-                const latestCodeVersion = activeChat.codeHistory.length;
-
-                activeChat.messages.forEach(msg => {
-                    const msgDiv = document.createElement('div');
-                    msgDiv.className = 'message-container';
-                    const msgContent = document.createElement('div');
-                    msgDiv.className = `flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`;
-                    msgContent.className = `message ${msg.sender === 'user' ? 'user-message' : 'bot-message'}`;
-                    
-                    if (msg.imageUrl) {
-                        const img = document.createElement('img');
-                        img.src = msg.imageUrl;
-                        img.className = 'rounded-lg';
-                        msgContent.appendChild(img);
+                updateHeaderButton();
+                closeModal();
+            }
+        }
+        
+        async function sendMessage() {
+            if (isGenerating) return;
+            // TODO: Реализовать проверку лимита сообщений
+            const text = ui.messageInput.value.trim();
+            if (text || attachedImageUrl) {
+                await addMessage(text, 'user', attachedImageUrl);
+                if (currentMode === 'canvas' || currentMode === 'react' || currentMode === 'vue' || currentMode === 'angular' || currentMode === 'flutter' || currentMode === null) {
+                    if (activeChat.code_history.length === 0) {
+                        initiateAiGeneration(text);
+                    } else {
+                        improveAiGeneration(text);
                     }
-                    if (msg.text) {
-                        const textP = document.createElement('p');
-                        textP.innerHTML = msg.text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-blue-300 underline">$1</a>');
-                        if(msg.imageUrl) textP.className = 'mt-2';
-                        msgContent.appendChild(textP);
-                    }
-                    if (msg.codeVersion) {
-                        const isLatest = msg.codeVersion === latestCodeVersion;
-                        const button = document.createElement('button');
-                        button.textContent = isLatest ? 'Открыть' : 'Восстановить';
-                        button.className = 'mt-2 w-full text-center py-1.5 rounded-lg font-semibold transition-colors text-sm';
-                        
-                        if (isLatest) {
-                            button.style.backgroundColor = 'var(--tg-button-color)';
-                            button.style.color = 'var(--tg-button-text-color)';
-                            button.onclick = () => openCodeModal(true, msg.codeVersion);
-                        } else {
-                            button.style.backgroundColor = '#4B5563';
-                            button.style.color = 'white';
-                            button.onclick = () => showRestoreConfirmation(msg.codeVersion);
-                        }
-                        msgContent.appendChild(button);
-                    }
-
-                    msgDiv.appendChild(msgContent);
-                    ui.chatArea.appendChild(msgDiv);
-                });
-                ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
-            };
-
-            const simulateBotResponse = (userInput) => {
-                ui.loader.classList.remove('hidden');
-                ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
-                setTimeout(() => {
-                    ui.loader.classList.add('hidden');
-                    addMessage(userInput, 'bot');
-                }, 1500);
-            };
-
-            const sendMessage = () => {
-                if (isGenerating) return;
-                
-                if (!checkAndIncrementMessageCount()) {
-                    return; // Прерываем отправку, если лимит достигнут
                 }
-
-                const text = ui.messageInput.value.trim();
-                if (text || attachedImageUrl) {
-                    addMessage(text, 'user', attachedImageUrl);
-                    if (currentMode === 'canvas' || currentMode === 'react' || currentMode === 'vue' || currentMode === 'angular' || currentMode === 'flutter' || currentMode === null) {
-                        const activeChat = userState.chats[activeChatId];
-                        if (activeChat.codeHistory.length === 0) { 
-                            initiateAiGeneration(text);
-                        } else {
-                            improveAiGeneration(text);
-                        }
-                    }
-                    ui.messageInput.value = '';
-                    resetImageAttachment();
-                    updateInputState();
-                    tg.HapticFeedback.impactOccurred('light');
-                }
-            };
-            
-            const resetImageAttachment = () => {
-                attachedImageUrl = null;
-                if(ui.imagePreview) ui.imagePreview.src = '';
-                if(ui.imagePreviewContainer) ui.imagePreviewContainer.classList.add('hidden');
+                ui.messageInput.value = '';
+                resetImageAttachment();
                 updateInputState();
-            };
+                tg.HapticFeedback.impactOccurred('light');
+            }
+        }
 
-            const updateInputState = () => {
-                const hasContent = ui.messageInput.value.trim().length > 0 || attachedImageUrl;
-                const isEnabled = !isGenerating;
-                if(ui.micButton) ui.micButton.classList.toggle('hidden', hasContent);
-                if(ui.sendButton) ui.sendButton.classList.toggle('hidden', !hasContent);
-                if(ui.messageInput) ui.messageInput.disabled = !isEnabled;
-                if(ui.sendButton) ui.sendButton.disabled = !isEnabled;
-            };
+        // --- AI & Code Generation ---
+        const callGeminiAPI = async (prompt) => {
+            const apiKey = GEMINI_API_KEY;
+            if (!apiKey) {
+                const errorMsg = "Ошибка конфигурации: Gemini API ключ не найден.";
+                console.error(errorMsg);
+                await addMessage(`❌ ${errorMsg}`, 'bot');
+                return { "error.html": `<!-- ${errorMsg} -->` };
+            }
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", } };
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const result = await response.json();
+                const responseText = result.candidates[0].content.parts[0].text;
+                return JSON.parse(responseText);
+            } catch (error) {
+                console.error("Ошибка API:", error);
+                return { "error.html": `<!-- Ошибка при генерации кода: ${error.message} -->` };
+            }
+        };
 
-            const callGeminiAPI = async (prompt) => {
-                const apiKey = GEMINI_API_KEY;
-                if (!apiKey) {
-                    const errorMsg = "Ошибка конфигурации: Gemini API ключ не найден.";
-                    console.error(errorMsg);
-                    addMessage(`❌ ${errorMsg}`, 'bot');
-                    isGenerating = false;
-                    updateInputState();
-                    closeModal();
-                    return { "error.html": `<!-- ${errorMsg} -->` };
-                }
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", } };
-                try {
-                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    const result = await response.json();
-                    const responseText = result.candidates[0].content.parts[0].text;
-                    return JSON.parse(responseText);
-                } catch (error) {
-                    console.error("Ошибка API:", error);
-                    return { "error.html": `<!-- Ошибка при генерации кода: ${error.message} -->` };
-                }
-            };
-            
-            const formatCodeForDisplay = (codeObject) => {
-                if (typeof codeObject === 'string') return codeObject;
-                if (codeObject['error.html']) return codeObject['error.html'];
-                return Object.entries(codeObject).map(([filename, code]) => `//--- ${filename} ---\n\n${code}`).join('\n\n\n');
-            };
-
-            const runAiProcess = async (steps, prompt) => {
-                isGenerating = true;
-                updateInputState();
-                openModal(ui.codeModal);
-                const activeChat = userState.chats[activeChatId];
-                
-                // Determine if preview should be shown before setting the mode from auto-selection
-                const isFlutter = currentMode === 'flutter';
-                document.querySelector('[data-tab="preview"]').style.display = isFlutter ? 'none' : 'block';
-                switchTab('code');
-
-                ui.codeOutput.textContent = '';
-                ui.aiStatusContainer.innerHTML = '';
-                
-                for (let i = 0; i < steps.length; i++) {
-                    const step = steps[i];
-                    const statusDiv = document.createElement('div');
-                    statusDiv.className = 'flex items-center space-x-2';
-                    const iconSpan = document.createElement('span');
-                    iconSpan.innerHTML = '<div class="spinner"></div>';
-                    statusDiv.appendChild(iconSpan);
-                    const textSpan = document.createElement('span');
-                    textSpan.textContent = step;
-                    statusDiv.appendChild(textSpan);
-                    ui.aiStatusContainer.appendChild(statusDiv);
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    iconSpan.innerHTML = '✅';
-                }
-                
-                const apiStatusDiv = document.createElement('div');
-                apiStatusDiv.className = 'flex items-center space-x-2';
+        const runAiProcess = async (steps, prompt) => {
+            isGenerating = true;
+            updateInputState();
+            openModal(ui.codeModal);
+            const isFlutter = currentMode === 'flutter';
+            document.querySelector('[data-tab="preview"]').style.display = isFlutter ? 'none' : 'block';
+            switchTab('code');
+            ui.codeOutput.textContent = '';
+            ui.aiStatusContainer.innerHTML = '';
+            for (let i = 0; i < steps.length; i++) {
+                const step = steps[i];
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'flex items-center space-x-2';
                 const iconSpan = document.createElement('span');
                 iconSpan.innerHTML = '<div class="spinner"></div>';
-                apiStatusDiv.appendChild(iconSpan);
+                statusDiv.appendChild(iconSpan);
                 const textSpan = document.createElement('span');
-                textSpan.textContent = 'Отправка запроса в Gemini...';
-                apiStatusDiv.appendChild(textSpan);
-                ui.aiStatusContainer.appendChild(apiStatusDiv);
-                
-                let generatedCodeObject = await callGeminiAPI(prompt);
-                
-                if (generatedCodeObject['error.html']) {
-                    textSpan.textContent = 'Ошибка конфигурации API.';
-                    iconSpan.innerHTML = '❌';
-                    isGenerating = false;
-                    updateInputState();
-                    return;
-                }
-
-                // Handle auto-selection response
-                if (generatedCodeObject.chosenFramework && generatedCodeObject.files) {
-                    const chosenFramework = generatedCodeObject.chosenFramework;
-                    addMessage(`🤖 Я думаю, что для этой задачи лучше всего подойдет **${chosenFramework.charAt(0).toUpperCase() + chosenFramework.slice(1)}**. Начинаю генерацию...`, 'bot');
-                    activeChat.mode = chosenFramework;
-                    currentMode = chosenFramework; // Update global mode
-                    generatedCodeObject = generatedCodeObject.files; // Use the nested files object
-                }
-
-                // Update UI again in case framework was auto-selected
-                const isReact = activeChat.mode === 'react';
-                const isFinalFlutter = activeChat.mode === 'flutter';
-                document.querySelector('[data-tab="preview"]').style.display = (isReact || isFinalFlutter) ? 'none' : 'block';
-                if(isFinalFlutter) switchTab('code');
-
-                textSpan.textContent = 'Получение ответа...';
+                textSpan.textContent = step;
+                statusDiv.appendChild(textSpan);
+                ui.aiStatusContainer.appendChild(statusDiv);
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 iconSpan.innerHTML = '✅';
-                
-                const formattedCode = formatCodeForDisplay(generatedCodeObject);
-                typeCode(generatedCodeObject, formattedCode);
-            };
+            }
+            const apiStatusDiv = document.createElement('div');
+            apiStatusDiv.className = 'flex items-center space-x-2';
+            const iconSpan = document.createElement('span');
+            iconSpan.innerHTML = '<div class="spinner"></div>';
+            apiStatusDiv.appendChild(iconSpan);
+            const textSpan = document.createElement('span');
+            textSpan.textContent = 'Отправка запроса в Gemini...';
+            apiStatusDiv.appendChild(textSpan);
+            ui.aiStatusContainer.appendChild(apiStatusDiv);
+            let generatedCodeObject = await callGeminiAPI(prompt);
+            if (generatedCodeObject['error.html']) {
+                textSpan.textContent = 'Ошибка API.';
+                iconSpan.innerHTML = '❌';
+                isGenerating = false;
+                updateInputState();
+                return;
+            }
+            if (generatedCodeObject.chosenFramework && generatedCodeObject.files) {
+                const chosenFramework = generatedCodeObject.chosenFramework;
+                await addMessage(`🤖 Я думаю, что для этой задачи лучше всего подойдет **${chosenFramework.charAt(0).toUpperCase() + chosenFramework.slice(1)}**. Начинаю генерацию...`, 'bot');
+                activeChat.mode = chosenFramework;
+                currentMode = chosenFramework;
+                generatedCodeObject = generatedCodeObject.files;
+            }
+            const isReact = activeChat.mode === 'react';
+            const isFinalFlutter = activeChat.mode === 'flutter';
+            document.querySelector('[data-tab="preview"]').style.display = (isReact || isFinalFlutter) ? 'none' : 'block';
+            if(isFinalFlutter) switchTab('code');
+            textSpan.textContent = 'Получение ответа...';
+            iconSpan.innerHTML = '✅';
+            typeCode(generatedCodeObject, formatCodeForDisplay(generatedCodeObject));
+        };
 
-            const initiateAiGeneration = (prompt) => {
-                const activeChat = userState.chats[activeChatId];
-                activeChat.mode = currentMode;
-                let fullPrompt;
+        const initiateAiGeneration = async (prompt) => {
+            activeChat.mode = currentMode;
+            const { error } = await supabase.from('chats').update({ mode: currentMode }).eq('id', activeChat.id);
+            if(error) console.error("Ошибка обновления режима чата:", error);
+            let fullPrompt;
+            if (currentMode === null) {
+                fullPrompt = `Ты - эксперт-архитектор по разработке программного обеспечения. Проанализируй следующий запрос пользователя: "${prompt}". Выбери НАИБОЛЕЕ ПОДХОДЯЩИЙ фреймворк из списка: [html, react, vue, angular]. Твой ответ ДОЛЖЕН БЫТЬ в формате JSON и содержать два ключа: "chosenFramework" (значение из списка выше) и "files" (объект с кодом). Основываясь на твоем выборе, сгенерируй код для полноценного, красивого, минималистичного мобильного приложения, следуя инструкциям для выбранного фреймворка: - Если выбрал 'html': { "index.html": "..." } - Если выбрал 'react': { "package.json": "...", "public/index.html": "...", "src/App.js": "..." } - Если выбрал 'vue': { "package.json": "...", "index.html": "...", "src/App.vue": "..." } - Если выбрал 'angular': { "package.json": "...", "angular.json": "...", "src/index.html": "...", "src/main.ts": "...", "src/app/app.module.ts": "...", "src/app/app.component.ts": "...", "src/app/app.component.html": "...", "src/app/app.component.css": "..." } Используй Tailwind CSS для стилей. Приложение должно быть полностью функциональным. Не добавляй никаких объяснений, только JSON.`;
+            } else {
+                switch(currentMode) {
+                    case 'react': fullPrompt = `Создай React-приложение на тему "${prompt}". Ответ в JSON: { "package.json": "...", "public/index.html": "...", "src/App.js": "..." }. Используй Tailwind CSS.`; break;
+                    case 'vue': fullPrompt = `Создай Vue.js приложение на тему "${prompt}". Ответ в JSON: { "package.json": "...", "index.html": "...", "src/App.vue": "..." }. Используй Tailwind CSS.`; break;
+                    case 'angular': fullPrompt = `Создай Angular приложение на тему "${prompt}". Ответ в JSON со всеми необходимыми файлами (app.module, app.component, main.ts и т.д.). Используй Tailwind CSS.`; break;
+                    case 'flutter': fullPrompt = `Создай Flutter приложение (код на Dart) на тему "${prompt}". Ответ в JSON: { "pubspec.yaml": "...", "lib/main.dart": "..." }.`; break;
+                    case 'canvas': default: fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}". Ответ в JSON: { "index.html": "..." }. Используй Tailwind CSS.`;
+                }
+            }
+            runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], fullPrompt);
+        };
 
-                if (currentMode === null) {
-                    // Auto-selection prompt
-                    fullPrompt = `Ты - эксперт-архитектор по разработке программного обеспечения. Проанализируй следующий запрос пользователя: "${prompt}".
-                    Выбери НАИБОЛЕЕ ПОДХОДЯЩИЙ фреймворк из списка: [html, react, vue, angular].
-                    
-                    Твой ответ ДОЛЖЕН БЫТЬ в формате JSON и содержать два ключа: "chosenFramework" (значение из списка выше) и "files" (объект с кодом).
-                    
-                    Основываясь на твоем выборе, сгенерируй код для полноценного, красивого, минималистичного мобильного приложения, следуя инструкциям для выбранного фреймворка:
-                    - Если выбрал 'html': { "index.html": "..." }
-                    - Если выбрал 'react': { "package.json": "...", "public/index.html": "...", "src/App.js": "..." }
-                    - Если выбрал 'vue': { "package.json": "...", "index.html": "...", "src/App.vue": "..." }
-                    - Если выбрал 'angular': { "package.json": "...", "angular.json": "...", "src/index.html": "...", "src/main.ts": "...", "src/app/app.module.ts": "...", "src/app/app.component.ts": "...", "src/app/app.component.html": "...", "src/app/app.component.css": "..." }
-                    
-                    Используй Tailwind CSS для стилей. Приложение должно быть полностью функциональным. Не добавляй никаких объяснений, только JSON.`;
+        const improveAiGeneration = (prompt) => {
+            if (!activeChat || activeChat.code_history.length === 0) {
+                initiateAiGeneration(prompt);
+                return;
+            }
+            const latestCodeObject = activeChat.code_history.slice(-1)[0].code_object;
+            const codeString = JSON.stringify(latestCodeObject, null, 2);
+            const framework = activeChat.mode;
+            let fullPrompt = `Ты - эксперт по ${framework}. Вот существующий код приложения в формате JSON:\n\n${codeString}\n\nВнеси следующее улучшение: "${prompt}". Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлами кода.`;
+            runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], fullPrompt);
+        };
+
+        const typeCode = (codeObject, formattedCode) => {
+            const newVersionNumber = activeChat.code_history.length + 1;
+            let index = 0;
+            const interval = setInterval(async () => {
+                if (index < formattedCode.length) {
+                    ui.codeOutput.textContent += formattedCode[index];
+                    index++;
+                    ui.codeView.scrollTop = ui.codeView.scrollHeight;
                 } else {
-                    switch(currentMode) {
-                        case 'react':
-                            fullPrompt = `Создай React-приложение на тему "${prompt}". Ответ в JSON: { "package.json": "...", "public/index.html": "...", "src/App.js": "..." }. Используй Tailwind CSS.`;
-                            break;
-                        case 'vue':
-                            fullPrompt = `Создай Vue.js приложение на тему "${prompt}". Ответ в JSON: { "package.json": "...", "index.html": "...", "src/App.vue": "..." }. Используй Tailwind CSS.`;
-                            break;
-                        case 'angular':
-                             fullPrompt = `Создай Angular приложение на тему "${prompt}". Ответ в JSON со всеми необходимыми файлами (app.module, app.component, main.ts и т.д.). Используй Tailwind CSS.`;
-                            break;
-                        case 'flutter':
-                             fullPrompt = `Создай Flutter приложение (код на Dart) на тему "${prompt}". Ответ в JSON: { "pubspec.yaml": "...", "lib/main.dart": "..." }.`;
-                            break;
-                        case 'canvas':
-                        default:
-                             fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}". Ответ в JSON: { "index.html": "..." }. Используй Tailwind CSS.`;
-                    }
-                }
-                runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], fullPrompt);
-            };
-
-            const improveAiGeneration = (prompt) => {
-                const activeChat = userState.chats[activeChatId];
-                if (!activeChat || activeChat.codeHistory.length === 0) {
-                    initiateAiGeneration(prompt);
-                    return;
-                }
-                const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
-                const codeString = JSON.stringify(latestCodeObject, null, 2);
-                const framework = activeChat.mode;
-
-                let fullPrompt = `Ты - эксперт по ${framework}. Вот существующий код приложения в формате JSON:\n\n${codeString}\n\nВнеси следующее улучшение: "${prompt}". Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлами кода.`;
-                
-                runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], fullPrompt);
-            };
-
-            const typeCode = (codeObject, formattedCode) => {
-                const activeChat = userState.chats[activeChatId];
-                const newVersion = activeChat.codeHistory.length + 1;
-                activeChat.codeHistory.push({ version: newVersion, code: codeObject });
-                let index = 0;
-                const interval = setInterval(() => {
-                    if (index < formattedCode.length) {
-                        ui.codeOutput.textContent += formattedCode[index];
-                        index++;
-                        ui.codeView.scrollTop = ui.codeView.scrollHeight;
+                    clearInterval(interval);
+                    const { data: newCodeVersion, error } = await supabase.from('code_history').insert({ chat_id: activeChat.id, version: newVersionNumber, code_object: codeObject }).select().single();
+                    if (error) {
+                        console.error("Ошибка сохранения истории кода:", error);
+                        tg.showAlert("Не удалось сохранить сгенерированный код.");
                     } else {
-                        clearInterval(interval);
-                        setTimeout(() => {
-                            if (activeChat.mode !== 'react' && activeChat.mode !== 'flutter') {
-                                switchTab('preview');
-                            }
-                            addMessage("Приложение сгенерировано.", 'bot', null, newVersion);
-                            isGenerating = false;
-                            updateInputState();
-                            if (newVersion === 1) {
-                                createGitHubRepo(activeChat.repoName, codeObject);
-                            }
-                        }, 500);
+                        activeChat.code_history.push(newCodeVersion);
                     }
-                }, 5);
-            };
-
-            const switchTab = (tabName) => {
-                const tabs = ui.codeTabs.querySelectorAll('.tab-button');
-                tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
-                const isPreview = tabName === 'preview';
-                ui.codeView.classList.toggle('hidden', isPreview);
-                ui.previewView.classList.toggle('hidden', !isPreview);
-                if (isPreview) {
-                    const activeChat = userState.chats[activeChatId];
-                    const latestCode = activeChat.codeHistory.length > 0 ? activeChat.codeHistory.slice(-1)[0].code['index.html'] : '';
-                    ui.previewFrame.srcdoc = latestCode;
-                }
-            };
-            
-            const openCodeModal = (switchToPreview = false, version) => {
-                const activeChat = userState.chats[activeChatId];
-                const codeHistoryItem = activeChat.codeHistory.find(h => h.version === version);
-                if (!codeHistoryItem) return;
-                const codeObject = codeHistoryItem.code;
-                ui.codeOutput.textContent = formatCodeForDisplay(codeObject);
-                const isReact = activeChat.mode === 'react';
-                const isFlutter = activeChat.mode === 'flutter';
-                document.querySelector('[data-tab="preview"]').style.display = (isReact || isFlutter) ? 'none' : 'block';
-                updateDeployButtonState();
-                if (isReact || isFlutter) {
-                    switchTab('code');
-                } else {
-                    switchTab(switchToPreview ? 'preview' : 'code');
-                }
-                openModal(ui.codeModal);
-            };
-
-            const openModal = (modal) => {
-                if(ui.modalOverlay) ui.modalOverlay.classList.add('visible');
-                if(modal) modal.classList.add('visible');
-                tg.HapticFeedback.impactOccurred('light');
-            };
-
-            const closeModal = () => {
-                if(ui.modalOverlay) ui.modalOverlay.classList.remove('visible');
-                [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.repoBrowserModal, ui.subscriptionModal].forEach(modal => {
-                    if (modal) modal.classList.remove('visible');
-                });
-            };
-            
-            const openProfileModal = () => {
-                if (user) {
-                    if(ui.profileModalPhoto) ui.profileModalPhoto.src = user.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
-                    if(ui.profileModalName) ui.profileModalName.textContent = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-                    if(ui.profileModalUsername) ui.profileModalUsername.textContent = user.username ? `@${user.username}` : 'Username не указан';
-                    if(ui.profileModalId) ui.profileModalId.textContent = `ID: ${user.id}`;
-                }
-                updateProfileModalUI();
-                openModal(ui.profileModal);
-            };
-            
-            const updateProfileModalUI = () => {
-                ui.repositoriesSection.innerHTML = ''; // Очищаем секцию
-                
-                if (isTelegramEnv) {
-                    // Внутри Telegram используем GitHub App
-                    const header = document.createElement('div');
-                    header.className = 'flex justify-between items-center mb-3';
-                    header.innerHTML = '<h4 class="text-base font-bold">Репозитории</h4>';
-                    
-                    const repoListDiv = document.createElement('div');
-                    repoListDiv.id = 'repo-list';
-                    repoListDiv.className = 'space-y-2';
-
-                    ui.repositoriesSection.appendChild(header);
-                    ui.repositoriesSection.appendChild(repoListDiv);
-                    renderRepoList();
-
-                } else {
-                    // В браузере используем OAuth
-                    if (githubOAuthToken) {
-                        const header = document.createElement('div');
-                        header.className = 'flex justify-between items-center mb-3';
-                        header.innerHTML = '<h4 class="text-base font-bold">Репозитории</h4>';
-                        
-                        const logoutButton = document.createElement('button');
-                        logoutButton.textContent = 'Выйти';
-                        logoutButton.className = 'text-xs text-red-400 hover:underline';
-                        logoutButton.onclick = logoutFromGitHub;
-                        header.appendChild(logoutButton);
-
-                        const repoListDiv = document.createElement('div');
-                        repoListDiv.id = 'repo-list';
-                        repoListDiv.className = 'space-y-2';
-
-                        ui.repositoriesSection.appendChild(header);
-                        ui.repositoriesSection.appendChild(repoListDiv);
-                        renderRepoList();
-                    } else {
-                        const loginContainer = document.createElement('div');
-                        loginContainer.className = 'text-center p-4 border border-dashed border-gray-600 rounded-lg';
-                        loginContainer.innerHTML = '<p class="mb-3 text-sm text-gray-400">Войдите в GitHub, чтобы управлять репозиториями.</p>';
-                        
-                        const loginButton = document.createElement('button');
-                        loginButton.className = 'w-full py-2 px-4 rounded-lg font-semibold text-sm flex items-center justify-center';
-                        loginButton.style.backgroundColor = '#24292e';
-                        loginButton.style.color = 'white';
-                        loginButton.innerHTML = `<svg class="w-5 h-5 mr-2" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>Войти через GitHub`;
-                        loginButton.onclick = loginWithGitHub;
-                        
-                        loginContainer.appendChild(loginButton);
-                        ui.repositoriesSection.appendChild(loginContainer);
-                    }
-                }
-            };
-
-            const renderRepoList = () => {
-                const repoListDiv = document.getElementById('repo-list');
-                if (!repoListDiv) return;
-                repoListDiv.innerHTML = '';
-                const userRepos = Object.values(userState.chats).filter(chat => chat.repoFullName);
-                if (userRepos.length === 0) {
-                    repoListDiv.innerHTML = '<p class="text-gray-500 text-center text-sm">У вас пока нет репозиториев.</p>';
-                    return;
-                }
-                userRepos.reverse().forEach(chat => {
-                    const repoDiv = document.createElement('div');
-                    repoDiv.className = 'p-3 rounded-lg border border-gray-700 cursor-pointer hover:bg-gray-800 transition-colors';
-                    const repoName = chat.repoFullName.split('/')[1];
-                    repoDiv.innerHTML = ` <div class="flex items-center justify-between pointer-events-none"> <div class="flex items-center space-x-2 min-w-0"> <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg> <span class="text-blue-400 font-semibold text-sm truncate">${repoName}</span> </div> <span class="text-xs text-gray-500 border border-gray-600 px-1.5 py-0.5 rounded-full flex-shrink-0">${chat.mode === 'react' ? 'React' : 'HTML'}</span> </div> <p class="text-xs text-gray-400 mt-1.5 truncate pointer-events-none">${chat.title}</p> ${chat.deployUrl ? ` <div class="mt-2 pt-2 border-t border-gray-700 flex items-center space-x-2"> <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> <a href="${chat.deployUrl}" class="text-green-400 text-xs hover:underline deploy-link">Deployed on Netlify</a> </div> ` : ''} `;
-                    repoDiv.addEventListener('click', (e) => {
-                        if (e.target.classList.contains('deploy-link')) {
-                            e.stopPropagation();
-                            tg.openLink(e.target.href);
-                            return;
+                    setTimeout(async () => {
+                        if (activeChat.mode !== 'react' && activeChat.mode !== 'flutter') {
+                            switchTab('preview');
                         }
-                        openRepoBrowser(chat.repoFullName);
-                    });
-                    repoListDiv.appendChild(repoDiv);
-                });
-            };
-
-            const showRepoLoader = (show) => {
-                ui.repoBrowserLoader.classList.toggle('hidden', !show);
-            };
-
-            const openRepoBrowser = async (repoFullName) => {
-                const token = await getGitHubToken();
-                if (!token) {
-                    addMessage('❌ Ошибка аутентификации. Не удалось получить токен доступа к GitHub.', 'bot');
-                    closeModal();
-                    return;
-                }
-                currentRepo.fullName = repoFullName;
-                ui.repoBrowserTitle.textContent = repoFullName.split('/')[1];
-                ui.repoFileContentView.classList.add('hidden');
-                ui.repoFileListView.classList.remove('hidden');
-                fetchRepoContents('', token);
-                openModal(ui.repoBrowserModal);
-            };
-
-            const fetchRepoContents = async (path, token) => {
-                showRepoLoader(true);
-                ui.repoFileListView.innerHTML = '';
-                currentRepo.path = path;
-                updateBreadcrumbs();
-                try {
-                    const response = await fetch(`https://api.github.com/repos/${currentRepo.fullName}/contents/${path}`, {
-                        headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-                    });
-                    if (!response.ok) throw new Error(`Ошибка GitHub: ${response.statusText}`);
-                    const contents = await response.json();
-                    renderRepoContents(contents);
-                } catch (error) {
-                    ui.repoFileListView.innerHTML = `<p class="text-red-400 text-sm p-2">Не удалось загрузить содержимое: ${error.message}</p>`;
-                } finally {
-                    showRepoLoader(false);
-                }
-            };
-
-            const renderRepoContents = (contents) => {
-                ui.repoFileListView.innerHTML = '';
-                contents.sort((a, b) => {
-                    if (a.type === b.type) return a.name.localeCompare(b.name);
-                    return a.type === 'dir' ? -1 : 1;
-                });
-                contents.forEach(item => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'flex items-center p-2 rounded-md hover:bg-gray-700 cursor-pointer';
-                    const isDir = item.type === 'dir';
-                    itemDiv.innerHTML = ` <svg class="w-5 h-5 mr-3 flex-shrink-0 ${isDir ? 'text-blue-400' : 'text-gray-400'}" fill="none" viewBox="0 0 24 24" stroke="currentColor"> ${isDir ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />'} </svg> <span class="text-sm truncate">${item.name}</span> `;
-                    itemDiv.addEventListener('click', () => {
-                        if (isDir) {
-                            getGitHubToken().then(token => token && fetchRepoContents(item.path, token));
-                        } else {
-                            fetchAndDisplayFileContent(item);
+                        await addMessage("Приложение сгенерировано.", 'bot', null, newVersionNumber);
+                        isGenerating = false;
+                        updateInputState();
+                        if (newVersionNumber === 1 && activeChat.repo_name) {
+                            createGitHubRepo(activeChat.repo_name, codeObject);
                         }
-                    });
-                    ui.repoFileListView.appendChild(itemDiv);
+                    }, 500);
+                }
+            }, 5);
+        };
+
+        const formatCodeForDisplay = (codeObject) => {
+            if (typeof codeObject === 'string') return codeObject;
+            if (codeObject['error.html']) return codeObject['error.html'];
+            return Object.entries(codeObject).map(([filename, code]) => `//--- ${filename} ---\n\n${code}`).join('\n\n\n');
+        };
+
+        // --- UI Helpers & Modals ---
+        const openModal = (modal) => { ui.modalOverlay.classList.add('visible'); modal.classList.add('visible'); tg.HapticFeedback.impactOccurred('light'); };
+        const closeModal = () => { ui.modalOverlay.classList.remove('visible'); [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.repoBrowserModal, ui.subscriptionModal].forEach(m => m.classList.remove('visible')); };
+        const switchTab = (tabName) => {
+            ui.codeTabs.querySelectorAll('.tab-button').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
+            const isPreview = tabName === 'preview';
+            ui.codeView.classList.toggle('hidden', isPreview);
+            ui.previewView.classList.toggle('hidden', !isPreview);
+            if (isPreview && activeChat.code_history.length > 0) {
+                const latestCode = activeChat.code_history.slice(-1)[0].code_object['index.html'] || '';
+                ui.previewFrame.srcdoc = latestCode;
+            }
+        };
+        const openCodeModal = (switchToPreview = false, version) => {
+            const codeHistoryItem = activeChat.code_history.find(h => h.version === version);
+            if (!codeHistoryItem) return;
+            ui.codeOutput.textContent = formatCodeForDisplay(codeHistoryItem.code_object);
+            const isReact = activeChat.mode === 'react';
+            const isFlutter = activeChat.mode === 'flutter';
+            document.querySelector('[data-tab="preview"]').style.display = (isReact || isFlutter) ? 'none' : 'block';
+            updateDeployButtonState();
+            switchTab((isReact || isFlutter) ? 'code' : (switchToPreview ? 'preview' : 'code'));
+            openModal(ui.codeModal);
+        };
+
+        // --- GitHub & Netlify Logic ---
+        const initAuth = () => {
+            isTelegramEnv = tg.platform !== 'unknown';
+            if (!isTelegramEnv) initGitHubOAuth();
+        };
+        const initGitHubOAuth = () => {
+            if (userProfile && userProfile.github_token) return;
+            const code = new URLSearchParams(window.location.search).get('code');
+            if (code) {
+                const newUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}`;
+                window.history.replaceState({ path: newUrl }, '', newUrl);
+                getGitHubOAuthToken(code);
+            }
+        };
+        const loginWithGitHub = () => { window.location.href = `https://github.com/login/oauth/authorize?client_id=${GITHUB_OAUTH_CLIENT_ID}&scope=repo,user`; };
+        const logoutFromGitHub = async () => {
+            userProfile.github_token = null;
+            const { error } = await supabase.from('users').update({ github_token: null }).eq('id', userProfile.id);
+            if (error) console.error("Ошибка при выходе из GitHub:", error);
+            updateProfileModalUI();
+        };
+        const getGitHubOAuthToken = async (code) => {
+            ui.repositoriesSection.innerHTML = '<div class="flex justify-center items-center p-4"><div class="spinner mr-2"></div><span>Аутентификация...</span></div>';
+            try {
+                const response = await fetch(`${CORS_PROXY_URL}https://github.com/login/oauth/access_token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ client_id: GITHUB_OAUTH_CLIENT_ID, client_secret: GITHUB_OAUTH_CLIENT_SECRET, code })
                 });
-            };
-
-            const updateBreadcrumbs = () => {
-                ui.repoBrowserNav.innerHTML = '';
-                const parts = ['root', ...currentRepo.path.split('/')].filter(p => p);
-                parts.forEach((part, index) => {
-                    const isLast = index === parts.length - 1;
-                    const partName = part === 'root' ? currentRepo.fullName.split('/')[1] : part;
-                    if (isLast) {
-                        const span = document.createElement('span');
-                        span.className = 'font-semibold text-white px-1';
-                        span.textContent = partName;
-                        ui.repoBrowserNav.appendChild(span);
-                    } else {
-                        const linkPath = parts.slice(1, index + 1).join('/');
-                        const link = document.createElement('a');
-                        link.href = '#';
-                        link.className = 'text-blue-400 hover:underline px-1';
-                        link.textContent = partName;
-                        link.onclick = (e) => {
-                            e.preventDefault();
-                            getGitHubToken().then(token => token && fetchRepoContents(linkPath, token));
-                        };
-                        ui.repoBrowserNav.appendChild(link);
-                    }
-                    if (!isLast) {
-                        const slash = document.createElement('span');
-                        slash.className = 'mx-1 text-gray-500';
-                        slash.textContent = '/';
-                        ui.repoBrowserNav.appendChild(slash);
-                    }
+                const data = await response.json();
+                if (data.access_token) {
+                    userProfile.github_token = data.access_token;
+                    await supabase.from('users').update({ github_token: userProfile.github_token }).eq('id', userProfile.id);
+                    updateProfileModalUI();
+                } else { throw new Error(data.error_description || 'Не удалось получить токен.'); }
+            } catch (error) {
+                console.error('Ошибка аутентификации GitHub:', error);
+                ui.repositoriesSection.innerHTML = `<p class="text-red-400 text-center">Ошибка входа: ${error.message}</p>`;
+            }
+        };
+        const getGitHubToken = async () => {
+            if (isTelegramEnv) {
+                console.error("Требуется бэкенд для GitHub App в среде Telegram.");
+                await addMessage("❌ **Ошибка:** Для работы с GitHub в Telegram требуется настройка серверной части.", 'bot');
+                return null;
+            }
+            return userProfile.github_token;
+        };
+        const createGitHubRepo = async (repoName, codeObject) => {
+            const token = await getGitHubToken();
+            if (!token) {
+                await addMessage(`❌ Ошибка аутентификации. Войдите в GitHub в профиле.`, 'bot');
+                return;
+            }
+            await addMessage(`Создаю репозиторий "${repoName}"...`, 'bot');
+            try {
+                const repoResponse = await fetch('https://api.github.com/user/repos', {
+                    method: 'POST',
+                    headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                    body: JSON.stringify({ name: repoName, description: 'Created by Devtol Mini App', private: false }),
                 });
-            };
-
-            const fetchAndDisplayFileContent = async (file) => {
-                showRepoLoader(true);
-                try {
-                    const response = await fetch(file.download_url);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    const content = await response.text();
-                    ui.repoFileContent.textContent = content;
-                    ui.repoFileListView.classList.add('hidden');
-                    ui.repoFileContentView.classList.remove('hidden');
-                } catch (error) {
-                    tg.showAlert(`Не удалось загрузить файл: ${error.message}`);
-                } finally {
-                    showRepoLoader(false);
-                }
-            };
-
-            const createNewChat = (isInitial = false) => {
-                const chatCount = Object.keys(userState.chats).length;
-                const limit = SUBSCRIPTION_LIMITS[userState.subscription].chats;
-
-                if (!isInitial && chatCount >= limit) {
-                    tg.showAlert(`Вы достигли лимита в ${limit} чатов для плана ${SUBSCRIPTION_LIMITS[userState.subscription].name}. Обновите подписку.`);
-                    openSubscriptionModal();
-                    return;
-                }
-
-                const newId = Date.now().toString();
-                userState.chats[newId] = { id: newId, title: 'Новый чат', mode: null, repoName: null, repoFullName: null, messages: [], codeHistory: [], deployUrl: null, isDeploying: false, };
-                switchChat(newId);
-                closeModal();
-            };
-
-            const switchChat = (chatId) => {
-                activeChatId = chatId;
-                renderMessages();
-                updateHeaderButton();
-                closeModal();
-            };
-
-            const renderChatList = () => {
-                if(!ui.chatList) return;
-                ui.chatList.innerHTML = '';
-                Object.values(userState.chats).reverse().forEach(chat => {
-                    const chatDiv = document.createElement('div');
-                    chatDiv.className = 'p-2.5 rounded-lg hover:bg-gray-800 cursor-pointer';
-                    const title = document.createElement('p');
-                    title.className = 'font-semibold truncate text-sm';
-                    title.textContent = chat.title;
-                    chatDiv.appendChild(title);
-                    const lastMessage = chat.messages.slice().reverse().find(m => m.text);
-                    if (lastMessage) {
-                        const snippet = document.createElement('p');
-                        snippet.className = 'text-xs text-gray-400 truncate';
-                        snippet.textContent = lastMessage.text;
-                        chatDiv.appendChild(snippet);
-                    }
-                    chatDiv.onclick = () => switchChat(chat.id);
-                    ui.chatList.appendChild(chatDiv);
-                });
-            };
-
-            const showRestoreConfirmation = (version) => {
-                versionToRestore = version;
-                openModal(ui.confirmRestoreModal);
-            };
-
-            const confirmRestore = () => {
-                const activeChat = userState.chats[activeChatId];
-                if (!activeChat || versionToRestore === null) return;
-                const versionIndex = activeChat.codeHistory.findIndex(h => h.version === versionToRestore);
-                if (versionIndex === -1) return;
-                activeChat.codeHistory.splice(versionIndex + 1);
-                const lastValidMessageIndex = activeChat.messages.map(m => m.codeVersion).lastIndexOf(versionToRestore);
-                if(lastValidMessageIndex > -1) {
-                    activeChat.messages.splice(lastValidMessageIndex + 1);
-                }
-                saveUserState();
-                renderMessages();
-                closeModal();
-                versionToRestore = null;
-            };
-
-            const updateHeaderButton = () => {
-                const chat = userState.chats[activeChatId];
-                const subName = SUBSCRIPTION_LIMITS[userState.subscription].name;
-                
-                let buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">${subName}</button>`;
-
-                if (chat && chat.deployUrl) {
-                    buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-500 text-white">Открыть</button>`;
-                } else if (chat && chat.isDeploying) {
-                    buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full flex items-center" style="background-color: var(--tg-secondary-bg-color);" disabled><div class="spinner mr-1.5"></div>Деплой...</button>`;
-                }
-                
-                ui.headerActionContainer.innerHTML = buttonHTML;
-                const newButton = document.getElementById('header-action-button');
-                
-                if (chat && chat.deployUrl) {
-                    newButton.onclick = () => tg.openLink(chat.deployUrl);
-                } else if (!chat || !chat.isDeploying) {
-                    newButton.onclick = openSubscriptionModal;
-                }
-            };
-            
-            const openSubscriptionModal = () => {
-                openModal(ui.subscriptionModal);
-            };
-
-            const startDeployCountdown = () => {
-                ui.deployButton.classList.remove('hidden');
-                ui.deployButton.disabled = true;
-                let seconds = 60;
-                ui.deployButton.textContent = `Деплой через ${seconds} сек.`;
-                countdownInterval = setInterval(() => {
-                    seconds--;
-                    ui.deployButton.textContent = `Деплой через ${seconds} сек.`;
-                    if (seconds <= 0) {
-                        clearInterval(countdownInterval);
-                        ui.deployButton.disabled = false;
-                        ui.deployButton.textContent = 'Деплой';
-                    }
-                }, 1000);
-            };
-
-            const updateDeployButtonState = () => {
-                const chat = userState.chats[activeChatId];
-                if (chat && chat.repoFullName && !chat.deployUrl && !chat.isDeploying) {
-                    ui.deployButton.classList.remove('hidden');
-                    ui.deployButton.disabled = false;
-                    ui.deployButton.textContent = 'Деплой';
-                } else {
-                    ui.deployButton.classList.add('hidden');
-                }
-            };
-
-            const createGitHubRepo = async (repoName, codeObject) => {
-                const token = await getGitHubToken();
-                if (!token) {
-                    addMessage(`❌ Ошибка аутентификации. Не удалось получить токен доступа к GitHub.`, 'bot');
-                    return;
-                }
-
-                const chat = userState.chats[activeChatId];
-                addMessage(`Создаю репозиторий "${repoName}" на GitHub...`, 'bot');
-                try {
-                    const repoResponse = await fetch('https://api.github.com/user/repos', {
-                        method: 'POST',
+                if (!repoResponse.ok) throw new Error(`Ошибка GitHub: ${(await repoResponse.json()).message}`);
+                const repoData = await repoResponse.json();
+                activeChat.repo_full_name = repoData.full_name;
+                await supabase.from('chats').update({ repo_full_name: repoData.full_name }).eq('id', activeChat.id);
+                await addMessage('Загружаю файлы...', 'bot');
+                for (const [filePath, fileContent] of Object.entries(codeObject)) {
+                    const content = btoa(unescape(encodeURIComponent(fileContent)));
+                    const fileResponse = await fetch(`https://api.github.com/repos/${activeChat.repo_full_name}/contents/${filePath}`, {
+                        method: 'PUT',
                         headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' },
-                        body: JSON.stringify({ name: repoName, description: 'Created by Devtol Mini App', private: false }),
+                        body: JSON.stringify({ message: 'Initial commit', content: content }),
                     });
-                    if (!repoResponse.ok) throw new Error(`Ошибка GitHub: ${ (await repoResponse.json()).message }`);
-                    const repoData = await repoResponse.json();
-                    chat.repoFullName = repoData.full_name;
-
-                    addMessage('Загружаю файлы в репозиторий...', 'bot');
-                    
-                    for (const [filePath, fileContent] of Object.entries(codeObject)) {
-                        const content = btoa(unescape(encodeURIComponent(fileContent)));
-                        const fileResponse = await fetch(`https://api.github.com/repos/${chat.repoFullName}/contents/${filePath}`, {
-                            method: 'PUT',
-                            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' },
-                            body: JSON.stringify({ message: 'Initial commit', content: content }),
-                        });
-                        if (!fileResponse.ok) throw new Error(`Ошибка загрузки файла ${filePath}: ${ (await fileResponse.json()).message }`);
-                    }
-                    
-                    saveUserState();
-                    addMessage('✅ Репозиторий создан. Деплой будет доступен через минуту.', 'bot');
-                    startDeployCountdown();
-
-                } catch (error) {
-                     addMessage(`❌ Ошибка создания репозитория: ${error.message}`, 'bot');
+                    if (!fileResponse.ok) throw new Error(`Ошибка загрузки ${filePath}: ${(await fileResponse.json()).message}`);
                 }
-            };
-
-            const pollDeployStatus = (siteId, liveUrl) => {
-                const chat = userState.chats[activeChatId];
-                let attempts = 0;
-                const maxAttempts = 24;
-                const intervalId = setInterval(async () => {
-                    if (attempts >= maxAttempts) {
-                        clearInterval(intervalId);
-                        addMessage(`❌ Ошибка: Деплой не завершился за 2 минуты.`, 'bot');
-                        chat.isDeploying = false;
-                        updateHeaderButton();
-                        return;
-                    }
-                    try {
-                        const response = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys`, { headers: { 'Authorization': `Bearer ${NETLIFY_TOKEN}` } });
-                        if (!response.ok) { throw new Error(`Ошибка API Netlify: ${response.statusText}`); }
-                        const deploys = await response.json();
-                        if (deploys && deploys.length > 0) {
-                            const latestDeploy = deploys[0];
-                            if (latestDeploy.state === 'ready') {
-                                clearInterval(intervalId);
-                                chat.deployUrl = liveUrl;
-                                saveUserState();
-                                addMessage(`✅ Успех! Ваш сайт доступен по адресу: ${liveUrl}`, 'bot');
-                                tg.HapticFeedback.notificationOccurred('success');
-                                chat.isDeploying = false;
-                                updateHeaderButton();
-                            } else if (latestDeploy.state === 'error') {
-                                clearInterval(intervalId);
-                                addMessage(`❌ Ошибка деплоя на Netlify: ${latestDeploy.error_message}`, 'bot');
-                                chat.isDeploying = false;
-                                updateHeaderButton();
-                            }
-                        }
-                    } catch (error) {
-                        clearInterval(intervalId);
-                        addMessage(`❌ Ошибка при проверке статуса деплоя: ${error.message}`, 'bot');
-                        chat.isDeploying = false;
-                        updateHeaderButton();
-                    }
-                    attempts++;
-                }, 5000);
-            };
-
-            const deployToNetlify = async () => {
-                if (!NETLIFY_TOKEN) {
-                    addMessage(`❌ Ошибка конфигурации: Netlify токен не указан.`, 'bot');
-                    return;
+                await addMessage('✅ Репозиторий создан. Деплой будет доступен через минуту.', 'bot');
+                startDeployCountdown();
+            } catch (error) {
+                await addMessage(`❌ Ошибка создания репозитория: ${error.message}`, 'bot');
+            }
+        };
+        const deployToNetlify = async () => {
+            if (!NETLIFY_TOKEN) { await addMessage(`❌ Ошибка: Netlify токен не указан.`, 'bot'); return; }
+            if (!activeChat || !activeChat.repo_full_name) { await addMessage('Ошибка: не найден репозиторий.', 'bot'); return; }
+            activeChat.is_deploying = true;
+            await supabase.from('chats').update({ is_deploying: true }).eq('id', activeChat.id);
+            updateHeaderButton();
+            ui.deployButton.classList.add('hidden');
+            await addMessage(`Начинаю деплой "${activeChat.repo_name}"...`, 'bot');
+            try {
+                await addMessage('1/2 Создаю сайт на Netlify...', 'bot');
+                const sitePayload = { repo: { provider: 'github', repo: activeChat.repo_full_name, private: false, branch: 'main' } };
+                if (activeChat.mode === 'react') {
+                    sitePayload.repo.cmd = 'npm run build';
+                    sitePayload.repo.dir = 'build/';
                 }
-                const chat = userState.chats[activeChatId];
-                if (!chat || !chat.repoFullName) {
-                    addMessage('Ошибка: не найден репозиторий для деплоя.', 'bot');
-                    return;
-                }
-                chat.isDeploying = true;
+                const siteResponse = await fetch('https://api.netlify.com/api/v1/sites', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${NETLIFY_TOKEN}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sitePayload),
+                });
+                if (!siteResponse.ok) throw new Error(`Ошибка Netlify: ${(await siteResponse.json()).message}`);
+                const siteData = await siteResponse.json();
+                await addMessage('2/2 Ожидаю завершения деплоя...', 'bot');
+                pollDeployStatus(siteData.id, siteData.ssl_url || siteData.url);
+            } catch (error) {
+                console.error('Ошибка деплоя:', error);
+                await addMessage(`❌ Ошибка деплоя: ${error.message}`, 'bot');
+                activeChat.is_deploying = false;
+                await supabase.from('chats').update({ is_deploying: false }).eq('id', activeChat.id);
                 updateHeaderButton();
-                ui.deployButton.classList.add('hidden');
-                addMessage(`Начинаю деплой проекта "${chat.repoName}"...`, 'bot');
+            }
+        };
+        const pollDeployStatus = (siteId, liveUrl) => {
+            let attempts = 0;
+            const intervalId = setInterval(async () => {
+                if (attempts >= 24) {
+                    clearInterval(intervalId);
+                    await addMessage(`❌ Деплой не завершился за 2 минуты.`, 'bot');
+                    activeChat.is_deploying = false;
+                    await supabase.from('chats').update({ is_deploying: false }).eq('id', activeChat.id);
+                    updateHeaderButton();
+                    return;
+                }
                 try {
-                    addMessage('1/2 Создаю сайт на Netlify...', 'bot');
-                    const sitePayload = { repo: { provider: 'github', repo: chat.repoFullName, private: false, branch: 'main' } };
-                    if (chat.mode === 'react') {
-                        sitePayload.repo.cmd = 'npm run build';
-                        sitePayload.repo.dir = 'build/';
+                    const response = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys`, { headers: { 'Authorization': `Bearer ${NETLIFY_TOKEN}` } });
+                    if (!response.ok) throw new Error(`Ошибка API Netlify: ${response.statusText}`);
+                    const deploys = await response.json();
+                    if (deploys && deploys.length > 0) {
+                        const latestDeploy = deploys[0];
+                        if (latestDeploy.state === 'ready') {
+                            clearInterval(intervalId);
+                            activeChat.deploy_url = liveUrl;
+                            activeChat.is_deploying = false;
+                            await supabase.from('chats').update({ deploy_url: liveUrl, is_deploying: false }).eq('id', activeChat.id);
+                            await addMessage(`✅ Успех! Сайт доступен: ${liveUrl}`, 'bot');
+                            updateHeaderButton();
+                        } else if (latestDeploy.state === 'error') {
+                            clearInterval(intervalId);
+                            await addMessage(`❌ Ошибка деплоя: ${latestDeploy.error_message}`, 'bot');
+                            activeChat.is_deploying = false;
+                            await supabase.from('chats').update({ is_deploying: false }).eq('id', activeChat.id);
+                            updateHeaderButton();
+                        }
                     }
-                    const siteResponse = await fetch('https://api.netlify.com/api/v1/sites', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${NETLIFY_TOKEN}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify(sitePayload),
-                    });
-                    if (!siteResponse.ok) throw new Error(`Ошибка Netlify: ${ (await siteResponse.json()).message }`);
-                    const siteData = await siteResponse.json();
-                    addMessage('2/2 Ожидаю завершения деплоя...', 'bot');
-                    const liveUrl = siteData.ssl_url || siteData.url;
-                    pollDeployStatus(siteData.id, liveUrl);
                 } catch (error) {
-                    console.error('Ошибка деплоя:', error);
-                    addMessage(`❌ Ошибка деплоя: ${error.message}`, 'bot');
-                    tg.HapticFeedback.notificationOccurred('error');
-                    chat.isDeploying = false;
+                    clearInterval(intervalId);
+                    await addMessage(`❌ Ошибка проверки статуса: ${error.message}`, 'bot');
+                    activeChat.is_deploying = false;
+                    await supabase.from('chats').update({ is_deploying: false }).eq('id', activeChat.id);
                     updateHeaderButton();
                 }
-            };
-
-            const setupEventListeners = () => {
-                if(ui.messageInput) {
-                    ui.messageInput.addEventListener('keypress', (e) => e.key === 'Enter' && sendMessage());
-                    ui.messageInput.addEventListener('input', updateInputState);
+                attempts++;
+            }, 5000);
+        };
+        
+        // --- Full Event Listeners Setup ---
+        const setupEventListeners = () => {
+            ui.messageInput.addEventListener('keypress', (e) => e.key === 'Enter' && sendMessage());
+            ui.messageInput.addEventListener('input', updateInputState);
+            ui.sendButton.addEventListener('click', sendMessage);
+            ui.attachButton.addEventListener('click', () => ui.imageInput.click());
+            ui.removeImageButton.addEventListener('click', resetImageAttachment);
+            ui.imageInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        attachedImageUrl = e.target.result;
+                        ui.imagePreview.src = attachedImageUrl;
+                        ui.imagePreviewContainer.classList.remove('hidden');
+                        updateInputState();
+                    };
+                    reader.readAsDataURL(file);
                 }
-                if(ui.sendButton) ui.sendButton.addEventListener('click', sendMessage);
-                if(ui.attachButton) ui.attachButton.addEventListener('click', () => ui.imageInput.click());
-                if(ui.removeImageButton) ui.removeImageButton.addEventListener('click', resetImageAttachment);
-                if(ui.imageInput) ui.imageInput.addEventListener('change', (event) => {
-                    const file = event.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            attachedImageUrl = e.target.result;
-                            if(ui.imagePreview) ui.imagePreview.src = attachedImageUrl;
-                            if(ui.imagePreviewContainer) ui.imagePreviewContainer.classList.remove('hidden');
-                            updateInputState();
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                    if(event.target) event.target.value = '';
-                });
-                if(ui.settingsButton) ui.settingsButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if(ui.settingsPopup) ui.settingsPopup.classList.toggle('visible');
-                    tg.HapticFeedback.impactOccurred('light');
-                });
-                document.addEventListener('click', (e) => {
-                    if (ui.settingsPopup && !ui.settingsPopup.contains(e.target) && ui.settingsButton && !ui.settingsButton.contains(e.target)) {
-                        ui.settingsPopup.classList.remove('visible');
-                    }
-                });
-                if(ui.settingsItems) ui.settingsItems.forEach(item => {
-                    item.addEventListener('click', () => {
-                        if(ui.modeTagText) ui.modeTagText.textContent = item.textContent.trim();
-                        if(ui.modeTag) {
-                            ui.modeTag.classList.remove('hidden');
-                            ui.modeTag.classList.add('flex');
-                        }
-                        currentMode = item.dataset.mode;
-                        if(ui.settingsPopup) ui.settingsPopup.classList.remove('visible');
-                        tg.HapticFeedback.impactOccurred('medium');
-                    });
-                });
-                if(ui.removeModeTag) ui.removeModeTag.addEventListener('click', () => {
-                    if(ui.modeTag) {
-                        ui.modeTag.classList.add('hidden');
-                        ui.modeTag.classList.remove('flex');
-                    }
-                    currentMode = null;
-                    tg.HapticFeedback.impactOccurred('light');
-                });
-                if(ui.menuButton) ui.menuButton.addEventListener('click', () => {
-                    renderChatList();
-                    openModal(ui.historyModal);
-                });
-                if (ui.newChatButton) {
-                    ui.newChatButton.addEventListener('click', () => createNewChat(false));
+                event.target.value = '';
+            });
+            ui.settingsButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                ui.settingsPopup.classList.toggle('visible');
+                tg.HapticFeedback.impactOccurred('light');
+            });
+            document.addEventListener('click', (e) => {
+                if (!ui.settingsPopup.contains(e.target) && !ui.settingsButton.contains(e.target)) {
+                    ui.settingsPopup.classList.remove('visible');
                 }
-                if(ui.userPhoto) ui.userPhoto.addEventListener('click', openProfileModal);
-                if(ui.modalOverlay) ui.modalOverlay.addEventListener('click', closeModal);
-                if(ui.closeProfileModal) ui.closeProfileModal.addEventListener('click', closeModal);
-                if(ui.closeCodeModal) ui.closeCodeModal.addEventListener('click', closeModal);
-                if(ui.confirmRestoreButton) ui.confirmRestoreButton.addEventListener('click', confirmRestore);
-                if(ui.cancelRestoreButton) ui.cancelRestoreButton.addEventListener('click', closeModal);
-                if(ui.codeTabs) ui.codeTabs.querySelectorAll('.tab-button').forEach(button => {
-                    button.addEventListener('click', () => switchTab(button.dataset.tab));
+            });
+            ui.settingsItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    ui.modeTagText.textContent = item.textContent.trim();
+                    ui.modeTag.classList.remove('hidden');
+                    ui.modeTag.classList.add('flex');
+                    currentMode = item.dataset.mode;
+                    ui.settingsPopup.classList.remove('visible');
+                    tg.HapticFeedback.impactOccurred('medium');
                 });
-                if(ui.deployButton) ui.deployButton.addEventListener('click', deployToNetlify);
-                if(ui.closeRepoBrowserModal) ui.closeRepoBrowserModal.addEventListener('click', closeModal);
-                if(ui.backToFileList) ui.backToFileList.addEventListener('click', () => {
-                    ui.repoFileContentView.classList.add('hidden');
-                    ui.repoFileListView.classList.remove('hidden');
-                });
-                [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.repoBrowserModal, ui.subscriptionModal].forEach(modal => {
-                    if (modal) {
-                        let startY;
-                        modal.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
-                        modal.addEventListener('touchmove', (e) => {
-                            if (modal.scrollTop === 0 && e.touches[0].clientY > startY + 50) closeModal();
-                        }, { passive: true });
-                    }
-                });
-                // --- Event Listeners for Subscription Buttons ---
-                ui.buyProButton.addEventListener('click', () => buySubscription('pro', 299900)); // 2999.00 RUB
-                ui.buyUltimaButton.addEventListener('click', () => buySubscription('ultima', 999900)); // 9999.00 RUB
-            };
-            
-            const buySubscription = (plan, amount) => {
-                // Здесь вам нужно указать токен вашего платежного провайдера, полученный от @BotFather
-                const paymentProviderToken = "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ";
-
-                if (!paymentProviderToken || paymentProviderToken === "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ") {
-                    tg.showAlert("Платежная система не настроена. Обратитесь к разработчику.");
-                    return;
+            });
+            ui.removeModeTag.addEventListener('click', () => {
+                ui.modeTag.classList.add('hidden');
+                ui.modeTag.classList.remove('flex');
+                currentMode = null;
+                tg.HapticFeedback.impactOccurred('light');
+            });
+            ui.menuButton.addEventListener('click', () => { renderChatList(); openModal(ui.historyModal); });
+            ui.newChatButton.addEventListener('click', () => createNewChat(false));
+            ui.userPhoto.addEventListener('click', openProfileModal);
+            ui.modalOverlay.addEventListener('click', closeModal);
+            ui.closeProfileModal.addEventListener('click', closeModal);
+            ui.closeCodeModal.addEventListener('click', closeModal);
+            ui.confirmRestoreButton.addEventListener('click', confirmRestore);
+            ui.cancelRestoreButton.addEventListener('click', closeModal);
+            ui.codeTabs.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', () => switchTab(button.dataset.tab));
+            });
+            ui.deployButton.addEventListener('click', deployToNetlify);
+            ui.closeRepoBrowserModal.addEventListener('click', closeModal);
+            ui.backToFileList.addEventListener('click', () => {
+                ui.repoFileContentView.classList.add('hidden');
+                ui.repoFileListView.classList.remove('hidden');
+            });
+            [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.repoBrowserModal, ui.subscriptionModal].forEach(modal => {
+                if (modal) {
+                    let startY;
+                    modal.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+                    modal.addEventListener('touchmove', (e) => {
+                        if (modal.scrollTop === 0 && e.touches[0].clientY > startY + 50) closeModal();
+                    }, { passive: true });
                 }
+            });
+            ui.buyProButton.addEventListener('click', () => buySubscription('pro', 299900));
+            ui.buyUltimaButton.addEventListener('click', () => buySubscription('ultima', 999900));
+        };
 
-                const invoice = {
-                    title: `Подписка ${SUBSCRIPTION_LIMITS[plan].name}`,
-                    description: `Доступ к расширенным функциям Devtol (${SUBSCRIPTION_LIMITS[plan].chats} чатов, ${SUBSCRIPTION_LIMITS[plan].messages} сообщений).`,
-                    payload: `buy-${plan}-plan-user-${user.id}`,
-                    provider_token: paymentProviderToken,
-                    currency: 'RUB',
-                    prices: [{ label: `Подписка ${SUBSCRIPTION_LIMITS[plan].name}`, amount: amount }]
-                };
-
-                tg.openInvoice(invoice.payload, (status) => {
-                    if (status === 'paid') {
-                        // Важно: здесь должна быть проверка на вашем сервере,
-                        // что платеж действительно прошел, прежде чем обновлять подписку.
-                        userState.subscription = plan;
-                        saveUserState();
-                        updateHeaderButton();
-                        closeModal();
-                        tg.showAlert('Спасибо! Ваша подписка успешно обновлена.');
-                    } else if (status === 'failed') {
-                        tg.showAlert('Не удалось обработать платеж. Попробуйте снова.');
-                    }
-                });
-            };
-
-            const initApp = () => {
-                loadUserState();
-                initAuth();
-                setupEventListeners();
-                updateInputState();
-                updateHeaderButton();
-                renderMessages();
-            };
-
-            initApp();
-        });
+        // --- All other functions ---
+        const resetImageAttachment = () => { attachedImageUrl = null; ui.imagePreview.src = ''; ui.imagePreviewContainer.classList.add('hidden'); updateInputState(); };
+        const updateInputState = () => { const hasContent = ui.messageInput.value.trim().length > 0 || attachedImageUrl; const isEnabled = !isGenerating; ui.micButton.classList.toggle('hidden', hasContent); ui.sendButton.classList.toggle('hidden', !hasContent); ui.messageInput.disabled = !isEnabled; ui.sendButton.disabled = !isEnabled; };
+        const openProfileModal = () => { const tgUser = tg.initDataUnsafe.user; if (tgUser) { ui.profileModalPhoto.src = tgUser.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${tgUser.first_name.charAt(0).toUpperCase()}`; ui.profileModalName.textContent = `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim(); ui.profileModalUsername.textContent = tgUser.username ? `@${tgUser.username}` : 'Username не указан'; ui.profileModalId.textContent = `ID: ${tgUser.id}`; } updateProfileModalUI(); openModal(ui.profileModal); };
+        const updateProfileModalUI = () => { ui.repositoriesSection.innerHTML = ''; if (isTelegramEnv) { /* UI для Telegram */ } else { if (userProfile && userProfile.github_token) { const header = document.createElement('div'); header.className = 'flex justify-between items-center mb-3'; header.innerHTML = '<h4 class="text-base font-bold">Репозитории</h4>'; const logoutButton = document.createElement('button'); logoutButton.textContent = 'Выйти'; logoutButton.className = 'text-xs text-red-400 hover:underline'; logoutButton.onclick = logoutFromGitHub; header.appendChild(logoutButton); const repoListDiv = document.createElement('div'); repoListDiv.id = 'repo-list'; repoListDiv.className = 'space-y-2'; ui.repositoriesSection.appendChild(header); ui.repositoriesSection.appendChild(repoListDiv); renderRepoList(); } else { const loginContainer = document.createElement('div'); loginContainer.className = 'text-center p-4 border border-dashed border-gray-600 rounded-lg'; loginContainer.innerHTML = '<p class="mb-3 text-sm text-gray-400">Войдите в GitHub, чтобы управлять репозиториями.</p>'; const loginButton = document.createElement('button'); loginButton.className = 'w-full py-2 px-4 rounded-lg font-semibold text-sm flex items-center justify-center'; loginButton.style.backgroundColor = '#24292e'; loginButton.style.color = 'white'; loginButton.innerHTML = `<svg class="w-5 h-5 mr-2" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>Войти через GitHub`; loginButton.onclick = loginWithGitHub; loginContainer.appendChild(loginButton); ui.repositoriesSection.appendChild(loginContainer); } } };
+        const renderRepoList = () => { const repoListDiv = document.getElementById('repo-list'); if (!repoListDiv) return; repoListDiv.innerHTML = ''; const userRepos = chats.filter(chat => chat.repo_full_name); if (userRepos.length === 0) { repoListDiv.innerHTML = '<p class="text-gray-500 text-center text-sm">У вас пока нет репозиториев.</p>'; return; } userRepos.reverse().forEach(chat => { const repoDiv = document.createElement('div'); repoDiv.className = 'p-3 rounded-lg border border-gray-700 cursor-pointer hover:bg-gray-800 transition-colors'; const repoName = chat.repo_full_name.split('/')[1]; repoDiv.innerHTML = ` <div class="flex items-center justify-between pointer-events-none"> <div class="flex items-center space-x-2 min-w-0"> <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg> <span class="text-blue-400 font-semibold text-sm truncate">${repoName}</span> </div> <span class="text-xs text-gray-500 border border-gray-600 px-1.5 py-0.5 rounded-full flex-shrink-0">${chat.mode || 'HTML'}</span> </div> <p class="text-xs text-gray-400 mt-1.5 truncate pointer-events-none">${chat.title}</p> ${chat.deploy_url ? ` <div class="mt-2 pt-2 border-t border-gray-700 flex items-center space-x-2"> <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> <a href="${chat.deploy_url}" class="text-green-400 text-xs hover:underline deploy-link">Deployed on Netlify</a> </div> ` : ''} `; repoDiv.addEventListener('click', (e) => { if (e.target.classList.contains('deploy-link')) { e.stopPropagation(); tg.openLink(e.target.href); return; } openRepoBrowser(chat.repo_full_name); }); repoListDiv.appendChild(repoDiv); }); };
+        const showRepoLoader = (show) => { ui.repoBrowserLoader.classList.toggle('hidden', !show); };
+        const openRepoBrowser = async (repoFullName) => { const token = await getGitHubToken(); if (!token) { await addMessage('❌ Ошибка аутентификации.', 'bot'); closeModal(); return; } currentRepo.fullName = repoFullName; ui.repoBrowserTitle.textContent = repoFullName.split('/')[1]; ui.repoFileContentView.classList.add('hidden'); ui.repoFileListView.classList.remove('hidden'); fetchRepoContents('', token); openModal(ui.repoBrowserModal); };
+        const fetchRepoContents = async (path, token) => { showRepoLoader(true); ui.repoFileListView.innerHTML = ''; currentRepo.path = path; updateBreadcrumbs(); try { const response = await fetch(`https://api.github.com/repos/${currentRepo.fullName}/contents/${path}`, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } }); if (!response.ok) throw new Error(`Ошибка GitHub: ${response.statusText}`); const contents = await response.json(); renderRepoContents(contents); } catch (error) { ui.repoFileListView.innerHTML = `<p class="text-red-400 text-sm p-2">Не удалось загрузить: ${error.message}</p>`; } finally { showRepoLoader(false); } };
+        const renderRepoContents = (contents) => { ui.repoFileListView.innerHTML = ''; contents.sort((a, b) => { if (a.type === b.type) return a.name.localeCompare(b.name); return a.type === 'dir' ? -1 : 1; }); contents.forEach(item => { const itemDiv = document.createElement('div'); itemDiv.className = 'flex items-center p-2 rounded-md hover:bg-gray-700 cursor-pointer'; const isDir = item.type === 'dir'; itemDiv.innerHTML = ` <svg class="w-5 h-5 mr-3 flex-shrink-0 ${isDir ? 'text-blue-400' : 'text-gray-400'}" fill="none" viewBox="0 0 24 24" stroke="currentColor"> ${isDir ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />'} </svg> <span class="text-sm truncate">${item.name}</span> `; itemDiv.addEventListener('click', () => { if (isDir) { getGitHubToken().then(token => token && fetchRepoContents(item.path, token)); } else { fetchAndDisplayFileContent(item); } }); ui.repoFileListView.appendChild(itemDiv); }); };
+        const updateBreadcrumbs = () => { ui.repoBrowserNav.innerHTML = ''; const parts = ['root', ...currentRepo.path.split('/')].filter(p => p); parts.forEach((part, index) => { const isLast = index === parts.length - 1; const partName = part === 'root' ? currentRepo.fullName.split('/')[1] : part; if (isLast) { const span = document.createElement('span'); span.className = 'font-semibold text-white px-1'; span.textContent = partName; ui.repoBrowserNav.appendChild(span); } else { const linkPath = parts.slice(1, index + 1).join('/'); const link = document.createElement('a'); link.href = '#'; link.className = 'text-blue-400 hover:underline px-1'; link.textContent = partName; link.onclick = (e) => { e.preventDefault(); getGitHubToken().then(token => token && fetchRepoContents(linkPath, token)); }; ui.repoBrowserNav.appendChild(link); } if (!isLast) { const slash = document.createElement('span'); slash.className = 'mx-1 text-gray-500'; slash.textContent = '/'; ui.repoBrowserNav.appendChild(slash); } }); };
+        const fetchAndDisplayFileContent = async (file) => { showRepoLoader(true); try { const response = await fetch(file.download_url); if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`); const content = await response.text(); ui.repoFileContent.textContent = content; ui.repoFileListView.classList.add('hidden'); ui.repoFileContentView.classList.remove('hidden'); } catch (error) { tg.showAlert(`Не удалось загрузить файл: ${error.message}`); } finally { showRepoLoader(false); } };
+        const renderChatList = () => { ui.chatList.innerHTML = ''; chats.slice().reverse().forEach(chat => { const chatDiv = document.createElement('div'); chatDiv.className = 'p-2.5 rounded-lg hover:bg-gray-800 cursor-pointer'; const title = document.createElement('p'); title.className = 'font-semibold truncate text-sm'; title.textContent = chat.title; chatDiv.appendChild(title); const lastMessage = chat.messages.slice().reverse().find(m => m.text_content); if (lastMessage) { const snippet = document.createElement('p'); snippet.className = 'text-xs text-gray-400 truncate'; snippet.textContent = lastMessage.text_content; chatDiv.appendChild(snippet); } chatDiv.onclick = () => switchChat(chat.id); ui.chatList.appendChild(chatDiv); }); };
+        const showRestoreConfirmation = (version) => { versionToRestore = version; openModal(ui.confirmRestoreModal); };
+        const confirmRestore = async () => { if (!activeChat || versionToRestore === null) return; const { error } = await supabase.from('code_history').delete().eq('chat_id', activeChat.id).gt('version', versionToRestore); if (error) { console.error("Ошибка удаления истории кода:", error); return; } const { error: msgError } = await supabase.from('messages').delete().eq('chat_id', activeChat.id).gt('code_version', versionToRestore); if (msgError) { console.error("Ошибка удаления сообщений:", msgError); } activeChat.code_history = activeChat.code_history.filter(h => h.version <= versionToRestore); activeChat.messages = activeChat.messages.filter(m => !m.code_version || m.code_version <= versionToRestore); renderMessages(); closeModal(); versionToRestore = null; };
+        const updateHeaderButton = () => { const subName = SUBSCRIPTION_LIMITS[userProfile.subscription_plan].name; let buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">${subName}</button>`; if (activeChat && activeChat.deploy_url) { buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-500 text-white">Открыть</button>`; } else if (activeChat && activeChat.is_deploying) { buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full flex items-center" style="background-color: var(--tg-secondary-bg-color);" disabled><div class="spinner mr-1.5"></div>Деплой...</button>`; } ui.headerActionContainer.innerHTML = buttonHTML; const newButton = document.getElementById('header-action-button'); if (activeChat && activeChat.deploy_url) { newButton.onclick = () => tg.openLink(activeChat.deploy_url); } else if (!activeChat || !activeChat.is_deploying) { newButton.onclick = openSubscriptionModal; } };
+        const openSubscriptionModal = () => { openModal(ui.subscriptionModal); };
+        const startDeployCountdown = () => { ui.deployButton.classList.remove('hidden'); ui.deployButton.disabled = true; let seconds = 60; ui.deployButton.textContent = `Деплой через ${seconds} сек.`; countdownInterval = setInterval(() => { seconds--; ui.deployButton.textContent = `Деплой через ${seconds} сек.`; if (seconds <= 0) { clearInterval(countdownInterval); ui.deployButton.disabled = false; ui.deployButton.textContent = 'Деплой'; } }, 1000); };
+        const updateDeployButtonState = () => { if (activeChat && activeChat.repo_full_name && !activeChat.deploy_url && !activeChat.is_deploying) { ui.deployButton.classList.remove('hidden'); ui.deployButton.disabled = false; ui.deployButton.textContent = 'Деплой'; } else { ui.deployButton.classList.add('hidden'); } };
+        const buySubscription = (plan, amount) => { const paymentProviderToken = "YOUR_PAYMENT_PROVIDER_TOKEN"; if (!paymentProviderToken || paymentProviderToken === "YOUR_PAYMENT_PROVIDER_TOKEN") { tg.showAlert("Платежная система не настроена."); return; } tg.openInvoice(`buy-${plan}-plan-user-${userProfile.id}`, async (status) => { if (status === 'paid') { const { error } = await supabase.from('users').update({ subscription_plan: plan }).eq('id', userProfile.id); if (error) { tg.showAlert('Не удалось обновить подписку в базе данных.'); } else { userProfile.subscription_plan = plan; updateHeaderButton(); closeModal(); tg.showAlert('Спасибо! Ваша подписка обновлена.'); } } else if (status === 'failed') { tg.showAlert('Не удалось обработать платеж.'); } }); };
+        
+        initApp();
+    });
     </script>
 </body>
 </html>

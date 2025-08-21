@@ -10,7 +10,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- Подключение Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- НОВОЕ: Подключение JSZip для создания архивов -->
+    <!-- Подключение JSZip для создания архивов -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
@@ -166,7 +166,6 @@
                 <p id="profile-modal-username" class="text-gray-400 text-sm">@username</p>
                 <p id="profile-modal-id" class="text-xs text-gray-500 mt-1.5"></p>
             </div>
-            <!-- Секция с репозиториями удалена, так как GitHub больше не используется -->
         </div>
     </div>
 
@@ -251,9 +250,8 @@
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxcHRhemthZGljdWplZG95eWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTU2ODUsImV4cCI6MjA3MTEzMTY4NX0.FaNU-OlO1yEo7e9ADUCbPWvK0RG90_GedlaXUXUM0Eo';
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             
-            // --- Конфигурация Netlify и Gemini ---
+            // --- Конфигурация Netlify ---
             const NETLIFY_TOKEN = 'nfp_HcEaWZxtyLaos1zC8s3d6arvDqW9674u7678'; // ВАЖНО: Хранить токен на клиенте небезопасно для продакшена!
-            const GEMINI_API_KEY = 'AIzaSyCcGUMM1DT4C65ee3ScUmeA9Zo3UOOXST8';
 
             // --- Конфигурация подписок ---
             const SUBSCRIPTION_LIMITS = {
@@ -572,28 +570,27 @@
                 if(ui.sendButton) ui.sendButton.disabled = !isEnabled;
             };
 
+            // --- ОБНОВЛЕННАЯ ФУНКЦИЯ ВЫЗОВА API ---
             const callGeminiAPI = async (prompt) => {
-                const apiKey = GEMINI_API_KEY;
-                if (!apiKey) {
-                    const errorMsg = "Ошибка конфигурации: Gemini API ключ не найден.";
-                    console.error(errorMsg);
+                try {
+                    const { data, error } = await supabaseClient.functions.invoke('generate-code', {
+                        body: { prompt },
+                    });
+
+                    if (error) throw error;
+                    if (data.error) throw new Error(data.error);
+
+                    // Функция теперь возвращает JSON напрямую
+                    return data;
+
+                } catch (error) {
+                    console.error("Ошибка вызова функции Supabase (generate-code):", error.message);
+                    const errorMsg = "Ошибка конфигурации API. Проверьте ключ в настройках Supabase.";
                     addMessage(`❌ ${errorMsg}`, 'bot');
                     isGenerating = false;
                     updateInputState();
                     closeModal();
                     return { "error.html": `<!-- ${errorMsg} -->` };
-                }
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
-                const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", } };
-                try {
-                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    const result = await response.json();
-                    const responseText = result.candidates[0].content.parts[0].text;
-                    return JSON.parse(responseText);
-                } catch (error) {
-                    console.error("Ошибка API:", error);
-                    return { "error.html": `<!-- Ошибка при генерации кода: ${error.message} -->` };
                 }
             };
             
@@ -637,7 +634,7 @@
                 iconSpan.innerHTML = '<div class="spinner"></div>';
                 apiStatusDiv.appendChild(iconSpan);
                 const textSpan = document.createElement('span');
-                textSpan.textContent = 'Отправка запроса в Gemini...';
+                textSpan.textContent = 'Отправка запроса в AI...';
                 apiStatusDiv.appendChild(textSpan);
                 ui.aiStatusContainer.appendChild(apiStatusDiv);
                 

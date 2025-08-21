@@ -446,6 +446,27 @@
                 for (const step of steps) {
                     await typeStep(step);
                 }
+                
+                // Создание базы данных
+                const { textEl: dbText, icon: dbIcon } = await typeStep('Создание базы данных...');
+                try {
+                    // Предполагается, что у вас есть Edge Function 'create-app-table'
+                    const { error } = await supabaseClient.functions.invoke('create-app-table', {
+                        body: { chatId: activeChatId },
+                    });
+                    if (error) throw error;
+                    dbText.textContent = 'База данных успешно создана.';
+                    dbIcon.innerHTML = '<span class="status-icon-success">✓</span>';
+                } catch (dbError) {
+                    console.error('Ошибка создания таблицы:', dbError);
+                    dbText.textContent = 'Ошибка создания базы данных.';
+                    dbIcon.innerHTML = '<span class="status-icon-error">✗</span>';
+                    isGenerating = false;
+                    updateInputState();
+                    return; // Прерываем процесс, если БД не создалась
+                }
+                await new Promise(resolve => setTimeout(resolve, 200));
+
 
                 const { textEl: apiText, icon: apiIcon } = await typeStep('Отправка запроса в AI...');
                 
@@ -477,8 +498,23 @@
 
             function initiateAiGeneration(prompt) {
                 localState.chats[activeChatId].mode = 'html';
-                const fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}". Ответ в JSON: { "index.html": "..." }. Используй Tailwind CSS. Приложение должно быть полностью функциональным, красивым, минималистичным и адаптированным для мобильных устройств.`;
-                runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], fullPrompt);
+                const tableName = `app_data_${activeChatId.replace(/-/g, '_')}`;
+                const fullPrompt = `
+                Создай однофайловое HTML-приложение на тему "${prompt}".
+                Ответ должен быть в формате JSON: { "index.html": "..." }.
+                Используй Tailwind CSS для стилей. Приложение должно быть полностью функциональным, красивым, минималистичным и адаптированным для мобильных устройств.
+                
+                ВАЖНО: Интегрируй в приложение Supabase JS v2.
+                1.  Добавь в <head> тег: <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>.
+                2.  Внутри тега <script> в <body>, инициализируй клиент Supabase:
+                    const supabaseUrl = '${SUPABASE_URL}';
+                    const supabaseKey = '${SUPABASE_ANON_KEY}';
+                    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+                3.  Приложение должно взаимодействовать с таблицей в базе данных под названием '${tableName}'.
+                4.  Реализуй базовый CRUD-функционал: добавление данных в таблицу и их отображение. Например, форма для ввода и список для вывода.
+                5.  Весь JS-код должен быть внутри одного тега <script> в <body>.
+                `;
+                runAiProcess(["Анализирую запрос...", "Проектирую структуру..."], fullPrompt);
             }
 
             function improveAiGeneration(prompt) {
@@ -488,7 +524,16 @@
                 }
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
                 const codeString = JSON.stringify(latestCodeObject, null, 2);
-                const fullPrompt = `Ты - эксперт по HTML и Tailwind CSS. Вот существующий код приложения в формате JSON:\n\n${codeString}\n\nВнеси следующее улучшение: "${prompt}". Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлом index.html.`;
+                const tableName = `app_data_${activeChatId.replace(/-/g, '_')}`;
+                const fullPrompt = `
+                Ты - эксперт по HTML, Tailwind CSS и Supabase. Вот существующий код приложения в формате JSON:
+                ${codeString}
+                
+                Внеси следующее улучшение: "${prompt}".
+                
+                Помни, что приложение использует Supabase для работы с данными. Таблица называется '${tableName}'. Убедись, что твои улучшения совместимы с этой архитектурой.
+                Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлом index.html.
+                `;
                 runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], fullPrompt);
             }
 
@@ -833,4 +878,4 @@
         });
     </script>
 </body>
-</html>
+</ht

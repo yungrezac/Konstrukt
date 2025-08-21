@@ -383,9 +383,7 @@
             function updateInputState() {
                 const hasContent = ui.messageInput.value.trim().length > 0;
                 ui.messageInput.disabled = isGenerating;
-                // Кнопка отправки теперь всегда видна, но неактивна, если нет текста или идет генерация
                 ui.sendButton.disabled = isGenerating || !hasContent;
-                // Добавим визуальный стиль для неактивной кнопки
                 ui.sendButton.classList.toggle('opacity-50', ui.sendButton.disabled);
                 ui.sendButton.classList.toggle('cursor-not-allowed', ui.sendButton.disabled);
             }
@@ -565,9 +563,11 @@
 
             async function switchChat(chatId) {
                 activeChatId = chatId;
+                ui.messageInput.value = ''; // Очищаем поле ввода при смене чата
                 await loadActiveChatDetails();
                 renderMessages();
                 updateHeader();
+                updateInputState(); // Обновляем состояние кнопки отправки
                 closeModal();
             }
 

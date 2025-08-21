@@ -105,7 +105,7 @@
                 <input id="message-input" type="text" placeholder="Спросить Devtol" class="flex-grow bg-transparent focus:outline-none mx-2 text-sm">
                 <div id="action-button-container" class="flex-shrink-0">
                      <button id="send-button" class="p-1.5 rounded-full transition-opacity">
-                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     </button>
                 </div>
             </div>
@@ -165,7 +165,7 @@
                 <button data-tab="preview" class="tab-button font-bold py-1 border-b-2 border-transparent">Просмотр</button>
             </div>
             <div id="deploy-actions-container" class="flex items-center space-x-2">
-               <!-- Кнопки деплоя будут здесь -->
+                 <!-- Кнопки деплоя будут здесь -->
             </div>
         </div>
         <div id="code-view" class="overflow-y-auto p-3 flex-grow">
@@ -411,24 +411,6 @@
                 }
             }
             
-            // Новая функция для вызова create-app-table
-            async function createAppDatabaseTable() {
-                if (!activeChatId) return false;
-                try {
-                    const { data, error } = await supabaseClient.functions.invoke('create-app-table', {
-                        body: { chatId: activeChatId }
-                    });
-                    if (error) throw error;
-                    if (data.error) throw new Error(data.error);
-                    console.log('Database table creation success:', data.message);
-                    return true;
-                } catch (error) {
-                    console.error("Ошибка вызова функции Supabase (create-app-table):", error.message);
-                    addMessage(`❌ Не удалось создать базу данных для приложения.`, 'bot');
-                    return false;
-                }
-            }
-
             function formatCodeForDisplay(codeObject) {
                 return codeObject['index.html'] || 'Код не найден.';
             }
@@ -467,23 +449,9 @@
 
                 const { textEl: apiText, icon: apiIcon } = await typeStep('Отправка запроса в AI...');
                 
-                let apiResponse = await callGeminiAPI(prompt);
-                let generatedCodeObject;
-
-                // The response from the Supabase function might be a JSON string,
-                // so we need to parse it into an object.
-                if (typeof apiResponse === 'string') {
-                    try {
-                        generatedCodeObject = JSON.parse(apiResponse);
-                    } catch (e) {
-                        console.error("Failed to parse AI response:", e);
-                        generatedCodeObject = null; // Set to null to trigger the error condition
-                    }
-                } else {
-                    generatedCodeObject = apiResponse; // Assume it's already an object
-                }
+                let generatedCodeObject = await callGeminiAPI(prompt);
                 
-                if (!generatedCodeObject || !generatedCodeObject['index.html']) {
+                if (!generatedCodeObject['index.html']) {
                     apiText.textContent = 'Ошибка генерации кода.';
                     apiIcon.innerHTML = '<span class="status-icon-error">✗</span>';
                     isGenerating = false;
@@ -494,23 +462,6 @@
                 apiText.textContent = 'Ответ от AI получен.';
                 apiIcon.innerHTML = '<span class="status-icon-success">✓</span>';
                 await new Promise(resolve => setTimeout(resolve, 200));
-
-                // Шаг создания базы данных
-                const { textEl: dbText, icon: dbIcon } = await typeStep('Создаю базу данных...');
-                const dbSuccess = await createAppDatabaseTable();
-
-                if (!dbSuccess) {
-                    dbText.textContent = 'Ошибка создания базы данных.';
-                    dbIcon.innerHTML = '<span class="status-icon-error">✗</span>';
-                    isGenerating = false;
-                    updateInputState();
-                    return;
-                }
-
-                dbText.textContent = 'База данных создана.';
-                dbIcon.innerHTML = '<span class="status-icon-success">✓</span>';
-                await new Promise(resolve => setTimeout(resolve, 200));
-
 
                 await typeStep('Вывожу результат...');
                 
@@ -526,17 +477,7 @@
 
             function initiateAiGeneration(prompt) {
                 localState.chats[activeChatId].mode = 'html';
-                const tableName = `app_data_${activeChatId.replace(/-/g, '_')}`;
-                const fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}".
-Приложение должно использовать Supabase для хранения данных.
-Вот данные для подключения:
-- Supabase URL: "${SUPABASE_URL}"
-- Supabase Anon Key: "${SUPABASE_ANON_KEY}"
-- Имя таблицы: "${tableName}"
-
-Включи в код скрипт для подключения к Supabase и базовые функции (чтение, добавление данных).
-Ответ в JSON: { "index.html": "..." }.
-Используй Tailwind CSS. Приложение должно быть полностью функциональным, красивым, минималистичным и адаптированным для мобильных устройств.`;
+                const fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}". Ответ в JSON: { "index.html": "..." }. Используй Tailwind CSS. Приложение должно быть полностью функциональным, красивым, минималистичным и адаптированным для мобильных устройств.`;
                 runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], fullPrompt);
             }
 
@@ -547,14 +488,7 @@
                 }
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
                 const codeString = JSON.stringify(latestCodeObject, null, 2);
-                const tableName = `app_data_${activeChatId.replace(/-/g, '_')}`;
-                const fullPrompt = `Ты - эксперт по HTML и Tailwind CSS. Вот существующий код приложения в формате JSON:\n\n${codeString}\n\n
-Это данные для подключения к базе данных Supabase:
-- Supabase URL: "${SUPABASE_URL}"
-- Supabase Anon Key: "${SUPABASE_ANON_KEY}"
-- Имя таблицы: "${tableName}"
-
-Внеси следующее улучшение: "${prompt}". Убедись, что функционал базы данных работает корректно с указанными данными. Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлом index.html.`;
+                const fullPrompt = `Ты - эксперт по HTML и Tailwind CSS. Вот существующий код приложения в формате JSON:\n\n${codeString}\n\nВнеси следующее улучшение: "${prompt}". Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлом index.html.`;
                 runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], fullPrompt);
             }
 

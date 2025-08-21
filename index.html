@@ -60,15 +60,12 @@
         @keyframes gradient-animation { to { background-position: 200% center; } }
         .progress-bar { background-color: #374151; border-radius: 9999px; }
         .progress-bar-inner { background-color: var(--tg-button-color); height: 100%; border-radius: 9999px; transition: width 0.5s ease-in-out; }
-        
-        /* New styles for animated AI status */
         #ai-status-container {
             font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
             color: #d1d5db; /* gray-300 */
         }
         .status-icon-success { color: #4ade80; } /* green-400 */
         .status-icon-error { color: #f87171; } /* red-400 */
-
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -450,7 +447,6 @@
                 // Создание базы данных
                 const { textEl: dbText, icon: dbIcon } = await typeStep('Создание базы данных...');
                 try {
-                    // Предполагается, что у вас есть Edge Function 'create-app-table'
                     const { error } = await supabaseClient.functions.invoke('create-app-table', {
                         body: { chatId: activeChatId },
                     });
@@ -463,7 +459,7 @@
                     dbIcon.innerHTML = '<span class="status-icon-error">✗</span>';
                     isGenerating = false;
                     updateInputState();
-                    return; // Прерываем процесс, если БД не создалась
+                    return;
                 }
                 await new Promise(resolve => setTimeout(resolve, 200));
 
@@ -878,4 +874,4 @@
         });
     </script>
 </body>
-</ht
+</html>

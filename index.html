@@ -10,7 +10,8 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- Подключение Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- JSZip больше не нужен на клиенте, он используется на сервере -->
+    <!-- JSZip (для функции деплоя) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --tg-bg-color: var(--tg-theme-bg-color, #111827);
@@ -289,31 +290,36 @@
             let versionToRestore = null;
             let activeChatId = null;
 
-            tg.ready();
-            tg.expand();
-            forceDarkTheme();
-
             const user = tg.initDataUnsafe.user;
-            if (user && user.first_name) {
-                if (ui.greetingText) ui.greetingText.textContent = `${user.first_name}, что создадим сегодня?`;
-                if (ui.userPhoto) ui.userPhoto.src = user.photo_url || `https://placehold.co/40x40/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
+
+            function forceDarkTheme() {
+                tg.setHeaderColor('#1f2937');
+                tg.setBackgroundColor('#111827');
+                const root = document.documentElement;
+                const darkThemeCssVars = {
+                    '--tg-theme-bg-color': '#111827',
+                    '--tg-theme-text-color': '#ffffff',
+                    '--tg-theme-hint-color': '#9ca3af',
+                    '--tg-theme-secondary-bg-color': '#1f2937',
+                    '--tg-theme-header-bg-color': '#1f2937',
+                    '--tg-theme-button-color': '#8774e1',
+                    '--tg-theme-button-text-color': '#ffffff',
+                };
+                Object.entries(darkThemeCssVars).forEach(([key, value]) => root.style.setProperty(key, value));
             }
-            
-            // --- Управление состоянием пользователя ---
-            const loadDataFromSupabase = async () => {
+
+            async function loadDataFromSupabase() {
                 if (!user || !user.id) {
                     console.error("Нет данных о пользователе Telegram.");
                     return;
                 }
-
-                // 1. Получить или создать пользователя
                 let { data: userData, error: userError } = await supabaseClient
                     .from('users')
                     .select('*')
                     .eq('id', user.id)
                     .single();
 
-                if (userError && userError.code !== 'PGRST116') { // PGRST116 = no rows found
+                if (userError && userError.code !== 'PGRST116') {
                     console.error("Ошибка при загрузке пользователя:", userError);
                     return;
                 }
@@ -338,7 +344,6 @@
                 }
                 localState.user = userData;
 
-                // 2. Загрузить чаты пользователя
                 const { data: chatsData, error: chatsError } = await supabaseClient
                     .from('chats')
                     .select('*')
@@ -354,59 +359,43 @@
                     localState.chats[chat.id] = { ...chat, messages: [], codeHistory: [] };
                 }
 
-                // 3. Если чатов нет, создать новый
                 if (chatsData.length === 0) {
                     await createNewChat(true);
                 } else {
                     activeChatId = chatsData[chatsData.length - 1].id;
                     await loadActiveChatDetails();
                 }
-            };
+            }
             
-            const loadActiveChatDetails = async () => {
+            async function loadActiveChatDetails() {
                 if (!activeChatId) return;
 
-                // Загрузка сообщений
                 const { data: messagesData, error: messagesError } = await supabaseClient
                     .from('messages')
                     .select('*')
                     .eq('chat_id', activeChatId)
                     .order('created_at', { ascending: true });
 
-                if (messagesError) {
-                    console.error("Ошибка загрузки сообщений:", messagesError);
-                } else {
-                    localState.chats[activeChatId].messages = messagesData.map(m => ({...m, text: m.text_content}));
-                }
+                if (messagesError) console.error("Ошибка загрузки сообщений:", messagesError);
+                else localState.chats[activeChatId].messages = messagesData.map(m => ({...m, text: m.text_content}));
 
-                // Загрузка истории кода
                 const { data: codeHistoryData, error: codeHistoryError } = await supabaseClient
                     .from('code_history')
                     .select('*')
                     .eq('chat_id', activeChatId)
                     .order('version', { ascending: true });
                 
-                if(codeHistoryError) {
-                    console.error("Ошибка загрузки истории кода:", codeHistoryError);
-                } else {
-                    localState.chats[activeChatId].codeHistory = codeHistoryData.map(c => ({...c, code: c.code_object}));
-                }
-            };
+                if(codeHistoryError) console.error("Ошибка загрузки истории кода:", codeHistoryError);
+                else localState.chats[activeChatId].codeHistory = codeHistoryData.map(c => ({...c, code: c.code_object}));
+            }
 
-            const addMessage = async (text, sender, imageUrl = null, codeVersion = null) => {
+            async function addMessage(text, sender, imageUrl = null, codeVersion = null) {
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat) return;
                 
-                // Сохраняем в Supabase
                 const { data: newMessage, error } = await supabaseClient
                     .from('messages')
-                    .insert({
-                        chat_id: activeChatId,
-                        sender: sender,
-                        text_content: text,
-                        image_url: imageUrl,
-                        code_version: codeVersion
-                    })
+                    .insert({ chat_id: activeChatId, sender, text_content: text, image_url: imageUrl, code_version: codeVersion })
                     .select()
                     .single();
 
@@ -419,14 +408,13 @@
 
                 if (sender === 'user' && activeChat.messages.filter(m => m.sender === 'user').length === 1 && text) {
                     activeChat.title = text;
-                    // Обновляем заголовок чата в Supabase
                     await supabaseClient.from('chats').update({ title: activeChat.title }).eq('id', activeChatId);
                 }
                 
                 renderMessages();
-            };
+            }
 
-            const renderMessages = () => {
+            function renderMessages() {
                 const activeChat = localState.chats[activeChatId];
                 
                 if (!activeChat || activeChat.messages.length === 0) {
@@ -481,15 +469,15 @@
                     ui.chatArea.appendChild(msgDiv);
                 });
                 ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
-            };
+            }
 
-            const sendMessage = () => {
+            function sendMessage() {
                 if (isGenerating) return;
 
                 const text = ui.messageInput.value.trim();
                 if (text || attachedImageUrl) {
                     addMessage(text, 'user', attachedImageUrl);
-                    if (currentMode === 'canvas' || currentMode === 'react' || currentMode === 'vue' || currentMode === 'angular' || currentMode === 'flutter' || currentMode === null) {
+                    if (currentMode === null || ['canvas', 'react', 'vue', 'angular', 'flutter'].includes(currentMode)) {
                         const activeChat = localState.chats[activeChatId];
                         if (activeChat.codeHistory.length === 0) { 
                             initiateAiGeneration(text);
@@ -502,38 +490,59 @@
                     updateInputState();
                     tg.HapticFeedback.impactOccurred('light');
                 }
-            };
+            }
             
-            const resetImageAttachment = () => {
+            function resetImageAttachment() {
                 attachedImageUrl = null;
                 if(ui.imagePreview) ui.imagePreview.src = '';
                 if(ui.imagePreviewContainer) ui.imagePreviewContainer.classList.add('hidden');
                 updateInputState();
-            };
+            }
 
-            const updateInputState = () => {
+            function updateInputState() {
                 const hasContent = ui.messageInput.value.trim().length > 0 || attachedImageUrl;
                 const isEnabled = !isGenerating;
                 if(ui.micButton) ui.micButton.classList.toggle('hidden', hasContent);
                 if(ui.sendButton) ui.sendButton.classList.toggle('hidden', !hasContent);
                 if(ui.messageInput) ui.messageInput.disabled = !isEnabled;
                 if(ui.sendButton) ui.sendButton.disabled = !isEnabled;
-            };
+            }
 
-            const formatCodeForDisplay = (codeObject) => {
+            async function callGeminiAPI(prompt) {
+                try {
+                    const { data, error } = await supabaseClient.functions.invoke('generate-code', {
+                        body: { prompt },
+                    });
+
+                    if (error) throw error;
+                    if (data.error) throw new Error(data.error);
+
+                    return data;
+
+                } catch (error) {
+                    console.error("Ошибка вызова функции Supabase (generate-code):", error.message);
+                    const errorMsg = "Ошибка конфигурации API.";
+                    addMessage(`❌ ${errorMsg}`, 'bot');
+                    isGenerating = false;
+                    updateInputState();
+                    closeModal();
+                    return { "error.html": `<!-- ${errorMsg} -->` };
+                }
+            }
+            
+            function formatCodeForDisplay(codeObject) {
                 if (typeof codeObject === 'string') return codeObject;
                 if (codeObject['error.html']) return codeObject['error.html'];
                 return Object.entries(codeObject).map(([filename, code]) => `//--- ${filename} ---\n\n${code}`).join('\n\n\n');
-            };
+            }
 
-            const runAiProcess = async (steps, prompt) => {
+            async function runAiProcess(steps, prompt) {
                 isGenerating = true;
                 updateInputState();
                 openModal(ui.codeModal);
                 const activeChat = localState.chats[activeChatId];
                 
-                const isFlutter = currentMode === 'flutter';
-                document.querySelector('[data-tab="preview"]').style.display = isFlutter ? 'none' : 'block';
+                document.querySelector('[data-tab="preview"]').style.display = currentMode === 'flutter' ? 'none' : 'block';
                 switchTab('code');
 
                 ui.codeOutput.textContent = '';
@@ -582,56 +591,31 @@
                     generatedCodeObject = generatedCodeObject.files; 
                 }
 
-                const isReact = activeChat.mode === 'react';
-                const isFinalFlutter = activeChat.mode === 'flutter';
-                document.querySelector('[data-tab="preview"]').style.display = (isReact || isFinalFlutter) ? 'none' : 'block';
-                if(isFinalFlutter) switchTab('code');
-
                 textSpan.textContent = 'Получение ответа...';
                 iconSpan.innerHTML = '✅';
                 
                 const formattedCode = formatCodeForDisplay(generatedCodeObject);
                 typeCode(generatedCodeObject, formattedCode);
-            };
+            }
 
-            const initiateAiGeneration = (prompt) => {
-                const activeChat = localState.chats[activeChatId];
-                activeChat.mode = currentMode;
+            function initiateAiGeneration(prompt) {
+                localState.chats[activeChatId].mode = currentMode;
                 let fullPrompt;
-
                 if (currentMode === null) {
-                    fullPrompt = `Ты - эксперт-архитектор по разработке программного обеспечения. Проанализируй следующий запрос пользователя: "${prompt}".
-                    Выбери НАИБОЛЕЕ ПОДХОДЯЩИЙ фреймворк из списка: [html, react, vue, angular].
-                    Твой ответ ДОЛЖЕН БЫТЬ в формате JSON и содержать два ключа: "chosenFramework" (значение из списка выше) и "files" (объект с кодом).
-                    Основываясь на твоем выборе, сгенерируй код для полноценного, красивого, минималистичного мобильного приложения, следуя инструкциям для выбранного фреймворка:
-                    - Если выбрал 'html': { "index.html": "..." }
-                    - Если выбрал 'react': { "package.json": "...", "public/index.html": "...", "src/App.js": "..." }
-                    - Если выбрал 'vue': { "package.json": "...", "index.html": "...", "src/App.vue": "..." }
-                    - Если выбрал 'angular': { "package.json": "...", "angular.json": "...", "src/index.html": "...", "src/main.ts": "...", "src/app/app.module.ts": "...", "src/app/app.component.ts": "...", "src/app/app.component.html": "...", "src/app/app.component.css": "..." }
-                    Используй Tailwind CSS для стилей. Приложение должно быть полностью функциональным. Не добавляй никаких объяснений, только JSON.`;
+                    fullPrompt = `Ты - эксперт-архитектор по разработке программного обеспечения. Проанализируй следующий запрос пользователя: "${prompt}". Выбери НАИБОЛЕЕ ПОДХОДЯЩИЙ фреймворк из списка: [html, react, vue, angular]. Твой ответ ДОЛЖЕН БЫТЬ в формате JSON и содержать два ключа: "chosenFramework" (значение из списка выше) и "files" (объект с кодом). Основываясь на твоем выборе, сгенерируй код для полноценного, красивого, минималистичного мобильного приложения, следуя инструкциям для выбранного фреймворка: - Если выбрал 'html': { "index.html": "..." } - Если выбрал 'react': { "package.json": "...", "public/index.html": "...", "src/App.js": "..." } - Если выбрал 'vue': { "package.json": "...", "index.html": "...", "src/App.vue": "..." } - Если выбрал 'angular': { "package.json": "...", "angular.json": "...", "src/index.html": "...", "src/main.ts": "...", "src/app/app.module.ts": "...", "src/app/app.component.ts": "...", "src/app/app.component.html": "...", "src/app/app.component.css": "..." } Используй Tailwind CSS для стилей. Приложение должно быть полностью функциональным. Не добавляй никаких объяснений, только JSON.`;
                 } else {
                     switch(currentMode) {
-                        case 'react':
-                            fullPrompt = `Создай React-приложение на тему "${prompt}". Ответ в JSON: { "package.json": "...", "public/index.html": "...", "src/App.js": "..." }. Используй Tailwind CSS.`;
-                            break;
-                        case 'vue':
-                            fullPrompt = `Создай Vue.js приложение на тему "${prompt}". Ответ в JSON: { "package.json": "...", "index.html": "...", "src/App.vue": "..." }. Используй Tailwind CSS.`;
-                            break;
-                        case 'angular':
-                             fullPrompt = `Создай Angular приложение на тему "${prompt}". Ответ в JSON со всеми необходимыми файлами (app.module, app.component, main.ts и т.д.). Используй Tailwind CSS.`;
-                            break;
-                        case 'flutter':
-                             fullPrompt = `Создай Flutter приложение (код на Dart) на тему "${prompt}". Ответ в JSON: { "pubspec.yaml": "...", "lib/main.dart": "..." }.`;
-                            break;
-                        case 'canvas':
-                        default:
-                             fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}". Ответ в JSON: { "index.html": "..." }. Используй Tailwind CSS.`;
+                        case 'react': fullPrompt = `Создай React-приложение на тему "${prompt}". Ответ в JSON: { "package.json": "...", "public/index.html": "...", "src/App.js": "..." }. Используй Tailwind CSS.`; break;
+                        case 'vue': fullPrompt = `Создай Vue.js приложение на тему "${prompt}". Ответ в JSON: { "package.json": "...", "index.html": "...", "src/App.vue": "..." }. Используй Tailwind CSS.`; break;
+                        case 'angular': fullPrompt = `Создай Angular приложение на тему "${prompt}". Ответ в JSON со всеми необходимыми файлами (app.module, app.component, main.ts и т.д.). Используй Tailwind CSS.`; break;
+                        case 'flutter': fullPrompt = `Создай Flutter приложение (код на Dart) на тему "${prompt}". Ответ в JSON: { "pubspec.yaml": "...", "lib/main.dart": "..." }.`; break;
+                        default: fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}". Ответ в JSON: { "index.html": "..." }. Используй Tailwind CSS.`;
                     }
                 }
                 runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], fullPrompt);
-            };
+            }
 
-            const improveAiGeneration = (prompt) => {
+            function improveAiGeneration(prompt) {
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat || activeChat.codeHistory.length === 0) {
                     initiateAiGeneration(prompt);
@@ -640,22 +624,15 @@
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
                 const codeString = JSON.stringify(latestCodeObject, null, 2);
                 const framework = activeChat.mode;
-
-                let fullPrompt = `Ты - эксперт по ${framework}. Вот существующий код приложения в формате JSON:\n\n${codeString}\n\nВнеси следующее улучшение: "${prompt}". Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлами кода.`;
-                
+                const fullPrompt = `Ты - эксперт по ${framework}. Вот существующий код приложения в формате JSON:\n\n${codeString}\n\nВнеси следующее улучшение: "${prompt}". Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлами кода.`;
                 runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], fullPrompt);
-            };
+            }
 
-            const typeCode = async (codeObject, formattedCode) => {
+            async function typeCode(codeObject, formattedCode) {
                 const activeChat = localState.chats[activeChatId];
                 const newVersion = activeChat.codeHistory.length + 1;
                 
-                // Сохраняем в Supabase
-                const { error } = await supabaseClient.from('code_history').insert({
-                    chat_id: activeChatId,
-                    version: newVersion,
-                    code_object: codeObject
-                });
+                const { error } = await supabaseClient.from('code_history').insert({ chat_id: activeChatId, version: newVersion, code_object: codeObject });
                 if (error) {
                     console.error("Ошибка сохранения истории кода:", error);
                     return;
@@ -682,11 +659,10 @@
                         }, 500);
                     }
                 }, 5);
-            };
+            }
 
-            const switchTab = (tabName) => {
-                const tabs = ui.codeTabs.querySelectorAll('.tab-button');
-                tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
+            function switchTab(tabName) {
+                ui.codeTabs.querySelectorAll('.tab-button').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
                 const isPreview = tabName === 'preview';
                 if(ui.codeView) ui.codeView.classList.toggle('hidden', isPreview);
                 if(ui.previewView) ui.previewView.classList.toggle('hidden', !isPreview);
@@ -695,9 +671,9 @@
                     const latestCode = activeChat.codeHistory.length > 0 ? activeChat.codeHistory.slice(-1)[0].code['index.html'] : '';
                     if(ui.previewFrame) ui.previewFrame.srcdoc = latestCode;
                 }
-            };
+            }
             
-            const openCodeModal = (switchToPreview = false, version) => {
+            function openCodeModal(switchToPreview = false, version) {
                 const activeChat = localState.chats[activeChatId];
                 const codeHistoryItem = activeChat.codeHistory.find(h => h.version === version);
                 if (!codeHistoryItem) return;
@@ -713,22 +689,22 @@
                     switchTab(switchToPreview ? 'preview' : 'code');
                 }
                 openModal(ui.codeModal);
-            };
+            }
 
-            const openModal = (modal) => {
+            function openModal(modal) {
                 if(ui.modalOverlay) ui.modalOverlay.classList.add('visible');
                 if(modal) modal.classList.add('visible');
                 tg.HapticFeedback.impactOccurred('light');
-            };
+            }
 
-            const closeModal = () => {
+            function closeModal() {
                 if(ui.modalOverlay) ui.modalOverlay.classList.remove('visible');
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.subscriptionModal].forEach(modal => {
                     if (modal) modal.classList.remove('visible');
                 });
-            };
+            }
             
-            const openProfileModal = () => {
+            function openProfileModal() {
                 if (localState.user) {
                     const u = localState.user;
                     if(ui.profileModalPhoto) ui.profileModalPhoto.src = u.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${u.first_name.charAt(0).toUpperCase()}`;
@@ -737,9 +713,9 @@
                     if(ui.profileModalId) ui.profileModalId.textContent = `ID: ${u.id}`;
                 }
                 openModal(ui.profileModal);
-            };
+            }
             
-            const createNewChat = async (isInitial = false) => {
+            async function createNewChat(isInitial = false) {
                 const chatCount = Object.keys(localState.chats).length;
                 const limit = SUBSCRIPTION_LIMITS[localState.user.subscription_plan].chats;
 
@@ -763,17 +739,17 @@
                 localState.chats[newChat.id] = { ...newChat, messages: [], codeHistory: [] };
                 switchChat(newChat.id);
                 closeModal();
-            };
+            }
 
-            const switchChat = async (chatId) => {
+            async function switchChat(chatId) {
                 activeChatId = chatId;
                 await loadActiveChatDetails();
                 renderMessages();
                 updateHeaderButton();
                 closeModal();
-            };
+            }
 
-            const renderChatList = () => {
+            function renderChatList() {
                 if(!ui.chatList) return;
                 ui.chatList.innerHTML = '';
                 const chats = Object.values(localState.chats).reverse();
@@ -794,14 +770,14 @@
                     chatDiv.onclick = () => switchChat(chat.id);
                     ui.chatList.appendChild(chatDiv);
                 });
-            };
+            }
 
-            const showRestoreConfirmation = (version) => {
+            function showRestoreConfirmation(version) {
                 versionToRestore = version;
                 openModal(ui.confirmRestoreModal);
-            };
+            }
 
-            const confirmRestore = async () => {
+            async function confirmRestore() {
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat || versionToRestore === null) return;
                 
@@ -823,9 +799,9 @@
                 renderMessages();
                 closeModal();
                 versionToRestore = null;
-            };
+            }
 
-            const updateHeaderButton = () => {
+            function updateHeaderButton() {
                 const chat = localState.chats[activeChatId];
                 const subName = SUBSCRIPTION_LIMITS[localState.user?.subscription_plan || 'free'].name;
                 
@@ -845,13 +821,13 @@
                 } else if (!chat || !chat.is_deploying) {
                     newButton.onclick = openSubscriptionModal;
                 }
-            };
+            }
             
-            const openSubscriptionModal = () => {
+            function openSubscriptionModal() {
                 openModal(ui.subscriptionModal);
-            };
+            }
 
-            const updateDeployButtonState = () => {
+            function updateDeployButtonState() {
                 const chat = localState.chats[activeChatId];
                 if (chat && chat.codeHistory.length > 0 && !chat.deploy_url && !chat.is_deploying) {
                     ui.deployButton.classList.remove('hidden');
@@ -860,9 +836,62 @@
                 } else {
                     ui.deployButton.classList.add('hidden');
                 }
-            };
+            }
             
-            const setupEventListeners = () => {
+            async function deployToNetlify() {
+                const chat = localState.chats[activeChatId];
+                if (!chat || chat.codeHistory.length === 0) {
+                    addMessage('Ошибка: не найден код для деплоя.', 'bot');
+                    return;
+                }
+
+                chat.is_deploying = true;
+                await supabaseClient.from('chats').update({ is_deploying: true }).eq('id', activeChatId);
+                updateHeaderButton();
+                ui.deployButton.classList.add('hidden');
+                addMessage(`Начинаю деплой проекта...`, 'bot');
+
+                try {
+                    const latestCodeObject = chat.codeHistory.slice(-1)[0].code;
+                    
+                    addMessage('1/2 Вызываю серверную функцию деплоя...', 'bot');
+                    const { data, error } = await supabaseClient.functions.invoke('deploy-to-netlify', {
+                        body: { 
+                            codeObject: latestCodeObject,
+                            netlifySiteId: chat.netlify_site_id 
+                        },
+                    });
+
+                    if (error) throw error;
+                    if (data.error) throw new Error(data.error);
+
+                    const { deploy_url, netlify_site_id } = data;
+
+                    addMessage('2/2 Сохраняю результат...', 'bot');
+                    chat.deploy_url = deploy_url;
+                    chat.netlify_site_id = netlify_site_id;
+                    chat.is_deploying = false;
+                    await supabaseClient.from('chats').update({ 
+                        deploy_url: deploy_url, 
+                        netlify_site_id: netlify_site_id,
+                        is_deploying: false 
+                    }).eq('id', activeChatId);
+                    
+                    addMessage(`✅ Успех! Ваш сайт доступен по адресу: ${deploy_url}`, 'bot');
+                    tg.HapticFeedback.notificationOccurred('success');
+                    updateHeaderButton();
+
+                } catch (error) {
+                    console.error('Ошибка деплоя:', error);
+                    addMessage(`❌ Ошибка деплоя: ${error.message}`, 'bot');
+                    tg.HapticFeedback.notificationOccurred('error');
+                    chat.is_deploying = false;
+                    await supabaseClient.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
+                    updateHeaderButton();
+                }
+            }
+            
+            function setupEventListeners() {
                 if(ui.messageInput) {
                     ui.messageInput.addEventListener('keypress', e => e.key === 'Enter' && sendMessage());
                     ui.messageInput.addEventListener('input', updateInputState);
@@ -942,9 +971,9 @@
                 });
                 ui.buyProButton.addEventListener('click', () => buySubscription('pro', 299900));
                 ui.buyUltimaButton.addEventListener('click', () => buySubscription('ultima', 999900));
-            };
+            }
             
-            const buySubscription = (plan, amount) => {
+            function buySubscription(plan, amount) {
                 const paymentProviderToken = "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ";
 
                 if (!paymentProviderToken || paymentProviderToken === "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ") {
@@ -982,16 +1011,25 @@
                         tg.showAlert('Не удалось обработать платеж. Попробуйте снова.');
                     }
                 });
-            };
+            }
 
-            const initApp = async () => {
+            async function initApp() {
+                tg.ready();
+                tg.expand();
+                forceDarkTheme();
+
+                if (user && user.first_name) {
+                    ui.greetingText.textContent = `${user.first_name}, что создадим сегодня?`;
+                    ui.userPhoto.src = user.photo_url || `https://placehold.co/40x40/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
+                }
+
                 await loadDataFromSupabase();
                 isTelegramEnv = tg.platform !== 'unknown';
                 setupEventListeners();
                 updateInputState();
                 updateHeaderButton();
                 renderMessages();
-            };
+            }
 
             initApp();
         });

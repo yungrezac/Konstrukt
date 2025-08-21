@@ -256,7 +256,6 @@
             async function loadDataFromSupabase() {
                 if (!user || !user.id) {
                     console.error("Пользователь Telegram не определен. Невозможно загрузить данные.");
-                    // Можно показать сообщение об ошибке пользователю
                     ui.greetingText.textContent = 'Ошибка: не удалось определить пользователя.';
                     return;
                 }

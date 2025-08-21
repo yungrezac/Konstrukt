@@ -467,9 +467,23 @@
 
                 const { textEl: apiText, icon: apiIcon } = await typeStep('Отправка запроса в AI...');
                 
-                let generatedCodeObject = await callGeminiAPI(prompt);
+                let apiResponse = await callGeminiAPI(prompt);
+                let generatedCodeObject;
+
+                // The response from the Supabase function might be a JSON string,
+                // so we need to parse it into an object.
+                if (typeof apiResponse === 'string') {
+                    try {
+                        generatedCodeObject = JSON.parse(apiResponse);
+                    } catch (e) {
+                        console.error("Failed to parse AI response:", e);
+                        generatedCodeObject = null; // Set to null to trigger the error condition
+                    }
+                } else {
+                    generatedCodeObject = apiResponse; // Assume it's already an object
+                }
                 
-                if (!generatedCodeObject['index.html']) {
+                if (!generatedCodeObject || !generatedCodeObject['index.html']) {
                     apiText.textContent = 'Ошибка генерации кода.';
                     apiIcon.innerHTML = '<span class="status-icon-error">✗</span>';
                     isGenerating = false;

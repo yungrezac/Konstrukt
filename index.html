@@ -44,8 +44,6 @@
         #code-modal .tab-button.active { border-bottom-color: var(--tg-button-color); color: var(--tg-text-color); }
         #code-output { white-space: pre-wrap; word-wrap: break-word; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; }
         #preview-frame { flex-grow: 1; border: none; background-color: #fff; }
-        #settings-popup { position: absolute; bottom: 120px; left: 0.75rem; width: calc(100% - 1.5rem); max-width: 280px; background-color: #2c3542; border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 100; transform: translateY(10px) scale(0.95); opacity: 0; transition: transform 0.2s ease-out, opacity 0.2s ease-out; pointer-events: none; }
-        #settings-popup.visible { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
         .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         #animated-greeting {
@@ -64,7 +62,6 @@
     </style>
 </head>
 <body class="bg-gray-900 text-white">
-    <input type="file" id="image-input" accept="image/*" class="hidden">
 
     <div id="app" class="app-container">
         <header class="flex items-center justify-between p-2 flex-shrink-0" style="background-color: var(--tg-header-bg-color);">
@@ -85,7 +82,7 @@
                 <h2 id="animated-greeting" class="mb-6">Привет</h2>
                 <p id="greeting-text" class="text-xl font-semibold mb-4"></p>
                 <p class="text-gray-400 max-w-md text-sm">
-                    Я могу сгенерировать для вас веб-приложение на HTML или React, и сразу же опубликовать его в интернете. Просто опишите свою идею.
+                    Я могу сгенерировать для вас веб-приложение на HTML и сразу же опубликовать его в интернете. Просто опишите свою идею.
                 </p>
             </div>
             <div id="chat-area" class="chat-area h-full w-full absolute inset-0"></div>
@@ -94,31 +91,10 @@
         <div id="loader" class="hidden p-3"><div class="message bot-message loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
 
         <footer class="p-2 flex-shrink-0 relative">
-            <div class="flex items-center mb-1.5 px-1">
-                <button id="attach-button" class="p-1.5 rounded-full hover:bg-gray-700 flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-hint-color);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                </button>
-                <button id="settings-button" class="p-1.5 rounded-full hover:bg-gray-700 flex-shrink-0">
-                    <svg class="w-5 h-5" style="color: var(--tg-hint-color);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
-                </button>
-                <div id="mode-tag" class="hidden items-center bg-gray-700 rounded-lg px-2 py-0.5 ml-2 text-xs">
-                    <span id="mode-tag-text"></span>
-                    <button id="remove-mode-tag" class="ml-1.5 text-gray-400 hover:text-white font-bold text-base">&times;</button>
-                </div>
-            </div>
-            
-            <div id="image-preview-container" class="hidden mb-2 p-1.5 bg-gray-700 rounded-lg relative w-20">
-                <img id="image-preview" class="rounded w-full h-full object-cover" src="">
-                <button id="remove-image-button" class="absolute -top-1.5 -right-1.5 bg-gray-800 rounded-full w-5 h-5 flex items-center justify-center text-white text-xs">&times;</button>
-            </div>
-
-            <div class="rounded-xl p-1.5 flex items-center" style="background-color: var(--tg-secondary-bg-color);">
+             <div class="rounded-xl p-1.5 flex items-center" style="background-color: var(--tg-secondary-bg-color);">
                 <input id="message-input" type="text" placeholder="Спросить Devtol" class="flex-grow bg-transparent focus:outline-none mx-2 text-sm">
                 <div id="action-button-container" class="flex-shrink-0">
-                    <button id="mic-button" class="p-1.5 rounded-full hover:bg-gray-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-hint-color);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-                    </button>
-                    <button id="send-button" class="p-1.5 rounded-full hover:bg-gray-700 hidden">
+                     <button id="send-button" class="p-1.5 rounded-full hover:bg-gray-700">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     </button>
                 </div>
@@ -140,7 +116,6 @@
         <div class="modal-handle"></div>
         <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
             <h2 class="text-lg font-bold">Профиль</h2>
-            <button id="close-profile-modal" class="text-2xl">&times;</button>
         </div>
         <div class="p-4 overflow-y-auto">
             <div class="text-center">
@@ -177,16 +152,6 @@
         </div>
     </div>
 
-    <div id="settings-popup">
-        <ul class="p-1.5 text-white text-sm">
-            <li data-mode="canvas" class="flex items-center p-2 rounded-md hover:bg-gray-600 cursor-pointer"><svg class="w-4 h-4 mr-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Canvas (HTML)</li>
-            <li data-mode="react" class="flex items-center p-2 rounded-md hover:bg-gray-600 cursor-pointer"><svg class="w-4 h-4 mr-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path><circle cx="12" cy="12" r="3"></circle></svg>React</li>
-            <li data-mode="vue" class="flex items-center p-2 rounded-md hover:bg-gray-600 cursor-pointer"><svg class="w-4 h-4 mr-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.5 9.5L12 13.5L9.5 9.5M12 3L2 12h5l5-9l5 9h5L12 3z"/></svg>Vue.js</li>
-            <li data-mode="angular" class="flex items-center p-2 rounded-md hover:bg-gray-600 cursor-pointer"><svg class="w-4 h-4 mr-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 5l10 17L22 5L12 2zM12 2v6m0 0L6 5m6 3l6-3"/></svg>Angular</li>
-            <li data-mode="flutter" class="flex items-center p-2 rounded-md hover:bg-gray-600 cursor-pointer"><svg class="w-4 h-4 mr-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l-7-7 3-3 4 4 4-4 3 3-7 7zM5 8l7 7 7-7"/></svg>Flutter (без предпросмотра)</li>
-        </ul>
-    </div>
-
     <div id="code-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
         <div id="code-modal-header" class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
@@ -197,7 +162,6 @@
                 </div>
                 <button id="deploy-button" class="hidden text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);"></button>
             </div>
-            <button id="close-code-modal" class="text-2xl">&times;</button>
         </div>
         <div id="code-view" class="overflow-y-auto p-3 flex-grow">
             <div id="ai-status-container" class="mb-3 text-gray-400 space-y-1.5 text-sm"></div>
@@ -235,36 +199,22 @@
             let isTelegramEnv = false;
             let localState = { user: null, chats: {} }; 
             const ui = {
-                imageInput: document.getElementById('image-input'),
-                attachButton: document.getElementById('attach-button'),
-                imagePreviewContainer: document.getElementById('image-preview-container'),
-                imagePreview: document.getElementById('image-preview'),
-                removeImageButton: document.getElementById('remove-image-button'),
                 messageInput: document.getElementById('message-input'),
-                micButton: document.getElementById('mic-button'),
                 sendButton: document.getElementById('send-button'),
                 chatArea: document.getElementById('chat-area'),
                 loader: document.getElementById('loader'),
                 initialGreeting: document.getElementById('initial-greeting'),
                 greetingText: document.getElementById('greeting-text'),
                 userPhoto: document.getElementById('user-photo'),
-                settingsButton: document.getElementById('settings-button'),
-                settingsPopup: document.getElementById('settings-popup'),
-                settingsItems: document.querySelectorAll('#settings-popup li'),
-                modeTag: document.getElementById('mode-tag'),
-                modeTagText: document.getElementById('mode-tag-text'),
-                removeModeTag: document.getElementById('remove-mode-tag'),
                 menuButton: document.getElementById('menu-button'),
                 modalOverlay: document.getElementById('modal-overlay'),
                 historyModal: document.getElementById('history-modal'),
                 profileModal: document.getElementById('profile-modal'),
-                closeProfileModal: document.getElementById('close-profile-modal'),
                 profileModalPhoto: document.getElementById('profile-modal-photo'),
                 profileModalName: document.getElementById('profile-modal-name'),
                 profileModalUsername: document.getElementById('profile-modal-username'),
                 profileModalId: document.getElementById('profile-modal-id'),
                 codeModal: document.getElementById('code-modal'),
-                closeCodeModal: document.getElementById('close-code-modal'),
                 codeTabs: document.getElementById('code-tabs'),
                 codeView: document.getElementById('code-view'),
                 previewView: document.getElementById('preview-view'),
@@ -284,8 +234,6 @@
                 buyUltimaButton: document.getElementById('buy-ultima-button'),
             };
 
-            let attachedImageUrl = null;
-            let currentMode = null;
             let isGenerating = false;
             let versionToRestore = null;
             let activeChatId = null;
@@ -389,13 +337,13 @@
                 else localState.chats[activeChatId].codeHistory = codeHistoryData.map(c => ({...c, code: c.code_object}));
             }
 
-            async function addMessage(text, sender, imageUrl = null, codeVersion = null) {
+            async function addMessage(text, sender, codeVersion = null) {
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat) return;
                 
                 const { data: newMessage, error } = await supabaseClient
                     .from('messages')
-                    .insert({ chat_id: activeChatId, sender, text_content: text, image_url: imageUrl, code_version: codeVersion })
+                    .insert({ chat_id: activeChatId, sender, text_content: text, code_version: codeVersion })
                     .select()
                     .single();
 
@@ -435,16 +383,9 @@
                     msgDiv.className = `flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`;
                     msgContent.className = `message ${msg.sender === 'user' ? 'user-message' : 'bot-message'}`;
                     
-                    if (msg.image_url) {
-                        const img = document.createElement('img');
-                        img.src = msg.image_url;
-                        img.className = 'rounded-lg';
-                        msgContent.appendChild(img);
-                    }
                     if (msg.text) {
                         const textP = document.createElement('p');
                         textP.innerHTML = msg.text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-blue-300 underline">$1</a>');
-                        if(msg.image_url) textP.className = 'mt-2';
                         msgContent.appendChild(textP);
                     }
                     if (msg.code_version) {
@@ -475,35 +416,24 @@
                 if (isGenerating) return;
 
                 const text = ui.messageInput.value.trim();
-                if (text || attachedImageUrl) {
-                    addMessage(text, 'user', attachedImageUrl);
-                    if (currentMode === null || ['canvas', 'react', 'vue', 'angular', 'flutter'].includes(currentMode)) {
-                        const activeChat = localState.chats[activeChatId];
-                        if (activeChat.codeHistory.length === 0) { 
-                            initiateAiGeneration(text);
-                        } else {
-                            improveAiGeneration(text);
-                        }
+                if (text) {
+                    addMessage(text, 'user');
+                    const activeChat = localState.chats[activeChatId];
+                    if (activeChat.codeHistory.length === 0) { 
+                        initiateAiGeneration(text);
+                    } else {
+                        improveAiGeneration(text);
                     }
                     ui.messageInput.value = '';
-                    resetImageAttachment();
                     updateInputState();
                     tg.HapticFeedback.impactOccurred('light');
                 }
             }
             
-            function resetImageAttachment() {
-                attachedImageUrl = null;
-                if(ui.imagePreview) ui.imagePreview.src = '';
-                if(ui.imagePreviewContainer) ui.imagePreviewContainer.classList.add('hidden');
-                updateInputState();
-            }
-
             function updateInputState() {
-                const hasContent = ui.messageInput.value.trim().length > 0 || attachedImageUrl;
+                const hasContent = ui.messageInput.value.trim().length > 0;
                 const isEnabled = !isGenerating;
-                if(ui.micButton) ui.micButton.classList.toggle('hidden', hasContent);
-                if(ui.sendButton) ui.sendButton.classList.toggle('hidden', !hasContent);
+                if(ui.sendButton) ui.sendButton.style.display = hasContent ? 'block' : 'none';
                 if(ui.messageInput) ui.messageInput.disabled = !isEnabled;
                 if(ui.sendButton) ui.sendButton.disabled = !isEnabled;
             }
@@ -542,7 +472,6 @@
                 openModal(ui.codeModal);
                 const activeChat = localState.chats[activeChatId];
                 
-                document.querySelector('[data-tab="preview"]').style.display = currentMode === 'flutter' ? 'none' : 'block';
                 switchTab('code');
 
                 ui.codeOutput.textContent = '';
@@ -583,14 +512,6 @@
                     return;
                 }
 
-                if (generatedCodeObject.chosenFramework && generatedCodeObject.files) {
-                    const chosenFramework = generatedCodeObject.chosenFramework;
-                    addMessage(`🤖 Я думаю, что для этой задачи лучше всего подойдет **${chosenFramework.charAt(0).toUpperCase() + chosenFramework.slice(1)}**. Начинаю генерацию...`, 'bot');
-                    activeChat.mode = chosenFramework;
-                    currentMode = chosenFramework; 
-                    generatedCodeObject = generatedCodeObject.files; 
-                }
-
                 textSpan.textContent = 'Получение ответа...';
                 iconSpan.innerHTML = '✅';
                 
@@ -599,19 +520,8 @@
             }
 
             function initiateAiGeneration(prompt) {
-                localState.chats[activeChatId].mode = currentMode;
-                let fullPrompt;
-                if (currentMode === null) {
-                    fullPrompt = `Ты - эксперт-архитектор по разработке программного обеспечения. Проанализируй следующий запрос пользователя: "${prompt}". Выбери НАИБОЛЕЕ ПОДХОДЯЩИЙ фреймворк из списка: [html, react, vue, angular]. Твой ответ ДОЛЖЕН БЫТЬ в формате JSON и содержать два ключа: "chosenFramework" (значение из списка выше) и "files" (объект с кодом). Основываясь на твоем выборе, сгенерируй код для полноценного, красивого, минималистичного мобильного приложения, следуя инструкциям для выбранного фреймворка: - Если выбрал 'html': { "index.html": "..." } - Если выбрал 'react': { "package.json": "...", "public/index.html": "...", "src/App.js": "..." } - Если выбрал 'vue': { "package.json": "...", "index.html": "...", "src/App.vue": "..." } - Если выбрал 'angular': { "package.json": "...", "angular.json": "...", "src/index.html": "...", "src/main.ts": "...", "src/app/app.module.ts": "...", "src/app/app.component.ts": "...", "src/app/app.component.html": "...", "src/app/app.component.css": "..." } Используй Tailwind CSS для стилей. Приложение должно быть полностью функциональным. Не добавляй никаких объяснений, только JSON.`;
-                } else {
-                    switch(currentMode) {
-                        case 'react': fullPrompt = `Создай React-приложение на тему "${prompt}". Ответ в JSON: { "package.json": "...", "public/index.html": "...", "src/App.js": "..." }. Используй Tailwind CSS.`; break;
-                        case 'vue': fullPrompt = `Создай Vue.js приложение на тему "${prompt}". Ответ в JSON: { "package.json": "...", "index.html": "...", "src/App.vue": "..." }. Используй Tailwind CSS.`; break;
-                        case 'angular': fullPrompt = `Создай Angular приложение на тему "${prompt}". Ответ в JSON со всеми необходимыми файлами (app.module, app.component, main.ts и т.д.). Используй Tailwind CSS.`; break;
-                        case 'flutter': fullPrompt = `Создай Flutter приложение (код на Dart) на тему "${prompt}". Ответ в JSON: { "pubspec.yaml": "...", "lib/main.dart": "..." }.`; break;
-                        default: fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}". Ответ в JSON: { "index.html": "..." }. Используй Tailwind CSS.`;
-                    }
-                }
+                localState.chats[activeChatId].mode = 'html';
+                const fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}". Ответ в JSON: { "index.html": "..." }. Используй Tailwind CSS. Приложение должно быть полностью функциональным, красивым, минималистичным и адаптированным для мобильных устройств.`;
                 runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], fullPrompt);
             }
 
@@ -623,8 +533,7 @@
                 }
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
                 const codeString = JSON.stringify(latestCodeObject, null, 2);
-                const framework = activeChat.mode;
-                const fullPrompt = `Ты - эксперт по ${framework}. Вот существующий код приложения в формате JSON:\n\n${codeString}\n\nВнеси следующее улучшение: "${prompt}". Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлами кода.`;
+                const fullPrompt = `Ты - эксперт по HTML и Tailwind CSS. Вот существующий код приложения в формате JSON:\n\n${codeString}\n\nВнеси следующее улучшение: "${prompt}". Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлом index.html.`;
                 runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], fullPrompt);
             }
 
@@ -649,10 +558,8 @@
                     } else {
                         clearInterval(interval);
                         setTimeout(() => {
-                            if (activeChat.mode !== 'react' && activeChat.mode !== 'flutter') {
-                                switchTab('preview');
-                            }
-                            addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', null, newVersion);
+                            switchTab('preview');
+                            addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
                             isGenerating = false;
                             updateInputState();
                             updateDeployButtonState();
@@ -679,15 +586,8 @@
                 if (!codeHistoryItem) return;
                 const codeObject = codeHistoryItem.code;
                 ui.codeOutput.textContent = formatCodeForDisplay(codeObject);
-                const isReact = activeChat.mode === 'react';
-                const isFlutter = activeChat.mode === 'flutter';
-                document.querySelector('[data-tab="preview"]').style.display = (isReact || isFlutter) ? 'none' : 'block';
                 updateDeployButtonState();
-                if (isReact || isFlutter) {
-                    switchTab('code');
-                } else {
-                    switchTab(switchToPreview ? 'preview' : 'code');
-                }
+                switchTab(switchToPreview ? 'preview' : 'code');
                 openModal(ui.codeModal);
             }
 
@@ -897,52 +797,6 @@
                     ui.messageInput.addEventListener('input', updateInputState);
                 }
                 if(ui.sendButton) ui.sendButton.addEventListener('click', sendMessage);
-                if(ui.attachButton) ui.attachButton.addEventListener('click', () => ui.imageInput.click());
-                if(ui.removeImageButton) ui.removeImageButton.addEventListener('click', resetImageAttachment);
-                if(ui.imageInput) ui.imageInput.addEventListener('change', (event) => {
-                    const file = event.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            attachedImageUrl = e.target.result;
-                            if(ui.imagePreview) ui.imagePreview.src = attachedImageUrl;
-                            if(ui.imagePreviewContainer) ui.imagePreviewContainer.classList.remove('hidden');
-                            updateInputState();
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                    if(event.target) event.target.value = '';
-                });
-                if(ui.settingsButton) ui.settingsButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if(ui.settingsPopup) ui.settingsPopup.classList.toggle('visible');
-                    tg.HapticFeedback.impactOccurred('light');
-                });
-                document.addEventListener('click', (e) => {
-                    if (ui.settingsPopup && !ui.settingsPopup.contains(e.target) && ui.settingsButton && !ui.settingsButton.contains(e.target)) {
-                        ui.settingsPopup.classList.remove('visible');
-                    }
-                });
-                if(ui.settingsItems) ui.settingsItems.forEach(item => {
-                    item.addEventListener('click', () => {
-                        if(ui.modeTagText) ui.modeTagText.textContent = item.textContent.trim();
-                        if(ui.modeTag) {
-                            ui.modeTag.classList.remove('hidden');
-                            ui.modeTag.classList.add('flex');
-                        }
-                        currentMode = item.dataset.mode;
-                        if(ui.settingsPopup) ui.settingsPopup.classList.remove('visible');
-                        tg.HapticFeedback.impactOccurred('medium');
-                    });
-                });
-                if(ui.removeModeTag) ui.removeModeTag.addEventListener('click', () => {
-                    if(ui.modeTag) {
-                        ui.modeTag.classList.add('hidden');
-                        ui.modeTag.classList.remove('flex');
-                    }
-                    currentMode = null;
-                    tg.HapticFeedback.impactOccurred('light');
-                });
                 if(ui.menuButton) ui.menuButton.addEventListener('click', () => {
                     renderChatList();
                     openModal(ui.historyModal);
@@ -952,8 +806,6 @@
                 }
                 if(ui.userPhoto) ui.userPhoto.addEventListener('click', openProfileModal);
                 if(ui.modalOverlay) ui.modalOverlay.addEventListener('click', closeModal);
-                if(ui.closeProfileModal) ui.closeProfileModal.addEventListener('click', closeModal);
-                if(ui.closeCodeModal) ui.closeCodeModal.addEventListener('click', closeModal);
                 if(ui.confirmRestoreButton) ui.confirmRestoreButton.addEventListener('click', confirmRestore);
                 if(ui.cancelRestoreButton) ui.cancelRestoreButton.addEventListener('click', closeModal);
                 if(ui.codeTabs) ui.codeTabs.querySelectorAll('.tab-button').forEach(button => {

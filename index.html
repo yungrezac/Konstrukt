@@ -60,12 +60,15 @@
         @keyframes gradient-animation { to { background-position: 200% center; } }
         .progress-bar { background-color: #374151; border-radius: 9999px; }
         .progress-bar-inner { background-color: var(--tg-button-color); height: 100%; border-radius: 9999px; transition: width 0.5s ease-in-out; }
+        
+        /* New styles for animated AI status */
         #ai-status-container {
             font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
             color: #d1d5db; /* gray-300 */
         }
         .status-icon-success { color: #4ade80; } /* green-400 */
         .status-icon-error { color: #f87171; } /* red-400 */
+
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -102,7 +105,7 @@
                 <input id="message-input" type="text" placeholder="Спросить Devtol" class="flex-grow bg-transparent focus:outline-none mx-2 text-sm">
                 <div id="action-button-container" class="flex-shrink-0">
                      <button id="send-button" class="p-1.5 rounded-full transition-opacity">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     </button>
                 </div>
             </div>
@@ -162,7 +165,7 @@
                 <button data-tab="preview" class="tab-button font-bold py-1 border-b-2 border-transparent">Просмотр</button>
             </div>
             <div id="deploy-actions-container" class="flex items-center space-x-2">
-                 <!-- Кнопки деплоя будут здесь -->
+               <!-- Кнопки деплоя будут здесь -->
             </div>
         </div>
         <div id="code-view" class="overflow-y-auto p-3 flex-grow">
@@ -235,7 +238,8 @@
             let isGenerating = false;
             let versionToRestore = null;
             let activeChatId = null;
-            let user;
+
+            const user = tg.initDataUnsafe.user;
 
             function forceDarkTheme() {
                 tg.setHeaderColor('#1f2937');
@@ -255,8 +259,7 @@
 
             async function loadDataFromSupabase() {
                 if (!user || !user.id) {
-                    console.error("Пользователь Telegram не определен. Невозможно загрузить данные.");
-                    ui.greetingText.textContent = 'Ошибка: не удалось определить пользователя.';
+                    console.error("Нет данных о пользователе Telegram.");
                     return;
                 }
                 let { data: userData, error: userError } = await supabaseClient
@@ -408,6 +411,24 @@
                 }
             }
             
+            // Новая функция для вызова create-app-table
+            async function createAppDatabaseTable() {
+                if (!activeChatId) return false;
+                try {
+                    const { data, error } = await supabaseClient.functions.invoke('create-app-table', {
+                        body: { chatId: activeChatId }
+                    });
+                    if (error) throw error;
+                    if (data.error) throw new Error(data.error);
+                    console.log('Database table creation success:', data.message);
+                    return true;
+                } catch (error) {
+                    console.error("Ошибка вызова функции Supabase (create-app-table):", error.message);
+                    addMessage(`❌ Не удалось создать базу данных для приложения.`, 'bot');
+                    return false;
+                }
+            }
+
             function formatCodeForDisplay(codeObject) {
                 return codeObject['index.html'] || 'Код не найден.';
             }
@@ -443,26 +464,6 @@
                 for (const step of steps) {
                     await typeStep(step);
                 }
-                
-                // Создание базы данных
-                const { textEl: dbText, icon: dbIcon } = await typeStep('Создание базы данных...');
-                try {
-                    const { error } = await supabaseClient.functions.invoke('create-app-table', {
-                        body: { chatId: activeChatId },
-                    });
-                    if (error) throw error;
-                    dbText.textContent = 'База данных успешно создана.';
-                    dbIcon.innerHTML = '<span class="status-icon-success">✓</span>';
-                } catch (dbError) {
-                    console.error('Ошибка создания таблицы:', dbError);
-                    dbText.textContent = 'Ошибка создания базы данных.';
-                    dbIcon.innerHTML = '<span class="status-icon-error">✗</span>';
-                    isGenerating = false;
-                    updateInputState();
-                    return;
-                }
-                await new Promise(resolve => setTimeout(resolve, 200));
-
 
                 const { textEl: apiText, icon: apiIcon } = await typeStep('Отправка запроса в AI...');
                 
@@ -480,6 +481,23 @@
                 apiIcon.innerHTML = '<span class="status-icon-success">✓</span>';
                 await new Promise(resolve => setTimeout(resolve, 200));
 
+                // Шаг создания базы данных
+                const { textEl: dbText, icon: dbIcon } = await typeStep('Создаю базу данных...');
+                const dbSuccess = await createAppDatabaseTable();
+
+                if (!dbSuccess) {
+                    dbText.textContent = 'Ошибка создания базы данных.';
+                    dbIcon.innerHTML = '<span class="status-icon-error">✗</span>';
+                    isGenerating = false;
+                    updateInputState();
+                    return;
+                }
+
+                dbText.textContent = 'База данных создана.';
+                dbIcon.innerHTML = '<span class="status-icon-success">✓</span>';
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+
                 await typeStep('Вывожу результат...');
                 
                 ui.aiStatusContainer.style.transition = 'opacity 0.5s ease-out';
@@ -495,22 +513,17 @@
             function initiateAiGeneration(prompt) {
                 localState.chats[activeChatId].mode = 'html';
                 const tableName = `app_data_${activeChatId.replace(/-/g, '_')}`;
-                const fullPrompt = `
-                Создай однофайловое HTML-приложение на тему "${prompt}".
-                Ответ должен быть в формате JSON: { "index.html": "..." }.
-                Используй Tailwind CSS для стилей. Приложение должно быть полностью функциональным, красивым, минималистичным и адаптированным для мобильных устройств.
-                
-                ВАЖНО: Интегрируй в приложение Supabase JS v2.
-                1.  Добавь в <head> тег: <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>.
-                2.  Внутри тега <script> в <body>, инициализируй клиент Supabase:
-                    const supabaseUrl = '${SUPABASE_URL}';
-                    const supabaseKey = '${SUPABASE_ANON_KEY}';
-                    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-                3.  Приложение должно взаимодействовать с таблицей в базе данных под названием '${tableName}'.
-                4.  Реализуй базовый CRUD-функционал: добавление данных в таблицу и их отображение. Например, форма для ввода и список для вывода.
-                5.  Весь JS-код должен быть внутри одного тега <script> в <body>.
-                `;
-                runAiProcess(["Анализирую запрос...", "Проектирую структуру..."], fullPrompt);
+                const fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}".
+Приложение должно использовать Supabase для хранения данных.
+Вот данные для подключения:
+- Supabase URL: "${SUPABASE_URL}"
+- Supabase Anon Key: "${SUPABASE_ANON_KEY}"
+- Имя таблицы: "${tableName}"
+
+Включи в код скрипт для подключения к Supabase и базовые функции (чтение, добавление данных).
+Ответ в JSON: { "index.html": "..." }.
+Используй Tailwind CSS. Приложение должно быть полностью функциональным, красивым, минималистичным и адаптированным для мобильных устройств.`;
+                runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], fullPrompt);
             }
 
             function improveAiGeneration(prompt) {
@@ -521,15 +534,13 @@
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
                 const codeString = JSON.stringify(latestCodeObject, null, 2);
                 const tableName = `app_data_${activeChatId.replace(/-/g, '_')}`;
-                const fullPrompt = `
-                Ты - эксперт по HTML, Tailwind CSS и Supabase. Вот существующий код приложения в формате JSON:
-                ${codeString}
-                
-                Внеси следующее улучшение: "${prompt}".
-                
-                Помни, что приложение использует Supabase для работы с данными. Таблица называется '${tableName}'. Убедись, что твои улучшения совместимы с этой архитектурой.
-                Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлом index.html.
-                `;
+                const fullPrompt = `Ты - эксперт по HTML и Tailwind CSS. Вот существующий код приложения в формате JSON:\n\n${codeString}\n\n
+Это данные для подключения к базе данных Supabase:
+- Supabase URL: "${SUPABASE_URL}"
+- Supabase Anon Key: "${SUPABASE_ANON_KEY}"
+- Имя таблицы: "${tableName}"
+
+Внеси следующее улучшение: "${prompt}". Убедись, что функционал базы данных работает корректно с указанными данными. Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлом index.html.`;
                 runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], fullPrompt);
             }
 
@@ -615,7 +626,7 @@
                     return;
                 }
 
-                const { data: newChat, error } = await supabaseClient.from('chats').insert({ user_id: user.id }).select().single();
+                const { data: newChat, error } = await supabaseClient.from('chats').insert({ user_id: localState.user.id }).select().single();
                 if (error) { console.error("Ошибка создания чата:", error); return; }
                 
                 localState.chats[newChat.id] = { ...newChat, messages: [], codeHistory: [] };
@@ -857,14 +868,6 @@
                 tg.ready();
                 tg.expand();
                 forceDarkTheme();
-
-                // Определяем пользователя. Добавляем заглушку для тестирования в браузере.
-                if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
-                    user = tg.initDataUnsafe.user;
-                } else {
-                    console.warn("Не удалось определить пользователя Telegram. Используется мок-объект для тестирования.");
-                    user = { id: '123456789', first_name: 'Test', last_name: 'User', username: 'testuser' };
-                }
 
                 if (user && user.first_name) {
                     ui.greetingText.textContent = `${user.first_name}, что создадим сегодня?`;

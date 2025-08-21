@@ -235,8 +235,7 @@
             let isGenerating = false;
             let versionToRestore = null;
             let activeChatId = null;
-
-            const user = tg.initDataUnsafe.user;
+            let user;
 
             function forceDarkTheme() {
                 tg.setHeaderColor('#1f2937');
@@ -256,7 +255,9 @@
 
             async function loadDataFromSupabase() {
                 if (!user || !user.id) {
-                    console.error("Нет данных о пользователе Telegram.");
+                    console.error("Пользователь Telegram не определен. Невозможно загрузить данные.");
+                    // Можно показать сообщение об ошибке пользователю
+                    ui.greetingText.textContent = 'Ошибка: не удалось определить пользователя.';
                     return;
                 }
                 let { data: userData, error: userError } = await supabaseClient
@@ -615,7 +616,7 @@
                     return;
                 }
 
-                const { data: newChat, error } = await supabaseClient.from('chats').insert({ user_id: localState.user.id }).select().single();
+                const { data: newChat, error } = await supabaseClient.from('chats').insert({ user_id: user.id }).select().single();
                 if (error) { console.error("Ошибка создания чата:", error); return; }
                 
                 localState.chats[newChat.id] = { ...newChat, messages: [], codeHistory: [] };
@@ -857,6 +858,14 @@
                 tg.ready();
                 tg.expand();
                 forceDarkTheme();
+
+                // Определяем пользователя. Добавляем заглушку для тестирования в браузере.
+                if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+                    user = tg.initDataUnsafe.user;
+                } else {
+                    console.warn("Не удалось определить пользователя Telegram. Используется мок-объект для тестирования.");
+                    user = { id: '123456789', first_name: 'Test', last_name: 'User', username: 'testuser' };
+                }
 
                 if (user && user.first_name) {
                     ui.greetingText.textContent = `${user.first_name}, что создадим сегодня?`;

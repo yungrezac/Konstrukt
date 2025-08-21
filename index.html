@@ -618,6 +618,12 @@
             }
             
             function openSubscriptionModal() {
+                // Закрываем все остальные модальные окна перед открытием окна подписки
+                [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal].forEach(modal => {
+                    if (modal && modal.classList.contains('visible')) {
+                        modal.classList.remove('visible');
+                    }
+                });
                 openModal(ui.subscriptionModal);
             }
 
@@ -694,11 +700,6 @@
                 const chatUsage = allChats.length;
                 const chatPercentage = limits.chats === Infinity ? 100 : (chatUsage / limits.chats) * 100;
                 
-                // Для подсчета сообщений, нужно будет их загрузить, если это не сделано
-                // Для простоты, пока оставим заглушку
-                const messageUsage = 'N/A';
-                const messagePercentage = 50; // Заглушка
-
                 let deployedAppsHTML = '<p class="text-sm text-gray-400">У вас пока нет опубликованных приложений.</p>';
                 if (deployedChats.length > 0) {
                     deployedAppsHTML = deployedChats.map(chat => `

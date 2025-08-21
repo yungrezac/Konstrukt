@@ -62,6 +62,15 @@
         @keyframes gradient-animation { to { background-position: 200% center; } }
         .progress-bar { background-color: #374151; border-radius: 9999px; }
         .progress-bar-inner { background-color: var(--tg-button-color); height: 100%; border-radius: 9999px; transition: width 0.5s ease-in-out; }
+        
+        /* New styles for animated AI status */
+        #ai-status-container {
+            font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
+            color: #d1d5db; /* gray-300 */
+        }
+        .status-icon-success { color: #4ade80; } /* green-400 */
+        .status-icon-error { color: #f87171; } /* red-400 */
+
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -162,7 +171,7 @@
             </div>
         </div>
         <div id="code-view" class="overflow-y-auto p-3 flex-grow">
-            <div id="ai-status-container" class="mb-3 text-gray-400 space-y-1.5 text-sm"></div>
+            <div id="ai-status-container" class="mb-3"></div>
             <pre><code id="code-output"></code></pre>
         </div>
     </div>
@@ -416,36 +425,57 @@
                 switchTab('code');
                 ui.codeOutput.textContent = '';
                 ui.aiStatusContainer.innerHTML = '';
-                
+                ui.aiStatusContainer.style.opacity = 1;
+
+                const typeStep = async (text, delay = 25) => {
+                    const line = document.createElement('div');
+                    line.className = 'flex items-center space-x-2 text-sm mb-1.5';
+                    const icon = document.createElement('span');
+                    icon.innerHTML = '<div class="spinner"></div>';
+                    const textEl = document.createElement('span');
+                    line.appendChild(icon);
+                    line.appendChild(textEl);
+                    ui.aiStatusContainer.appendChild(line);
+
+                    for (let i = 0; i < text.length; i++) {
+                        textEl.textContent += text[i];
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                    icon.innerHTML = '<span class="status-icon-success">✓</span>';
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    return { line, icon, textEl };
+                };
+
                 for (const step of steps) {
-                    const statusDiv = document.createElement('div');
-                    statusDiv.className = 'flex items-center space-x-2';
-                    statusDiv.innerHTML = `<span><div class="spinner"></div></span><span>${step}</span>`;
-                    ui.aiStatusContainer.appendChild(statusDiv);
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    statusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
+                    await typeStep(step);
                 }
-                
-                const apiStatusDiv = document.createElement('div');
-                apiStatusDiv.className = 'flex items-center space-x-2';
-                apiStatusDiv.innerHTML = '<span><div class="spinner"></div></span><span>Отправка запроса в AI...</span>';
-                ui.aiStatusContainer.appendChild(apiStatusDiv);
+
+                const { textEl: apiText, icon: apiIcon } = await typeStep('Отправка запроса в AI...');
                 
                 let generatedCodeObject = await callGeminiAPI(prompt);
                 
                 if (!generatedCodeObject['index.html']) {
-                    apiStatusDiv.querySelector('span:last-child').textContent = 'Ошибка генерации кода.';
-                    apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
+                    apiText.textContent = 'Ошибка генерации кода.';
+                    apiIcon.innerHTML = '<span class="status-icon-error">✗</span>';
                     isGenerating = false;
                     updateInputState();
                     return;
                 }
 
-                apiStatusDiv.querySelector('span:last-child').textContent = 'Получение ответа...';
-                apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
+                apiText.textContent = 'Ответ от AI получен.';
+                apiIcon.innerHTML = '<span class="status-icon-success">✓</span>';
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                await typeStep('Вывожу результат...');
                 
+                ui.aiStatusContainer.style.transition = 'opacity 0.5s ease-out';
+                ui.aiStatusContainer.style.opacity = 0;
+
                 const formattedCode = formatCodeForDisplay(generatedCodeObject);
-                typeCode(generatedCodeObject, formattedCode);
+                
+                setTimeout(() => {
+                    typeCode(generatedCodeObject, formattedCode);
+                }, 500);
             }
 
             function initiateAiGeneration(prompt) {
@@ -474,15 +504,24 @@
 
                 activeChat.codeHistory.push({ version: newVersion, code: codeObject });
                 
-                ui.codeOutput.textContent = formattedCode; // Показываем код сразу
-                
-                setTimeout(() => {
-                    switchTab('preview');
-                    addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
-                    isGenerating = false;
-                    updateInputState();
-                    updateDeployActions();
-                }, 500);
+                let index = 0;
+                const interval = setInterval(() => {
+                    if (index < formattedCode.length) {
+                        ui.codeOutput.textContent += formattedCode.slice(index, index + 10);
+                        index += 10;
+                        ui.codeView.scrollTop = ui.codeView.scrollHeight;
+                    } else {
+                        clearInterval(interval);
+                        ui.codeOutput.textContent = formattedCode; // Ensure full code is displayed
+                        setTimeout(() => {
+                            switchTab('preview');
+                            addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
+                            isGenerating = false;
+                            updateInputState();
+                            updateDeployActions();
+                        }, 500);
+                    }
+                }, 1);
             }
 
             function switchTab(tabName) {

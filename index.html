@@ -42,7 +42,9 @@
         .modal-handle { width: 36px; height: 4px; background-color: var(--tg-hint-color, #9ca3af); border-radius: 2px; margin: 6px auto; flex-shrink: 0; }
         #code-modal .tab-button.active { border-bottom-color: var(--tg-button-color); color: var(--tg-text-color); }
         #code-output { white-space: pre-wrap; word-wrap: break-word; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; }
-        #preview-frame { flex-grow: 1; border: none; background-color: #fff; }
+        /* Fullscreen preview */
+        #preview-view.fullscreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 60; background-color: #fff; }
+        #preview-frame { width: 100%; height: 100%; border: none; }
         .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         #animated-greeting {
@@ -60,15 +62,6 @@
         @keyframes gradient-animation { to { background-position: 200% center; } }
         .progress-bar { background-color: #374151; border-radius: 9999px; }
         .progress-bar-inner { background-color: var(--tg-button-color); height: 100%; border-radius: 9999px; transition: width 0.5s ease-in-out; }
-        
-        /* New styles for animated AI status */
-        #ai-status-container {
-            font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
-            color: #d1d5db; /* gray-300 */
-        }
-        .status-icon-success { color: #4ade80; } /* green-400 */
-        .status-icon-error { color: #f87171; } /* red-400 */
-
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -169,14 +162,15 @@
             </div>
         </div>
         <div id="code-view" class="overflow-y-auto p-3 flex-grow">
-            <div id="ai-status-container" class="mb-3"></div>
+            <div id="ai-status-container" class="mb-3 text-gray-400 space-y-1.5 text-sm"></div>
             <pre><code id="code-output"></code></pre>
         </div>
-        <div id="preview-view" class="hidden flex-grow flex flex-col">
-            <iframe id="preview-frame"></iframe>
-        </div>
     </div>
-    
+    <!-- Preview View вынесен за пределы модального окна для полноэкранного режима -->
+    <div id="preview-view" class="hidden">
+        <iframe id="preview-frame"></iframe>
+    </div>
+
     <div id="confirm-restore-modal" class="modal" style="height: auto; max-height: 40%;">
         <div class="p-4 text-center">
             <h3 class="text-base font-bold mb-2">Восстановить эту версию?</h3>
@@ -422,57 +416,36 @@
                 switchTab('code');
                 ui.codeOutput.textContent = '';
                 ui.aiStatusContainer.innerHTML = '';
-                ui.aiStatusContainer.style.opacity = 1;
-
-                const typeStep = async (text, delay = 25) => {
-                    const line = document.createElement('div');
-                    line.className = 'flex items-center space-x-2 text-sm mb-1.5';
-                    const icon = document.createElement('span');
-                    icon.innerHTML = '<div class="spinner"></div>';
-                    const textEl = document.createElement('span');
-                    line.appendChild(icon);
-                    line.appendChild(textEl);
-                    ui.aiStatusContainer.appendChild(line);
-
-                    for (let i = 0; i < text.length; i++) {
-                        textEl.textContent += text[i];
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    }
-                    icon.innerHTML = '<span class="status-icon-success">✓</span>';
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                    return { line, icon, textEl };
-                };
-
+                
                 for (const step of steps) {
-                    await typeStep(step);
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = 'flex items-center space-x-2';
+                    statusDiv.innerHTML = `<span><div class="spinner"></div></span><span>${step}</span>`;
+                    ui.aiStatusContainer.appendChild(statusDiv);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    statusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
                 }
-
-                const { textEl: apiText, icon: apiIcon } = await typeStep('Отправка запроса в AI...');
+                
+                const apiStatusDiv = document.createElement('div');
+                apiStatusDiv.className = 'flex items-center space-x-2';
+                apiStatusDiv.innerHTML = '<span><div class="spinner"></div></span><span>Отправка запроса в AI...</span>';
+                ui.aiStatusContainer.appendChild(apiStatusDiv);
                 
                 let generatedCodeObject = await callGeminiAPI(prompt);
                 
                 if (!generatedCodeObject['index.html']) {
-                    apiText.textContent = 'Ошибка генерации кода.';
-                    apiIcon.innerHTML = '<span class="status-icon-error">✗</span>';
+                    apiStatusDiv.querySelector('span:last-child').textContent = 'Ошибка генерации кода.';
+                    apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
                     isGenerating = false;
                     updateInputState();
                     return;
                 }
 
-                apiText.textContent = 'Ответ от AI получен.';
-                apiIcon.innerHTML = '<span class="status-icon-success">✓</span>';
-                await new Promise(resolve => setTimeout(resolve, 200));
-
-                await typeStep('Вывожу результат...');
+                apiStatusDiv.querySelector('span:last-child').textContent = 'Получение ответа...';
+                apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
                 
-                ui.aiStatusContainer.style.transition = 'opacity 0.5s ease-out';
-                ui.aiStatusContainer.style.opacity = 0;
-
                 const formattedCode = formatCodeForDisplay(generatedCodeObject);
-                
-                setTimeout(() => {
-                    typeCode(generatedCodeObject, formattedCode);
-                }, 500);
+                typeCode(generatedCodeObject, formattedCode);
             }
 
             function initiateAiGeneration(prompt) {
@@ -501,38 +474,40 @@
 
                 activeChat.codeHistory.push({ version: newVersion, code: codeObject });
                 
-                let index = 0;
-                const interval = setInterval(() => {
-                    if (index < formattedCode.length) {
-                        ui.codeOutput.textContent += formattedCode.slice(index, index + 10);
-                        index += 10;
-                        ui.codeView.scrollTop = ui.codeView.scrollHeight;
-                    } else {
-                        clearInterval(interval);
-                        ui.codeOutput.textContent = formattedCode; // Ensure full code is displayed
-                        setTimeout(() => {
-                            switchTab('preview');
-                            addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
-                            isGenerating = false;
-                            updateInputState();
-                            updateDeployActions();
-                        }, 500);
-                    }
-                }, 1);
+                ui.codeOutput.textContent = formattedCode; // Показываем код сразу
+                
+                setTimeout(() => {
+                    switchTab('preview');
+                    addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
+                    isGenerating = false;
+                    updateInputState();
+                    updateDeployActions();
+                }, 500);
             }
 
             function switchTab(tabName) {
                 ui.codeTabs.querySelectorAll('.tab-button').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
                 const isPreview = tabName === 'preview';
                 
-                ui.codeView.classList.toggle('hidden', isPreview);
-                ui.previewView.classList.toggle('hidden', !isPreview);
-
                 if (isPreview) {
                     const activeChat = localState.chats[activeChatId];
                     const latestCode = activeChat.codeHistory.length > 0 ? activeChat.codeHistory.slice(-1)[0].code['index.html'] : '';
                     ui.previewFrame.srcdoc = latestCode;
+                    ui.previewView.classList.remove('hidden');
+                    ui.previewView.classList.add('fullscreen');
+                    tg.BackButton.show();
+                    tg.onEvent('backButtonClicked', onPreviewBackClick);
+                } else {
+                    ui.codeView.classList.remove('hidden');
+                    ui.previewView.classList.add('hidden');
+                    ui.previewView.classList.remove('fullscreen');
+                    tg.BackButton.hide();
+                    tg.offEvent('backButtonClicked', onPreviewBackClick);
                 }
+            }
+            
+            function onPreviewBackClick() {
+                switchTab('code');
             }
 
             function openCodeModal(switchToPreview = false, version) {
@@ -557,6 +532,10 @@
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.subscriptionModal].forEach(modal => {
                     if (modal) modal.classList.remove('visible');
                 });
+                // Закрываем полноэкранный предпросмотр, если он открыт
+                if (ui.previewView.classList.contains('fullscreen')) {
+                    onPreviewBackClick();
+                }
             }
             
             async function openProfileModal() {

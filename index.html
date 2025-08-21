@@ -97,7 +97,7 @@
              <div class="rounded-xl p-1.5 flex items-center" style="background-color: var(--tg-secondary-bg-color);">
                 <input id="message-input" type="text" placeholder="Спросить Devtol" class="flex-grow bg-transparent focus:outline-none mx-2 text-sm">
                 <div id="action-button-container" class="flex-shrink-0">
-                     <button id="send-button" class="p-1.5 rounded-full hover:bg-gray-700">
+                     <button id="send-button" class="p-1.5 rounded-full transition-opacity">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     </button>
                 </div>
@@ -364,7 +364,7 @@
             }
 
             function sendMessage() {
-                if (isGenerating) return;
+                if (isGenerating || ui.sendButton.disabled) return;
                 const text = ui.messageInput.value.trim();
                 if (text) {
                     addMessage(text, 'user');
@@ -382,9 +382,12 @@
             
             function updateInputState() {
                 const hasContent = ui.messageInput.value.trim().length > 0;
-                ui.sendButton.style.display = hasContent ? 'block' : 'none';
                 ui.messageInput.disabled = isGenerating;
-                ui.sendButton.disabled = isGenerating;
+                // Кнопка отправки теперь всегда видна, но неактивна, если нет текста или идет генерация
+                ui.sendButton.disabled = isGenerating || !hasContent;
+                // Добавим визуальный стиль для неактивной кнопки
+                ui.sendButton.classList.toggle('opacity-50', ui.sendButton.disabled);
+                ui.sendButton.classList.toggle('cursor-not-allowed', ui.sendButton.disabled);
             }
 
             async function callGeminiAPI(prompt) {

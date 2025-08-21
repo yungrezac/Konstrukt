@@ -10,8 +10,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- Подключение Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Подключение JSZip для создания архивов -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- JSZip больше не нужен на клиенте, он используется на сервере -->
     <style>
         :root {
             --tg-bg-color: var(--tg-theme-bg-color, #111827);
@@ -48,11 +47,9 @@
         #settings-popup.visible { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
         .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* START: Animated Gradient Text Styles */
         #animated-greeting {
-            font-size: 4.5rem; /* 72px */
-            font-weight: 800; /* extrabold */
+            font-size: 4.5rem;
+            font-weight: 800;
             line-height: 1;
             background: linear-gradient(90deg, #a855f7, #ec4899, #ef4444, #ec4899, #a855f7);
             background-size: 200% auto;
@@ -62,20 +59,13 @@
             -webkit-text-fill-color: transparent;
             animation: gradient-animation 5s linear infinite;
         }
-
-        @keyframes gradient-animation {
-            to {
-                background-position: 200% center;
-            }
-        }
-        /* END: Animated Gradient Text Styles */
+        @keyframes gradient-animation { to { background-position: 200% center; } }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
     <input type="file" id="image-input" accept="image/*" class="hidden">
 
     <div id="app" class="app-container">
-        <!-- Шапка -->
         <header class="flex items-center justify-between p-2 flex-shrink-0" style="background-color: var(--tg-header-bg-color);">
             <div class="flex items-center space-x-2">
                 <svg id="menu-button" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
@@ -89,27 +79,19 @@
             </div>
         </header>
 
-        <!-- Основная часть (чат) -->
         <main class="flex-grow relative overflow-hidden">
-            <!-- START: Welcome Screen -->
             <div id="initial-greeting" class="absolute inset-0 flex flex-col items-center justify-center text-center px-4 transition-opacity duration-300 z-10" style="background-color: var(--tg-bg-color);">
                 <h2 id="animated-greeting" class="mb-6">Привет</h2>
-                <p id="greeting-text" class="text-xl font-semibold mb-4">
-                    <!-- Имя пользователя будет вставлено сюда -->
-                </p>
+                <p id="greeting-text" class="text-xl font-semibold mb-4"></p>
                 <p class="text-gray-400 max-w-md text-sm">
                     Я могу сгенерировать для вас веб-приложение на HTML или React, и сразу же опубликовать его в интернете. Просто опишите свою идею.
                 </p>
             </div>
-            <!-- END: Welcome Screen -->
-            <div id="chat-area" class="chat-area h-full w-full absolute inset-0">
-                <!-- Сообщения будут вставлены сюда -->
-            </div>
+            <div id="chat-area" class="chat-area h-full w-full absolute inset-0"></div>
         </main>
         
         <div id="loader" class="hidden p-3"><div class="message bot-message loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
 
-        <!-- Подвал (поле ввода) -->
         <footer class="p-2 flex-shrink-0 relative">
             <div class="flex items-center mb-1.5 px-1">
                 <button id="attach-button" class="p-1.5 rounded-full hover:bg-gray-700 flex-shrink-0">
@@ -169,13 +151,11 @@
         </div>
     </div>
 
-    <!-- START: Subscription Modal -->
     <div id="subscription-modal" class="modal" style="height: auto; max-height: 80%;">
         <div class="modal-handle"></div>
         <div class="p-4">
             <h2 class="text-xl font-bold text-center mb-4">Выберите план</h2>
             <div class="space-y-3">
-                <!-- Pro Plan -->
                 <div class="p-4 rounded-lg border-2 border-purple-500 bg-gray-800">
                     <h3 class="text-lg font-bold text-purple-400">Pro</h3>
                     <p class="text-sm text-gray-300 mt-1">10 чатов и 15 сообщений в день</p>
@@ -184,7 +164,6 @@
                         <button id="buy-pro-button" class="px-5 py-2 rounded-lg text-sm font-semibold" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Выбрать</button>
                     </div>
                 </div>
-                <!-- Ultima Plan -->
                 <div class="p-4 rounded-lg border border-gray-600 bg-gray-800">
                     <h3 class="text-lg font-bold">Ultima</h3>
                     <p class="text-sm text-gray-300 mt-1">Безлимит чатов и сообщений</p>
@@ -196,9 +175,7 @@
             </div>
         </div>
     </div>
-    <!-- END: Subscription Modal -->
 
-    <!-- START: Updated Settings Popup -->
     <div id="settings-popup">
         <ul class="p-1.5 text-white text-sm">
             <li data-mode="canvas" class="flex items-center p-2 rounded-md hover:bg-gray-600 cursor-pointer"><svg class="w-4 h-4 mr-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>Canvas (HTML)</li>
@@ -208,7 +185,6 @@
             <li data-mode="flutter" class="flex items-center p-2 rounded-md hover:bg-gray-600 cursor-pointer"><svg class="w-4 h-4 mr-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l-7-7 3-3 4 4 4-4 3 3-7 7zM5 8l7 7 7-7"/></svg>Flutter (без предпросмотра)</li>
         </ul>
     </div>
-    <!-- END: Updated Settings Popup -->
 
     <div id="code-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
@@ -245,15 +221,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             const tg = window.Telegram.WebApp;
 
-            // --- ⚠️ ВАЖНО: Конфигурация API ⚠️ ---
             const SUPABASE_URL = 'https://tqptazkadicujedoyykp.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxcHRhemthZGljdWplZG95eWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTU2ODUsImV4cCI6MjA3MTEzMTY4NX0.FaNU-OlO1yEo7e9ADUCbPWvK0RG90_GedlaXUXUM0Eo';
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             
-            // --- Конфигурация Netlify ---
-            const NETLIFY_TOKEN = 'nfp_HcEaWZxtyLaos1zC8s3d6arvDqW9674u7678'; // ВАЖНО: Хранить токен на клиенте небезопасно для продакшена!
-
-            // --- Конфигурация подписок ---
             const SUBSCRIPTION_LIMITS = {
                 free: { chats: 1, messages: 5, name: 'FREE' },
                 pro: { chats: 10, messages: 15, name: 'PRO' },
@@ -261,11 +232,7 @@
             };
 
             let isTelegramEnv = false;
-            let localState = { // Локальный кэш данных
-                user: null,
-                chats: {},
-            }; 
-
+            let localState = { user: null, chats: {} }; 
             const ui = {
                 imageInput: document.getElementById('image-input'),
                 attachButton: document.getElementById('attach-button'),
@@ -324,23 +291,6 @@
 
             tg.ready();
             tg.expand();
-            
-            const forceDarkTheme = () => {
-                tg.setHeaderColor('#1f2937');
-                tg.setBackgroundColor('#111827');
-                const root = document.documentElement;
-                const darkThemeCssVars = {
-                    '--tg-theme-bg-color': '#111827',
-                    '--tg-theme-text-color': '#ffffff',
-                    '--tg-theme-hint-color': '#9ca3af',
-                    '--tg-theme-secondary-bg-color': '#1f2937',
-                    '--tg-theme-header-bg-color': '#1f2937',
-                    '--tg-theme-button-color': '#8774e1',
-                    '--tg-theme-button-text-color': '#ffffff',
-                };
-                Object.entries(darkThemeCssVars).forEach(([key, value]) => root.style.setProperty(key, value));
-            };
-
             forceDarkTheme();
 
             const user = tg.initDataUnsafe.user;
@@ -570,30 +520,6 @@
                 if(ui.sendButton) ui.sendButton.disabled = !isEnabled;
             };
 
-            // --- ОБНОВЛЕННАЯ ФУНКЦИЯ ВЫЗОВА API ---
-            const callGeminiAPI = async (prompt) => {
-                try {
-                    const { data, error } = await supabaseClient.functions.invoke('generate-code', {
-                        body: { prompt },
-                    });
-
-                    if (error) throw error;
-                    if (data.error) throw new Error(data.error);
-
-                    // Функция теперь возвращает JSON напрямую
-                    return data;
-
-                } catch (error) {
-                    console.error("Ошибка вызова функции Supabase (generate-code):", error.message);
-                    const errorMsg = "Ошибка конфигурации API. Проверьте ключ в настройках Supabase.";
-                    addMessage(`❌ ${errorMsg}`, 'bot');
-                    isGenerating = false;
-                    updateInputState();
-                    closeModal();
-                    return { "error.html": `<!-- ${errorMsg} -->` };
-                }
-            };
-            
             const formatCodeForDisplay = (codeObject) => {
                 if (typeof codeObject === 'string') return codeObject;
                 if (codeObject['error.html']) return codeObject['error.html'];
@@ -762,12 +688,12 @@
                 const tabs = ui.codeTabs.querySelectorAll('.tab-button');
                 tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
                 const isPreview = tabName === 'preview';
-                ui.codeView.classList.toggle('hidden', isPreview);
-                ui.previewView.classList.toggle('hidden', !isPreview);
+                if(ui.codeView) ui.codeView.classList.toggle('hidden', isPreview);
+                if(ui.previewView) ui.previewView.classList.toggle('hidden', !isPreview);
                 if (isPreview) {
                     const activeChat = localState.chats[activeChatId];
                     const latestCode = activeChat.codeHistory.length > 0 ? activeChat.codeHistory.slice(-1)[0].code['index.html'] : '';
-                    ui.previewFrame.srcdoc = latestCode;
+                    if(ui.previewFrame) ui.previewFrame.srcdoc = latestCode;
                 }
             };
             
@@ -850,7 +776,8 @@
             const renderChatList = () => {
                 if(!ui.chatList) return;
                 ui.chatList.innerHTML = '';
-                Object.values(localState.chats).reverse().forEach(chat => {
+                const chats = Object.values(localState.chats).reverse();
+                chats.forEach(chat => {
                     const chatDiv = document.createElement('div');
                     chatDiv.className = 'p-2.5 rounded-lg hover:bg-gray-800 cursor-pointer';
                     const title = document.createElement('p');
@@ -878,7 +805,6 @@
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat || versionToRestore === null) return;
                 
-                // Удаляем из Supabase
                 const { error: deleteCodeError } = await supabaseClient.from('code_history').delete().eq('chat_id', activeChatId).gt('version', versionToRestore);
                 const { error: deleteMsgError } = await supabaseClient.from('messages').delete().eq('chat_id', activeChatId).gt('code_version', versionToRestore);
 
@@ -888,7 +814,6 @@
                     return;
                 }
 
-                // Обновляем локальный кэш
                 const versionIndex = activeChat.codeHistory.findIndex(h => h.version === versionToRestore);
                 if (versionIndex !== -1) activeChat.codeHistory.splice(versionIndex + 1);
                 
@@ -936,94 +861,10 @@
                     ui.deployButton.classList.add('hidden');
                 }
             };
-
-            // --- НОВАЯ ФУНКЦИЯ ДЕПЛОЯ ---
-            const deployToNetlify = async () => {
-                if (!NETLIFY_TOKEN) {
-                    addMessage(`❌ Ошибка конфигурации: Netlify токен не указан.`, 'bot');
-                    return;
-                }
-                const chat = localState.chats[activeChatId];
-                if (!chat || chat.codeHistory.length === 0) {
-                    addMessage('Ошибка: не найден код для деплоя.', 'bot');
-                    return;
-                }
-
-                chat.is_deploying = true;
-                await supabaseClient.from('chats').update({ is_deploying: true }).eq('id', activeChatId);
-                updateHeaderButton();
-                ui.deployButton.classList.add('hidden');
-                addMessage(`Начинаю деплой проекта...`, 'bot');
-
-                try {
-                    // 1. Создание ZIP-архива
-                    addMessage('1/3 Создаю архив проекта...', 'bot');
-                    const zip = new JSZip();
-                    const latestCodeObject = chat.codeHistory.slice(-1)[0].code;
-                    for (const [fileName, fileContent] of Object.entries(latestCodeObject)) {
-                        zip.file(fileName, fileContent);
-                    }
-                    const zipBlob = await zip.generateAsync({ type: "blob" });
-
-                    // 2. Создание сайта на Netlify, если его еще нет
-                    let siteId = chat.netlify_site_id;
-                    if (!siteId) {
-                        addMessage('2/3 Создаю новый сайт на Netlify...', 'bot');
-                        const siteResponse = await fetch('https://api.netlify.com/api/v1/sites', {
-                            method: 'POST',
-                            headers: { 
-                                'Authorization': `Bearer ${NETLIFY_TOKEN}`, 
-                                'Content-Type': 'application/json' 
-                            },
-                            body: JSON.stringify({ name: `devtol-app-${Date.now()}` }),
-                        });
-                        if (!siteResponse.ok) throw new Error(`Ошибка создания сайта на Netlify: ${ (await siteResponse.json()).message }`);
-                        const siteData = await siteResponse.json();
-                        siteId = siteData.id;
-                        await supabaseClient.from('chats').update({ netlify_site_id: siteId }).eq('id', activeChatId);
-                        chat.netlify_site_id = siteId;
-                    } else {
-                         addMessage('2/3 Обновляю существующий сайт на Netlify...', 'bot');
-                    }
-
-                    // 3. Загрузка архива на Netlify
-                    addMessage('3/3 Загружаю архив на сервер...', 'bot');
-                    const deployResponse = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${NETLIFY_TOKEN}`,
-                            'Content-Type': 'application/zip'
-                        },
-                        body: zipBlob
-                    });
-
-                    if (!deployResponse.ok) throw new Error(`Ошибка загрузки архива на Netlify: ${ (await deployResponse.json()).message }`);
-                    
-                    const deployData = await deployResponse.json();
-                    
-                    // Netlify деплоит мгновенно при загрузке zip, поэтому опрос не нужен.
-                    const liveUrl = deployData.ssl_url || deployData.url;
-                    chat.deploy_url = liveUrl;
-                    chat.is_deploying = false;
-                    await supabaseClient.from('chats').update({ deploy_url: liveUrl, is_deploying: false }).eq('id', activeChatId);
-                    
-                    addMessage(`✅ Успех! Ваш сайт доступен по адресу: ${liveUrl}`, 'bot');
-                    tg.HapticFeedback.notificationOccurred('success');
-                    updateHeaderButton();
-
-                } catch (error) {
-                    console.error('Ошибка деплоя:', error);
-                    addMessage(`❌ Ошибка деплоя: ${error.message}`, 'bot');
-                    tg.HapticFeedback.notificationOccurred('error');
-                    chat.is_deploying = false;
-                    await supabaseClient.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
-                    updateHeaderButton();
-                }
-            };
             
             const setupEventListeners = () => {
                 if(ui.messageInput) {
-                    ui.messageInput.addEventListener('keypress', (e) => e.key === 'Enter' && sendMessage());
+                    ui.messageInput.addEventListener('keypress', e => e.key === 'Enter' && sendMessage());
                     ui.messageInput.addEventListener('input', updateInputState);
                 }
                 if(ui.sendButton) ui.sendButton.addEventListener('click', sendMessage);
@@ -1099,9 +940,8 @@
                         }, { passive: true });
                     }
                 });
-                // --- Event Listeners for Subscription Buttons ---
-                ui.buyProButton.addEventListener('click', () => buySubscription('pro', 299900)); // 2999.00 RUB
-                ui.buyUltimaButton.addEventListener('click', () => buySubscription('ultima', 999900)); // 9999.00 RUB
+                ui.buyProButton.addEventListener('click', () => buySubscription('pro', 299900));
+                ui.buyUltimaButton.addEventListener('click', () => buySubscription('ultima', 999900));
             };
             
             const buySubscription = (plan, amount) => {

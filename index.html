@@ -42,6 +42,9 @@
         .modal-handle { width: 36px; height: 4px; background-color: var(--tg-hint-color, #9ca3af); border-radius: 2px; margin: 6px auto; flex-shrink: 0; }
         #code-modal .tab-button.active { border-bottom-color: var(--tg-button-color); color: var(--tg-text-color); }
         #code-output { white-space: pre-wrap; word-wrap: break-word; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; }
+        /* Fullscreen preview */
+        #preview-view.fullscreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 60; background-color: #fff; }
+        #preview-frame { width: 100%; height: 100%; border: none; }
         .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         #animated-greeting {
@@ -95,7 +98,7 @@
                 <input id="message-input" type="text" placeholder="Спросить Devtol" class="flex-grow bg-transparent focus:outline-none mx-2 text-sm">
                 <div id="action-button-container" class="flex-shrink-0">
                      <button id="send-button" class="p-1.5 rounded-full transition-opacity">
-                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     </button>
                 </div>
             </div>
@@ -147,7 +150,6 @@
         </div>
     </div>
 
-    <!-- ИЗМЕНЕНИЕ: Модальное окно для кода и предпросмотра -->
     <div id="code-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
         <div id="code-modal-header" class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
@@ -156,18 +158,17 @@
                 <button data-tab="preview" class="tab-button font-bold py-1 border-b-2 border-transparent">Просмотр</button>
             </div>
             <div id="deploy-actions-container" class="flex items-center space-x-2">
-                <!-- Кнопки деплоя будут здесь -->
+                 <!-- Кнопки деплоя будут здесь -->
             </div>
         </div>
-        <!-- Вкладка с кодом -->
         <div id="code-view" class="overflow-y-auto p-3 flex-grow">
             <div id="ai-status-container" class="mb-3 text-gray-400 space-y-1.5 text-sm"></div>
             <pre><code id="code-output"></code></pre>
         </div>
-        <!-- ИЗМЕНЕНИЕ: Вкладка с предпросмотром теперь внутри модального окна -->
-        <div id="preview-view" class="hidden flex-grow bg-white">
-            <iframe id="preview-frame" class="w-full h-full border-none"></iframe>
-        </div>
+    </div>
+    <!-- Preview View вынесен за пределы модального окна для полноэкранного режима -->
+    <div id="preview-view" class="hidden">
+        <iframe id="preview-frame"></iframe>
     </div>
 
     <div id="confirm-restore-modal" class="modal" style="height: auto; max-height: 40%;">
@@ -185,7 +186,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             const tg = window.Telegram.WebApp;
 
-            // --- Конфигурация ---
             const SUPABASE_URL = 'https://tqptazkadicujedoyykp.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxcHRhemthZGljdWplZG95eWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTU2ODUsImV4cCI6MjA3MTEzMTY4NX0.FaNU-OlO1yEo7e9ADUCbPWvK0RG90_GedlaXUXUM0Eo';
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -196,13 +196,7 @@
                 ultima: { chats: Infinity, messages: Infinity, name: 'ULTIMA' }
             };
 
-            // --- Состояние приложения ---
             let localState = { user: null, chats: {} }; 
-            let isGenerating = false;
-            let versionToRestore = null;
-            let activeChatId = null;
-
-            // --- Элементы UI ---
             const ui = {
                 messageInput: document.getElementById('message-input'),
                 sendButton: document.getElementById('send-button'),
@@ -235,9 +229,11 @@
                 buyUltimaButton: document.getElementById('buy-ultima-button'),
             };
 
-            const user = tg.initDataUnsafe.user;
+            let isGenerating = false;
+            let versionToRestore = null;
+            let activeChatId = null;
 
-            // --- Функции ---
+            const user = tg.initDataUnsafe.user;
 
             function forceDarkTheme() {
                 tg.setHeaderColor('#1f2937');
@@ -489,7 +485,6 @@
                 }, 500);
             }
 
-            // ИЗМЕНЕНИЕ: Упрощенная функция переключения вкладок
             function switchTab(tabName) {
                 ui.codeTabs.querySelectorAll('.tab-button').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
                 const isPreview = tabName === 'preview';
@@ -498,12 +493,21 @@
                     const activeChat = localState.chats[activeChatId];
                     const latestCode = activeChat.codeHistory.length > 0 ? activeChat.codeHistory.slice(-1)[0].code['index.html'] : '';
                     ui.previewFrame.srcdoc = latestCode;
-                    ui.codeView.classList.add('hidden');
                     ui.previewView.classList.remove('hidden');
+                    ui.previewView.classList.add('fullscreen');
+                    tg.BackButton.show();
+                    tg.onEvent('backButtonClicked', onPreviewBackClick);
                 } else {
                     ui.codeView.classList.remove('hidden');
                     ui.previewView.classList.add('hidden');
+                    ui.previewView.classList.remove('fullscreen');
+                    tg.BackButton.hide();
+                    tg.offEvent('backButtonClicked', onPreviewBackClick);
                 }
+            }
+            
+            function onPreviewBackClick() {
+                switchTab('code');
             }
 
             function openCodeModal(switchToPreview = false, version) {
@@ -513,9 +517,8 @@
                 const codeObject = codeHistoryItem.code;
                 ui.codeOutput.textContent = formatCodeForDisplay(codeObject);
                 updateDeployActions();
-                openModal(ui.codeModal);
-                // Переключаемся на нужную вкладку ПОСЛЕ открытия модального окна
                 switchTab(switchToPreview ? 'preview' : 'code');
+                openModal(ui.codeModal);
             }
 
             function openModal(modal) {
@@ -529,6 +532,10 @@
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.subscriptionModal].forEach(modal => {
                     if (modal) modal.classList.remove('visible');
                 });
+                // Закрываем полноэкранный предпросмотр, если он открыт
+                if (ui.previewView.classList.contains('fullscreen')) {
+                    onPreviewBackClick();
+                }
             }
             
             async function openProfileModal() {
@@ -556,11 +563,11 @@
 
             async function switchChat(chatId) {
                 activeChatId = chatId;
-                ui.messageInput.value = '';
+                ui.messageInput.value = ''; // Очищаем поле ввода при смене чата
                 await loadActiveChatDetails();
                 renderMessages();
                 updateHeader();
-                updateInputState();
+                updateInputState(); // Обновляем состояние кнопки отправки
                 closeModal();
             }
 
@@ -614,6 +621,7 @@
             }
             
             function openSubscriptionModal() {
+                // Закрываем все остальные модальные окна перед открытием окна подписки
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal].forEach(modal => {
                     if (modal && modal.classList.contains('visible')) {
                         modal.classList.remove('visible');
@@ -639,6 +647,7 @@
                 }
                 ui.deployActionsContainer.innerHTML = buttonsHTML;
                 
+                // Назначаем обработчики событий
                 const deployBtn = document.getElementById('deploy-button');
                 const updateDeployBtn = document.getElementById('update-deploy-button');
                 const openDeployBtn = document.getElementById('open-deploy-button');

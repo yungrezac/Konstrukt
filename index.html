@@ -30,7 +30,6 @@
         .message { max-width: 80%; padding: 0.4rem 0.8rem; border-radius: 1.15rem; margin-bottom: 0.5rem; word-wrap: break-word; line-height: 1.4; }
         .user-message { background-color: var(--tg-button-color); color: var(--tg-button-text-color); align-self: flex-end; margin-left: auto; border-bottom-right-radius: 0.25rem; }
         .bot-message { background-color: var(--tg-secondary-bg-color); align-self: flex-start; border-bottom-left-radius: 0.25rem; }
-        .message img { max-width: 100%; border-radius: 0.75rem; }
         .loader { display: flex; align-items: center; }
         .loader .dot { background-color: var(--tg-hint-color); width: 6px; height: 6px; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
         .loader .dot:nth-child(1) { animation-delay: -0.32s; }
@@ -43,7 +42,9 @@
         .modal-handle { width: 36px; height: 4px; background-color: var(--tg-hint-color, #9ca3af); border-radius: 2px; margin: 6px auto; flex-shrink: 0; }
         #code-modal .tab-button.active { border-bottom-color: var(--tg-button-color); color: var(--tg-text-color); }
         #code-output { white-space: pre-wrap; word-wrap: break-word; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; }
-        #preview-frame { flex-grow: 1; border: none; background-color: #fff; }
+        /* Fullscreen preview */
+        #preview-view.fullscreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 60; background-color: #fff; }
+        #preview-frame { width: 100%; height: 100%; border: none; }
         .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         #animated-greeting {
@@ -59,6 +60,8 @@
             animation: gradient-animation 5s linear infinite;
         }
         @keyframes gradient-animation { to { background-position: 200% center; } }
+        .progress-bar { background-color: #374151; border-radius: 9999px; }
+        .progress-bar-inner { background-color: var(--tg-button-color); height: 100%; border-radius: 9999px; transition: width 0.5s ease-in-out; }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -67,7 +70,7 @@
         <header class="flex items-center justify-between p-2 flex-shrink-0" style="background-color: var(--tg-header-bg-color);">
             <div class="flex items-center space-x-2">
                 <svg id="menu-button" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
-                <h1 class="text-lg font-semibold">Devtol</h1>
+                <h1 id="header-title" class="text-lg font-semibold truncate max-w-[150px]">Devtol</h1>
             </div>
             <div class="flex items-center space-x-2">
                 <div id="header-action-container">
@@ -117,13 +120,8 @@
         <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
             <h2 class="text-lg font-bold">Профиль</h2>
         </div>
-        <div class="p-4 overflow-y-auto">
-            <div class="text-center">
-                <img id="profile-modal-photo" src="https://placehold.co/128x128/1a202c/ffffff?text=U" class="w-24 h-24 rounded-full mx-auto mb-3">
-                <h3 id="profile-modal-name" class="text-xl font-bold">Имя пользователя</h3>
-                <p id="profile-modal-username" class="text-gray-400 text-sm">@username</p>
-                <p id="profile-modal-id" class="text-xs text-gray-500 mt-1.5"></p>
-            </div>
+        <div id="profile-content" class="p-4 overflow-y-auto">
+            <!-- Содержимое профиля будет генерироваться динамически -->
         </div>
     </div>
 
@@ -155,22 +153,24 @@
     <div id="code-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
         <div id="code-modal-header" class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <div id="code-tabs" class="flex space-x-3 text-gray-400 text-sm">
-                    <button data-tab="code" class="tab-button font-bold py-1 border-b-2 border-transparent">Код</button>
-                    <button data-tab="preview" class="tab-button font-bold py-1 border-b-2 border-transparent">Просмотр</button>
-                </div>
-                <button id="deploy-button" class="hidden text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);"></button>
+            <div id="code-tabs" class="flex space-x-3 text-gray-400 text-sm">
+                <button data-tab="code" class="tab-button font-bold py-1 border-b-2 border-transparent">Код</button>
+                <button data-tab="preview" class="tab-button font-bold py-1 border-b-2 border-transparent">Просмотр</button>
+            </div>
+            <div id="deploy-actions-container" class="flex items-center space-x-2">
+                 <!-- Кнопки деплоя будут здесь -->
             </div>
         </div>
         <div id="code-view" class="overflow-y-auto p-3 flex-grow">
             <div id="ai-status-container" class="mb-3 text-gray-400 space-y-1.5 text-sm"></div>
             <pre><code id="code-output"></code></pre>
         </div>
-        <div id="preview-view" class="hidden flex-grow">
-            <iframe id="preview-frame"></iframe>
-        </div>
     </div>
+    <!-- Preview View вынесен за пределы модального окна для полноэкранного режима -->
+    <div id="preview-view" class="hidden">
+        <iframe id="preview-frame"></iframe>
+    </div>
+
     <div id="confirm-restore-modal" class="modal" style="height: auto; max-height: 40%;">
         <div class="p-4 text-center">
             <h3 class="text-base font-bold mb-2">Восстановить эту версию?</h3>
@@ -196,24 +196,20 @@
                 ultima: { chats: Infinity, messages: Infinity, name: 'ULTIMA' }
             };
 
-            let isTelegramEnv = false;
             let localState = { user: null, chats: {} }; 
             const ui = {
                 messageInput: document.getElementById('message-input'),
                 sendButton: document.getElementById('send-button'),
                 chatArea: document.getElementById('chat-area'),
-                loader: document.getElementById('loader'),
                 initialGreeting: document.getElementById('initial-greeting'),
                 greetingText: document.getElementById('greeting-text'),
                 userPhoto: document.getElementById('user-photo'),
+                headerTitle: document.getElementById('header-title'),
                 menuButton: document.getElementById('menu-button'),
                 modalOverlay: document.getElementById('modal-overlay'),
                 historyModal: document.getElementById('history-modal'),
                 profileModal: document.getElementById('profile-modal'),
-                profileModalPhoto: document.getElementById('profile-modal-photo'),
-                profileModalName: document.getElementById('profile-modal-name'),
-                profileModalUsername: document.getElementById('profile-modal-username'),
-                profileModalId: document.getElementById('profile-modal-id'),
+                profileContent: document.getElementById('profile-content'),
                 codeModal: document.getElementById('code-modal'),
                 codeTabs: document.getElementById('code-tabs'),
                 codeView: document.getElementById('code-view'),
@@ -227,8 +223,7 @@
                 confirmRestoreButton: document.getElementById('confirm-restore-button'),
                 cancelRestoreButton: document.getElementById('cancel-restore-button'),
                 headerActionContainer: document.getElementById('header-action-container'),
-                headerActionButton: document.getElementById('header-action-button'),
-                deployButton: document.getElementById('deploy-button'),
+                deployActionsContainer: document.getElementById('deploy-actions-container'),
                 subscriptionModal: document.getElementById('subscription-modal'),
                 buyProButton: document.getElementById('buy-pro-button'),
                 buyUltimaButton: document.getElementById('buy-ultima-button'),
@@ -268,39 +263,19 @@
                     .single();
 
                 if (userError && userError.code !== 'PGRST116') {
-                    console.error("Ошибка при загрузке пользователя:", userError);
-                    return;
+                    console.error("Ошибка при загрузке пользователя:", userError); return;
                 }
 
                 if (!userData) {
                     const { data: newUser, error: insertError } = await supabaseClient
-                        .from('users')
-                        .insert({
-                            id: user.id,
-                            first_name: user.first_name,
-                            last_name: user.last_name,
-                            username: user.username,
-                            photo_url: user.photo_url,
-                        })
-                        .select()
-                        .single();
-                    if (insertError) {
-                        console.error("Ошибка при создании пользователя:", insertError);
-                        return;
-                    }
+                        .from('users').insert({ id: user.id, first_name: user.first_name, last_name: user.last_name, username: user.username, photo_url: user.photo_url, }).select().single();
+                    if (insertError) { console.error("Ошибка при создании пользователя:", insertError); return; }
                     userData = newUser;
                 }
                 localState.user = userData;
 
-                const { data: chatsData, error: chatsError } = await supabaseClient
-                    .from('chats')
-                    .select('*')
-                    .eq('user_id', user.id);
-                
-                if (chatsError) {
-                    console.error("Ошибка при загрузке чатов:", chatsError);
-                    return;
-                }
+                const { data: chatsData, error: chatsError } = await supabaseClient.from('chats').select('*').eq('user_id', user.id);
+                if (chatsError) { console.error("Ошибка при загрузке чатов:", chatsError); return; }
                 
                 localState.chats = {};
                 for (const chat of chatsData) {
@@ -310,29 +285,18 @@
                 if (chatsData.length === 0) {
                     await createNewChat(true);
                 } else {
-                    activeChatId = chatsData[chatsData.length - 1].id;
+                    activeChatId = chatsData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0].id;
                     await loadActiveChatDetails();
                 }
             }
             
             async function loadActiveChatDetails() {
                 if (!activeChatId) return;
-
-                const { data: messagesData, error: messagesError } = await supabaseClient
-                    .from('messages')
-                    .select('*')
-                    .eq('chat_id', activeChatId)
-                    .order('created_at', { ascending: true });
-
+                const { data: messagesData, error: messagesError } = await supabaseClient.from('messages').select('*').eq('chat_id', activeChatId).order('created_at', { ascending: true });
                 if (messagesError) console.error("Ошибка загрузки сообщений:", messagesError);
                 else localState.chats[activeChatId].messages = messagesData.map(m => ({...m, text: m.text_content}));
 
-                const { data: codeHistoryData, error: codeHistoryError } = await supabaseClient
-                    .from('code_history')
-                    .select('*')
-                    .eq('chat_id', activeChatId)
-                    .order('version', { ascending: true });
-                
+                const { data: codeHistoryData, error: codeHistoryError } = await supabaseClient.from('code_history').select('*').eq('chat_id', activeChatId).order('version', { ascending: true });
                 if(codeHistoryError) console.error("Ошибка загрузки истории кода:", codeHistoryError);
                 else localState.chats[activeChatId].codeHistory = codeHistoryData.map(c => ({...c, code: c.code_object}));
             }
@@ -341,44 +305,32 @@
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat) return;
                 
-                const { data: newMessage, error } = await supabaseClient
-                    .from('messages')
-                    .insert({ chat_id: activeChatId, sender, text_content: text, code_version: codeVersion })
-                    .select()
-                    .single();
-
-                if (error) {
-                    console.error("Ошибка сохранения сообщения:", error);
-                    return;
-                }
+                const { data: newMessage, error } = await supabaseClient.from('messages').insert({ chat_id: activeChatId, sender, text_content: text, code_version: codeVersion }).select().single();
+                if (error) { console.error("Ошибка сохранения сообщения:", error); return; }
 
                 activeChat.messages.push({ ...newMessage, text: newMessage.text_content });
 
                 if (sender === 'user' && activeChat.messages.filter(m => m.sender === 'user').length === 1 && text) {
                     activeChat.title = text;
-                    await supabaseClient.from('chats').update({ title: activeChat.title }).eq('id', activeChatId);
+                    await supabaseClient.from('chats').update({ title: text }).eq('id', activeChatId);
+                    ui.headerTitle.textContent = text;
                 }
-                
                 renderMessages();
             }
 
             function renderMessages() {
                 const activeChat = localState.chats[activeChatId];
-                
                 if (!activeChat || activeChat.messages.length === 0) {
                     if (ui.initialGreeting) ui.initialGreeting.classList.remove('opacity-0', 'pointer-events-none');
                     ui.chatArea.innerHTML = ''; 
                     return;
                 }
                 if (ui.initialGreeting) ui.initialGreeting.classList.add('opacity-0', 'pointer-events-none');
-
                 ui.chatArea.innerHTML = ''; 
-                
                 const latestCodeVersion = activeChat.codeHistory.length;
 
                 activeChat.messages.forEach(msg => {
                     const msgDiv = document.createElement('div');
-                    msgDiv.className = 'message-container';
                     const msgContent = document.createElement('div');
                     msgDiv.className = `flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`;
                     msgContent.className = `message ${msg.sender === 'user' ? 'user-message' : 'bot-message'}`;
@@ -391,7 +343,7 @@
                     if (msg.code_version) {
                         const isLatest = msg.code_version === latestCodeVersion;
                         const button = document.createElement('button');
-                        button.textContent = isLatest ? 'Открыть' : 'Восстановить';
+                        button.textContent = isLatest ? 'Открыть код' : 'Восстановить';
                         button.className = 'mt-2 w-full text-center py-1.5 rounded-lg font-semibold transition-colors text-sm';
                         
                         if (isLatest) {
@@ -405,7 +357,6 @@
                         }
                         msgContent.appendChild(button);
                     }
-
                     msgDiv.appendChild(msgContent);
                     ui.chatArea.appendChild(msgDiv);
                 });
@@ -414,7 +365,6 @@
 
             function sendMessage() {
                 if (isGenerating) return;
-
                 const text = ui.messageInput.value.trim();
                 if (text) {
                     addMessage(text, 'user');
@@ -432,23 +382,17 @@
             
             function updateInputState() {
                 const hasContent = ui.messageInput.value.trim().length > 0;
-                const isEnabled = !isGenerating;
-                if(ui.sendButton) ui.sendButton.style.display = hasContent ? 'block' : 'none';
-                if(ui.messageInput) ui.messageInput.disabled = !isEnabled;
-                if(ui.sendButton) ui.sendButton.disabled = !isEnabled;
+                ui.sendButton.style.display = hasContent ? 'block' : 'none';
+                ui.messageInput.disabled = isGenerating;
+                ui.sendButton.disabled = isGenerating;
             }
 
             async function callGeminiAPI(prompt) {
                 try {
-                    const { data, error } = await supabaseClient.functions.invoke('generate-code', {
-                        body: { prompt },
-                    });
-
+                    const { data, error } = await supabaseClient.functions.invoke('generate-code', { body: { prompt } });
                     if (error) throw error;
                     if (data.error) throw new Error(data.error);
-
                     return data;
-
                 } catch (error) {
                     console.error("Ошибка вызова функции Supabase (generate-code):", error.message);
                     const errorMsg = "Ошибка конфигурации API.";
@@ -456,64 +400,48 @@
                     isGenerating = false;
                     updateInputState();
                     closeModal();
-                    return { "error.html": `<!-- ${errorMsg} -->` };
+                    return { "index.html": `<!-- ${errorMsg} -->` };
                 }
             }
             
             function formatCodeForDisplay(codeObject) {
-                if (typeof codeObject === 'string') return codeObject;
-                if (codeObject['error.html']) return codeObject['error.html'];
-                return Object.entries(codeObject).map(([filename, code]) => `//--- ${filename} ---\n\n${code}`).join('\n\n\n');
+                return codeObject['index.html'] || 'Код не найден.';
             }
 
             async function runAiProcess(steps, prompt) {
                 isGenerating = true;
                 updateInputState();
                 openModal(ui.codeModal);
-                const activeChat = localState.chats[activeChatId];
-                
                 switchTab('code');
-
                 ui.codeOutput.textContent = '';
                 ui.aiStatusContainer.innerHTML = '';
                 
-                for (let i = 0; i < steps.length; i++) {
-                    const step = steps[i];
+                for (const step of steps) {
                     const statusDiv = document.createElement('div');
                     statusDiv.className = 'flex items-center space-x-2';
-                    const iconSpan = document.createElement('span');
-                    iconSpan.innerHTML = '<div class="spinner"></div>';
-                    statusDiv.appendChild(iconSpan);
-                    const textSpan = document.createElement('span');
-                    textSpan.textContent = step;
-                    statusDiv.appendChild(textSpan);
+                    statusDiv.innerHTML = `<span><div class="spinner"></div></span><span>${step}</span>`;
                     ui.aiStatusContainer.appendChild(statusDiv);
                     await new Promise(resolve => setTimeout(resolve, 1000));
-                    iconSpan.innerHTML = '✅';
+                    statusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
                 }
                 
                 const apiStatusDiv = document.createElement('div');
                 apiStatusDiv.className = 'flex items-center space-x-2';
-                const iconSpan = document.createElement('span');
-                iconSpan.innerHTML = '<div class="spinner"></div>';
-                apiStatusDiv.appendChild(iconSpan);
-                const textSpan = document.createElement('span');
-                textSpan.textContent = 'Отправка запроса в AI...';
-                apiStatusDiv.appendChild(textSpan);
+                apiStatusDiv.innerHTML = '<span><div class="spinner"></div></span><span>Отправка запроса в AI...</span>';
                 ui.aiStatusContainer.appendChild(apiStatusDiv);
                 
                 let generatedCodeObject = await callGeminiAPI(prompt);
                 
-                if (generatedCodeObject['error.html']) {
-                    textSpan.textContent = 'Ошибка конфигурации API.';
-                    iconSpan.innerHTML = '❌';
+                if (!generatedCodeObject['index.html']) {
+                    apiStatusDiv.querySelector('span:last-child').textContent = 'Ошибка генерации кода.';
+                    apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
                     isGenerating = false;
                     updateInputState();
                     return;
                 }
 
-                textSpan.textContent = 'Получение ответа...';
-                iconSpan.innerHTML = '✅';
+                apiStatusDiv.querySelector('span:last-child').textContent = 'Получение ответа...';
+                apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
                 
                 const formattedCode = formatCodeForDisplay(generatedCodeObject);
                 typeCode(generatedCodeObject, formattedCode);
@@ -528,8 +456,7 @@
             function improveAiGeneration(prompt) {
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat || activeChat.codeHistory.length === 0) {
-                    initiateAiGeneration(prompt);
-                    return;
+                    initiateAiGeneration(prompt); return;
                 }
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
                 const codeString = JSON.stringify(latestCodeObject, null, 2);
@@ -542,76 +469,76 @@
                 const newVersion = activeChat.codeHistory.length + 1;
                 
                 const { error } = await supabaseClient.from('code_history').insert({ chat_id: activeChatId, version: newVersion, code_object: codeObject });
-                if (error) {
-                    console.error("Ошибка сохранения истории кода:", error);
-                    return;
-                }
+                if (error) { console.error("Ошибка сохранения истории кода:", error); return; }
 
                 activeChat.codeHistory.push({ version: newVersion, code: codeObject });
                 
-                let index = 0;
-                const interval = setInterval(() => {
-                    if (index < formattedCode.length) {
-                        ui.codeOutput.textContent += formattedCode[index];
-                        index++;
-                        ui.codeView.scrollTop = ui.codeView.scrollHeight;
-                    } else {
-                        clearInterval(interval);
-                        setTimeout(() => {
-                            switchTab('preview');
-                            addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
-                            isGenerating = false;
-                            updateInputState();
-                            updateDeployButtonState();
-                        }, 500);
-                    }
-                }, 5);
+                ui.codeOutput.textContent = formattedCode; // Показываем код сразу
+                
+                setTimeout(() => {
+                    switchTab('preview');
+                    addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
+                    isGenerating = false;
+                    updateInputState();
+                    updateDeployActions();
+                }, 500);
             }
 
             function switchTab(tabName) {
                 ui.codeTabs.querySelectorAll('.tab-button').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
                 const isPreview = tabName === 'preview';
-                if(ui.codeView) ui.codeView.classList.toggle('hidden', isPreview);
-                if(ui.previewView) ui.previewView.classList.toggle('hidden', !isPreview);
+                
                 if (isPreview) {
                     const activeChat = localState.chats[activeChatId];
                     const latestCode = activeChat.codeHistory.length > 0 ? activeChat.codeHistory.slice(-1)[0].code['index.html'] : '';
-                    if(ui.previewFrame) ui.previewFrame.srcdoc = latestCode;
+                    ui.previewFrame.srcdoc = latestCode;
+                    ui.previewView.classList.remove('hidden');
+                    ui.previewView.classList.add('fullscreen');
+                    tg.BackButton.show();
+                    tg.onEvent('backButtonClicked', onPreviewBackClick);
+                } else {
+                    ui.codeView.classList.remove('hidden');
+                    ui.previewView.classList.add('hidden');
+                    ui.previewView.classList.remove('fullscreen');
+                    tg.BackButton.hide();
+                    tg.offEvent('backButtonClicked', onPreviewBackClick);
                 }
             }
             
+            function onPreviewBackClick() {
+                switchTab('code');
+            }
+
             function openCodeModal(switchToPreview = false, version) {
                 const activeChat = localState.chats[activeChatId];
                 const codeHistoryItem = activeChat.codeHistory.find(h => h.version === version);
                 if (!codeHistoryItem) return;
                 const codeObject = codeHistoryItem.code;
                 ui.codeOutput.textContent = formatCodeForDisplay(codeObject);
-                updateDeployButtonState();
+                updateDeployActions();
                 switchTab(switchToPreview ? 'preview' : 'code');
                 openModal(ui.codeModal);
             }
 
             function openModal(modal) {
-                if(ui.modalOverlay) ui.modalOverlay.classList.add('visible');
-                if(modal) modal.classList.add('visible');
+                ui.modalOverlay.classList.add('visible');
+                modal.classList.add('visible');
                 tg.HapticFeedback.impactOccurred('light');
             }
 
             function closeModal() {
-                if(ui.modalOverlay) ui.modalOverlay.classList.remove('visible');
+                ui.modalOverlay.classList.remove('visible');
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.subscriptionModal].forEach(modal => {
                     if (modal) modal.classList.remove('visible');
                 });
+                // Закрываем полноэкранный предпросмотр, если он открыт
+                if (ui.previewView.classList.contains('fullscreen')) {
+                    onPreviewBackClick();
+                }
             }
             
-            function openProfileModal() {
-                if (localState.user) {
-                    const u = localState.user;
-                    if(ui.profileModalPhoto) ui.profileModalPhoto.src = u.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${u.first_name.charAt(0).toUpperCase()}`;
-                    if(ui.profileModalName) ui.profileModalName.textContent = `${u.first_name || ''} ${u.last_name || ''}`.trim();
-                    if(ui.profileModalUsername) ui.profileModalUsername.textContent = u.username ? `@${u.username}` : 'Username не указан';
-                    if(ui.profileModalId) ui.profileModalId.textContent = `ID: ${u.id}`;
-                }
+            async function openProfileModal() {
+                await renderProfileDetails();
                 openModal(ui.profileModal);
             }
             
@@ -625,16 +552,8 @@
                     return;
                 }
 
-                const { data: newChat, error } = await supabaseClient
-                    .from('chats')
-                    .insert({ user_id: localState.user.id })
-                    .select()
-                    .single();
-
-                if (error) {
-                    console.error("Ошибка создания чата:", error);
-                    return;
-                }
+                const { data: newChat, error } = await supabaseClient.from('chats').insert({ user_id: localState.user.id }).select().single();
+                if (error) { console.error("Ошибка создания чата:", error); return; }
                 
                 localState.chats[newChat.id] = { ...newChat, messages: [], codeHistory: [] };
                 switchChat(newChat.id);
@@ -645,28 +564,17 @@
                 activeChatId = chatId;
                 await loadActiveChatDetails();
                 renderMessages();
-                updateHeaderButton();
+                updateHeader();
                 closeModal();
             }
 
             function renderChatList() {
-                if(!ui.chatList) return;
                 ui.chatList.innerHTML = '';
-                const chats = Object.values(localState.chats).reverse();
+                const chats = Object.values(localState.chats).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                 chats.forEach(chat => {
                     const chatDiv = document.createElement('div');
-                    chatDiv.className = 'p-2.5 rounded-lg hover:bg-gray-800 cursor-pointer';
-                    const title = document.createElement('p');
-                    title.className = 'font-semibold truncate text-sm';
-                    title.textContent = chat.title;
-                    chatDiv.appendChild(title);
-                    const lastMessage = chat.messages.slice().reverse().find(m => m.text);
-                    if (lastMessage) {
-                        const snippet = document.createElement('p');
-                        snippet.className = 'text-xs text-gray-400 truncate';
-                        snippet.textContent = lastMessage.text;
-                        chatDiv.appendChild(snippet);
-                    }
+                    chatDiv.className = `p-2.5 rounded-lg cursor-pointer ${chat.id === activeChatId ? 'bg-gray-800' : 'hover:bg-gray-800'}`;
+                    chatDiv.innerHTML = `<p class="font-semibold truncate text-sm">${chat.title || 'Новый чат'}</p>`;
                     chatDiv.onclick = () => switchChat(chat.id);
                     ui.chatList.appendChild(chatDiv);
                 });
@@ -701,41 +609,43 @@
                 versionToRestore = null;
             }
 
-            function updateHeaderButton() {
+            function updateHeader() {
                 const chat = localState.chats[activeChatId];
+                ui.headerTitle.textContent = chat?.title || 'Devtol';
                 const subName = SUBSCRIPTION_LIMITS[localState.user?.subscription_plan || 'free'].name;
-                
-                let buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">${subName}</button>`;
-
-                if (chat && chat.deploy_url) {
-                    buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-500 text-white">Открыть</button>`;
-                } else if (chat && chat.is_deploying) {
-                    buttonHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full flex items-center" style="background-color: var(--tg-secondary-bg-color);" disabled><div class="spinner mr-1.5"></div>Деплой...</button>`;
-                }
-                
-                ui.headerActionContainer.innerHTML = buttonHTML;
-                const newButton = document.getElementById('header-action-button');
-                
-                if (chat && chat.deploy_url) {
-                    newButton.onclick = () => tg.openLink(chat.deploy_url);
-                } else if (!chat || !chat.is_deploying) {
-                    newButton.onclick = openSubscriptionModal;
-                }
+                ui.headerActionContainer.innerHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">${subName}</button>`;
+                document.getElementById('header-action-button').onclick = openSubscriptionModal;
             }
             
             function openSubscriptionModal() {
                 openModal(ui.subscriptionModal);
             }
 
-            function updateDeployButtonState() {
+            function updateDeployActions() {
                 const chat = localState.chats[activeChatId];
-                if (chat && chat.codeHistory.length > 0 && !chat.deploy_url && !chat.is_deploying) {
-                    ui.deployButton.classList.remove('hidden');
-                    ui.deployButton.disabled = false;
-                    ui.deployButton.textContent = 'Деплой';
-                } else {
-                    ui.deployButton.classList.add('hidden');
+                let buttonsHTML = '';
+                if (chat && chat.codeHistory.length > 0) {
+                    if (chat.deploy_url) {
+                        buttonsHTML = `
+                            <button id="open-deploy-button" class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-500 text-white">Открыть</button>
+                            <button id="update-deploy-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Обновить</button>
+                        `;
+                    } else if (chat.is_deploying) {
+                        buttonsHTML = `<button class="text-xs font-bold px-2.5 py-1 rounded-full flex items-center" style="background-color: var(--tg-secondary-bg-color);" disabled><div class="spinner mr-1.5"></div>Деплой...</button>`;
+                    } else {
+                         buttonsHTML = `<button id="deploy-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Деплой</button>`;
+                    }
                 }
+                ui.deployActionsContainer.innerHTML = buttonsHTML;
+                
+                // Назначаем обработчики событий
+                const deployBtn = document.getElementById('deploy-button');
+                const updateDeployBtn = document.getElementById('update-deploy-button');
+                const openDeployBtn = document.getElementById('open-deploy-button');
+
+                if (deployBtn) deployBtn.onclick = deployToNetlify;
+                if (updateDeployBtn) updateDeployBtn.onclick = deployToNetlify;
+                if (openDeployBtn) openDeployBtn.onclick = () => tg.openLink(chat.deploy_url);
             }
             
             async function deployToNetlify() {
@@ -747,39 +657,24 @@
 
                 chat.is_deploying = true;
                 await supabaseClient.from('chats').update({ is_deploying: true }).eq('id', activeChatId);
-                updateHeaderButton();
-                ui.deployButton.classList.add('hidden');
+                updateDeployActions();
                 addMessage(`Начинаю деплой проекта...`, 'bot');
 
                 try {
                     const latestCodeObject = chat.codeHistory.slice(-1)[0].code;
-                    
-                    addMessage('1/2 Вызываю серверную функцию деплоя...', 'bot');
-                    const { data, error } = await supabaseClient.functions.invoke('deploy-to-netlify', {
-                        body: { 
-                            codeObject: latestCodeObject,
-                            netlifySiteId: chat.netlify_site_id 
-                        },
-                    });
-
+                    const { data, error } = await supabaseClient.functions.invoke('deploy-to-netlify', { body: { codeObject: latestCodeObject, netlifySiteId: chat.netlify_site_id } });
                     if (error) throw error;
                     if (data.error) throw new Error(data.error);
 
                     const { deploy_url, netlify_site_id } = data;
-
-                    addMessage('2/2 Сохраняю результат...', 'bot');
                     chat.deploy_url = deploy_url;
                     chat.netlify_site_id = netlify_site_id;
                     chat.is_deploying = false;
-                    await supabaseClient.from('chats').update({ 
-                        deploy_url: deploy_url, 
-                        netlify_site_id: netlify_site_id,
-                        is_deploying: false 
-                    }).eq('id', activeChatId);
+                    await supabaseClient.from('chats').update({ deploy_url: deploy_url, netlify_site_id: netlify_site_id, is_deploying: false }).eq('id', activeChatId);
                     
                     addMessage(`✅ Успех! Ваш сайт доступен по адресу: ${deploy_url}`, 'bot');
                     tg.HapticFeedback.notificationOccurred('success');
-                    updateHeaderButton();
+                    updateDeployActions();
 
                 } catch (error) {
                     console.error('Ошибка деплоя:', error);
@@ -787,31 +682,78 @@
                     tg.HapticFeedback.notificationOccurred('error');
                     chat.is_deploying = false;
                     await supabaseClient.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
-                    updateHeaderButton();
+                    updateDeployActions();
                 }
+            }
+
+            async function renderProfileDetails() {
+                const u = localState.user;
+                const allChats = Object.values(localState.chats);
+                const deployedChats = allChats.filter(c => c.deploy_url);
+                const limits = SUBSCRIPTION_LIMITS[u.subscription_plan || 'free'];
+                const chatUsage = allChats.length;
+                const chatPercentage = limits.chats === Infinity ? 100 : (chatUsage / limits.chats) * 100;
+                
+                // Для подсчета сообщений, нужно будет их загрузить, если это не сделано
+                // Для простоты, пока оставим заглушку
+                const messageUsage = 'N/A';
+                const messagePercentage = 50; // Заглушка
+
+                let deployedAppsHTML = '<p class="text-sm text-gray-400">У вас пока нет опубликованных приложений.</p>';
+                if (deployedChats.length > 0) {
+                    deployedAppsHTML = deployedChats.map(chat => `
+                        <div class="bg-gray-800 p-3 rounded-lg flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold text-sm truncate">${chat.title || 'Безымянное приложение'}</p>
+                                <a href="${chat.deploy_url}" target="_blank" class="text-xs text-purple-400 truncate">${chat.deploy_url}</a>
+                            </div>
+                            <button onclick="Telegram.WebApp.openLink('${chat.deploy_url}')" class="text-xs font-bold p-2 rounded-full bg-gray-700 hover:bg-gray-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                            </button>
+                        </div>
+                    `).join('');
+                }
+
+                ui.profileContent.innerHTML = `
+                    <div class="text-center">
+                        <img src="${u.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${u.first_name.charAt(0).toUpperCase()}`}" class="w-24 h-24 rounded-full mx-auto mb-3 border-2 border-purple-500">
+                        <h3 class="text-xl font-bold">${u.first_name || ''} ${u.last_name || ''}</h3>
+                        <p class="text-gray-400 text-sm">${u.username ? `@${u.username}` : 'Username не указан'}</p>
+                    </div>
+                    <div class="mt-6">
+                        <h4 class="font-bold mb-3">Мои лимиты (План: ${limits.name})</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span>Чаты</span>
+                                    <span>${chatUsage} / ${limits.chats === Infinity ? '∞' : limits.chats}</span>
+                                </div>
+                                <div class="progress-bar h-2 w-full"><div class="progress-bar-inner" style="width: ${chatPercentage}%;"></div></div>
+                            </div>
+                        </div>
+                         <button id="upgrade-plan-button" class="w-full mt-4 text-center py-2 rounded-lg font-semibold text-sm" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Улучшить план</button>
+                    </div>
+                    <div class="mt-6">
+                        <h4 class="font-bold mb-3">Мои приложения</h4>
+                        <div class="space-y-2">${deployedAppsHTML}</div>
+                    </div>
+                `;
+                document.getElementById('upgrade-plan-button').onclick = openSubscriptionModal;
             }
             
             function setupEventListeners() {
-                if(ui.messageInput) {
-                    ui.messageInput.addEventListener('keypress', e => e.key === 'Enter' && sendMessage());
-                    ui.messageInput.addEventListener('input', updateInputState);
-                }
-                if(ui.sendButton) ui.sendButton.addEventListener('click', sendMessage);
-                if(ui.menuButton) ui.menuButton.addEventListener('click', () => {
-                    renderChatList();
-                    openModal(ui.historyModal);
-                });
-                if (ui.newChatButton) {
-                    ui.newChatButton.addEventListener('click', () => createNewChat(false));
-                }
-                if(ui.userPhoto) ui.userPhoto.addEventListener('click', openProfileModal);
-                if(ui.modalOverlay) ui.modalOverlay.addEventListener('click', closeModal);
-                if(ui.confirmRestoreButton) ui.confirmRestoreButton.addEventListener('click', confirmRestore);
-                if(ui.cancelRestoreButton) ui.cancelRestoreButton.addEventListener('click', closeModal);
-                if(ui.codeTabs) ui.codeTabs.querySelectorAll('.tab-button').forEach(button => {
+                ui.messageInput.addEventListener('keypress', e => e.key === 'Enter' && sendMessage());
+                ui.messageInput.addEventListener('input', updateInputState);
+                ui.sendButton.addEventListener('click', sendMessage);
+                ui.menuButton.addEventListener('click', () => { renderChatList(); openModal(ui.historyModal); });
+                ui.newChatButton.addEventListener('click', () => createNewChat(false));
+                ui.userPhoto.addEventListener('click', openProfileModal);
+                ui.modalOverlay.addEventListener('click', closeModal);
+                ui.confirmRestoreButton.addEventListener('click', confirmRestore);
+                ui.cancelRestoreButton.addEventListener('click', closeModal);
+                ui.codeTabs.querySelectorAll('.tab-button').forEach(button => {
                     button.addEventListener('click', () => switchTab(button.dataset.tab));
                 });
-                if(ui.deployButton) ui.deployButton.addEventListener('click', deployToNetlify);
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.subscriptionModal].forEach(modal => {
                     if (modal) {
                         let startY;
@@ -827,36 +769,16 @@
             
             function buySubscription(plan, amount) {
                 const paymentProviderToken = "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ";
-
                 if (!paymentProviderToken || paymentProviderToken === "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ") {
-                    tg.showAlert("Платежная система не настроена. Обратитесь к разработчику.");
-                    return;
+                    tg.showAlert("Платежная система не настроена. Обратитесь к разработчику."); return;
                 }
-
-                const invoice = {
-                    title: `Подписка ${SUBSCRIPTION_LIMITS[plan].name}`,
-                    description: `Доступ к расширенным функциям Devtol (${SUBSCRIPTION_LIMITS[plan].chats} чатов, ${SUBSCRIPTION_LIMITS[plan].messages} сообщений).`,
-                    payload: `buy-${plan}-plan-user-${user.id}`,
-                    provider_token: paymentProviderToken,
-                    currency: 'RUB',
-                    prices: [{ label: `Подписка ${SUBSCRIPTION_LIMITS[plan].name}`, amount: amount }]
-                };
-
+                const invoice = { title: `Подписка ${SUBSCRIPTION_LIMITS[plan].name}`, description: `Доступ к расширенным функциям Devtol.`, payload: `buy-${plan}-plan-user-${user.id}`, provider_token: paymentProviderToken, currency: 'RUB', prices: [{ label: `Подписка ${SUBSCRIPTION_LIMITS[plan].name}`, amount: amount }] };
                 tg.openInvoice(invoice.payload, async (status) => {
                     if (status === 'paid') {
-                        const { error } = await supabaseClient
-                            .from('users')
-                            .update({ subscription_plan: plan })
-                            .eq('id', localState.user.id);
-                        
-                        if (error) {
-                            console.error("Ошибка обновления подписки:", error);
-                            tg.showAlert("Не удалось обновить подписку. Свяжитесь с поддержкой.");
-                            return;
-                        }
-
+                        const { error } = await supabaseClient.from('users').update({ subscription_plan: plan }).eq('id', localState.user.id);
+                        if (error) { console.error("Ошибка обновления подписки:", error); tg.showAlert("Не удалось обновить подписку. Свяжитесь с поддержкой."); return; }
                         localState.user.subscription_plan = plan;
-                        updateHeaderButton();
+                        updateHeader();
                         closeModal();
                         tg.showAlert('Спасибо! Ваша подписка успешно обновлена.');
                     } else if (status === 'failed') {
@@ -876,10 +798,9 @@
                 }
 
                 await loadDataFromSupabase();
-                isTelegramEnv = tg.platform !== 'unknown';
                 setupEventListeners();
                 updateInputState();
-                updateHeaderButton();
+                updateHeader();
                 renderMessages();
             }
 

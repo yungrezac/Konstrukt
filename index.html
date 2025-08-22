@@ -15,7 +15,7 @@
     <!-- highlight.js для подсветки синтаксиса -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <!-- НОВОЕ: marked.js для рендеринга Markdown -->
+    <!-- marked.js для рендеринга Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
@@ -121,7 +121,6 @@
 
         <footer class="p-2 flex-shrink-0 relative">
             <div class="rounded-xl p-1.5 flex items-start" style="background-color: var(--tg-secondary-bg-color);">
-                <!-- ИЗМЕНЕНО: input на textarea -->
                 <textarea id="message-input" placeholder="Спросить Devtol" class="flex-grow bg-transparent focus:outline-none mx-2 text-sm pt-1.5" rows="1"></textarea>
                 <div id="action-button-container" class="flex-shrink-0 self-end">
                     <button id="send-button" class="p-1.5 rounded-full transition-opacity">
@@ -190,7 +189,6 @@
         </div>
         <div id="code-view" class="overflow-y-auto p-3 flex-grow relative">
             <div id="ai-status-container" class="mb-3 text-gray-400 space-y-1.5 text-sm"></div>
-            <!-- ИЗМЕНЕНО: Структура для нумерации строк -->
             <table class="line-numbers-table">
                 <tbody id="code-output"></tbody>
             </table>
@@ -229,7 +227,7 @@
             // --- Состояние приложения ---
             let localState = { user: null, chats: {} }; 
             let isGenerating = false;
-            let currentConfirmAction = null; // НОВОЕ: для универсального модального окна подтверждения
+            let currentConfirmAction = null;
             let activeChatId = null;
             let currentCodeFile = 'index.html';
 
@@ -420,7 +418,7 @@
                         improveAiGeneration(text);
                     }
                     ui.messageInput.value = '';
-                    autoResizeInput(); // Сбросить высоту поля ввода
+                    autoResizeInput();
                     updateInputState();
                     tg.HapticFeedback.impactOccurred('light');
                 }
@@ -573,14 +571,12 @@
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
                 const codeContent = latestCodeObject[fileName] || `// Файл ${fileName} не найден.`;
                 
-                // Создаем временный элемент для подсветки
                 const tempCode = document.createElement('code');
                 tempCode.textContent = codeContent;
                 const language = fileName.split('.').pop();
                 tempCode.className = `language-${language}`;
                 hljs.highlightElement(tempCode);
 
-                // Разбиваем подсвеченный HTML на строки и добавляем в таблицу
                 const highlightedHtml = tempCode.innerHTML;
                 ui.codeOutput.innerHTML = highlightedHtml.split('\n').map((line, i) => {
                     return `<tr><td class="line-number">${i + 1}</td><td class="line-content">${line || ' '}</td></tr>`;
@@ -641,8 +637,9 @@
             }
             
             async function openProfileModal() {
-                await renderProfileDetails();
+                ui.profileContent.innerHTML = '<div class="flex justify-center items-center h-full"><div class="spinner"></div></div>';
                 openModal(ui.profileModal);
+                await renderProfileDetails();
             }
             
             async function createNewChat(isInitial = false) {
@@ -699,7 +696,6 @@
                     };
 
                     chatDiv.appendChild(titleP);
-                    // Не даем удалить последний чат
                     if (chats.length > 1) {
                         chatDiv.appendChild(deleteBtn);
                     }
@@ -719,7 +715,7 @@
                     ui.confirmTitle.textContent = 'Удалить этот чат?';
                     ui.confirmText.textContent = 'Это действие нельзя будет отменить.';
                     ui.confirmActionButton.textContent = 'Удалить';
-                    ui.confirmActionButton.style.backgroundColor = '#ef4444'; // Red color
+                    ui.confirmActionButton.style.backgroundColor = '#ef4444';
                 }
                 openModal(ui.confirmRestoreModal);
             }
@@ -775,7 +771,7 @@
                     if (newActiveChatId) {
                         await switchChat(newActiveChatId);
                     } else {
-                        await createNewChat(true); // Создаем новый, если все удалены
+                        await createNewChat(true);
                     }
                 }
                 renderChatList();
@@ -868,6 +864,7 @@
                 }
             }
 
+            // ИЗМЕНЕНО: Полностью переработанная функция рендеринга профиля
             async function renderProfileDetails() {
                 const u = localState.user;
                 const allChats = Object.values(localState.chats);
@@ -876,7 +873,20 @@
                 const chatUsage = allChats.length;
                 const chatPercentage = limits.chats === Infinity ? 100 : (chatUsage / limits.chats) * 100;
 
-                let deployedAppsHTML = '<p class="text-sm text-gray-400">У вас пока нет опубликованных приложений.</p>';
+                const chatIds = Object.keys(localState.chats);
+                let messageCount = 0;
+                if (chatIds.length > 0) {
+                    const { count, error } = await supabaseClient
+                        .from('messages')
+                        .select('id', { count: 'exact', head: true })
+                        .in('chat_id', chatIds)
+                        .eq('sender', 'user');
+                    if (!error) {
+                        messageCount = count || 0;
+                    }
+                }
+
+                let deployedAppsHTML = `<div class="bg-gray-800 p-3 rounded-lg text-center text-sm text-gray-400">У вас пока нет опубликованных приложений.</div>`;
                 if (deployedChats.length > 0) {
                     deployedAppsHTML = deployedChats.map(chat => `
                         <div class="bg-gray-800 p-3 rounded-lg flex justify-between items-center space-x-2">
@@ -892,27 +902,64 @@
                 }
 
                 ui.profileContent.innerHTML = `
-                    <div class="text-center">
-                        <img src="${u.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${u.first_name.charAt(0).toUpperCase()}`}" class="w-24 h-24 rounded-full mx-auto mb-3 border-2 border-purple-500">
-                        <h3 class="text-xl font-bold">${u.first_name || ''} ${u.last_name || ''}</h3>
-                        <p class="text-gray-400 text-sm">${u.username ? `@${u.username}` : 'Username не указан'}</p>
-                    </div>
-                    <div class="mt-6">
-                        <h4 class="font-bold mb-3">Мои лимиты (План: ${limits.name})</h4>
-                        <div class="space-y-3">
+                    <div class="space-y-4">
+                        <!-- User Card -->
+                        <div class="bg-gray-800 rounded-lg p-4 flex items-center space-x-4">
+                            <img src="${u.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${u.first_name.charAt(0).toUpperCase()}`}" class="w-16 h-16 rounded-full border-2 border-purple-500">
                             <div>
-                                <div class="flex justify-between text-xs mb-1">
-                                    <span>Чаты</span>
-                                    <span>${chatUsage} / ${limits.chats === Infinity ? '∞' : limits.chats}</span>
-                                </div>
-                                <div class="progress-bar h-2 w-full"><div class="progress-bar-inner" style="width: ${chatPercentage}%;"></div></div>
+                                <h3 class="text-lg font-bold">${u.first_name || ''} ${u.last_name || ''}</h3>
+                                <p class="text-gray-400 text-sm">${u.username ? `@${u.username}` : 'Username не указан'}</p>
                             </div>
                         </div>
-                        <button id="upgrade-plan-button" class="w-full mt-4 text-center py-2 rounded-lg font-semibold text-sm" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Улучшить план</button>
-                    </div>
-                    <div class="mt-6">
-                        <h4 class="font-bold mb-3">Мои приложения</h4>
-                        <div class="space-y-2">${deployedAppsHTML}</div>
+
+                        <!-- Stats Card -->
+                        <div class="bg-gray-800 rounded-lg p-4">
+                            <h4 class="font-bold mb-3 text-base">Статистика</h4>
+                            <div class="grid grid-cols-3 gap-4 text-center">
+                                <div>
+                                    <div class="bg-gray-700 rounded-full p-2 w-10 h-10 mx-auto flex items-center justify-center mb-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                                    </div>
+                                    <p class="text-xl font-bold">${chatUsage}</p>
+                                    <p class="text-xs text-gray-400">Проектов</p>
+                                </div>
+                                <div>
+                                    <div class="bg-gray-700 rounded-full p-2 w-10 h-10 mx-auto flex items-center justify-center mb-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                                    </div>
+                                    <p class="text-xl font-bold">${messageCount}</p>
+                                    <p class="text-xs text-gray-400">Сообщений</p>
+                                </div>
+                                <div>
+                                    <div class="bg-gray-700 rounded-full p-2 w-10 h-10 mx-auto flex items-center justify-center mb-1">
+                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l5 5L20 7" /></svg>
+                                    </div>
+                                    <p class="text-xl font-bold">${deployedChats.length}</p>
+                                    <p class="text-xs text-gray-400">Опубликовано</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Subscription Card -->
+                        <div class="bg-gray-800 rounded-lg p-4">
+                            <h4 class="font-bold mb-3 text-base">Мои лимиты (План: ${limits.name})</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span>Чаты</span>
+                                        <span>${chatUsage} / ${limits.chats === Infinity ? '∞' : limits.chats}</span>
+                                    </div>
+                                    <div class="progress-bar h-2 w-full"><div class="progress-bar-inner" style="width: ${chatPercentage}%;"></div></div>
+                                </div>
+                            </div>
+                            <button id="upgrade-plan-button" class="w-full mt-4 text-center py-2 rounded-lg font-semibold text-sm" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Улучшить план</button>
+                        </div>
+
+                        <!-- Apps Card -->
+                        <div class="bg-gray-800 rounded-lg p-4">
+                            <h4 class="font-bold mb-3 text-base">Мои приложения</h4>
+                            <div class="space-y-2">${deployedAppsHTML}</div>
+                        </div>
                     </div>
                 `;
                 document.getElementById('upgrade-plan-button').onclick = openSubscriptionModal;

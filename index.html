@@ -60,11 +60,17 @@
         
         #code-modal .tab-button.active { border-bottom-color: var(--tg-button-color); color: var(--tg-text-color); }
         
-        /* Стили для нумерации строк кода */
-        .line-numbers-table { width: 100%; border-collapse: collapse; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; }
-        .line-numbers-table td { vertical-align: top; padding: 0; }
-        .line-number { text-align: right; padding-right: 1em; color: var(--tg-hint-color); -webkit-user-select: none; user-select: none; width: 1%; }
-        .line-content { white-space: pre-wrap; word-wrap: break-word; }
+        /* Стили для редактора кода */
+        .code-editor-wrapper { position: relative; height: 100%; }
+        .line-numbers { font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; padding: 1rem 0.5rem 1rem 1rem; text-align: right; color: var(--tg-hint-color); -webkit-user-select: none; user-select: none; position: absolute; top: 0; left: 0; bottom: 0; overflow: hidden; }
+        #code-editor {
+            width: 100%; height: 100%;
+            background: transparent; border: none; outline: none; resize: none;
+            color: var(--tg-text-color);
+            font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px;
+            line-height: 1.5;
+            padding: 1rem 1rem 1rem 3.5rem; /* Отступ слева для номеров строк */
+        }
 
         .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -85,9 +91,8 @@
         .toast { background-color: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; animation: fade-in-out 3s ease-in-out; }
         @keyframes fade-in-out { 0% { opacity: 0; transform: translateY(-20px); } 10% { opacity: 1; transform: translateY(0); } 90% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-20px); } }
 
-        /* Стили для textarea */
         #message-input { resize: none; max-height: 120px; overflow-y: auto; }
-        #message-input::-webkit-scrollbar { display: none; } /* Скрыть скроллбар */
+        #message-input::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -181,20 +186,28 @@
         <div id="code-modal-header" class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
             <div id="code-tabs-container" class="flex items-center space-x-3 text-gray-400 text-sm overflow-x-auto"></div>
             <div class="flex items-center space-x-2 flex-shrink-0 ml-2">
+                <div id="code-edit-actions" class="hidden">
+                    <button id="cancel-edit-button" class="text-xs font-semibold px-2.5 py-1 rounded-md bg-gray-600">Отмена</button>
+                    <button id="save-edit-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Сохранить</button>
+                </div>
                 <button id="copy-code-button" class="p-1.5 rounded-full hover:bg-gray-700 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                 </button>
                 <div id="deploy-actions-container"></div>
             </div>
         </div>
-        <div id="code-view" class="overflow-y-auto p-3 flex-grow relative">
-            <div id="ai-status-container" class="mb-3 text-gray-400 space-y-1.5 text-sm"></div>
-            <table class="line-numbers-table">
-                <tbody id="code-output"></tbody>
-            </table>
+        <div id="code-view" class="overflow-y-auto p-0 flex-grow relative">
+            <div id="ai-status-container" class="p-3 mb-3 text-gray-400 space-y-1.5 text-sm"></div>
+            <div class="code-editor-wrapper">
+                <div id="line-numbers" class="line-numbers">1</div>
+                <textarea id="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+            </div>
         </div>
         <div id="preview-view" class="hidden flex-grow bg-white">
             <iframe id="preview-frame" class="w-full h-full border-none"></iframe>
+        </div>
+        <div id="code-modal-footer" class="p-2 border-t border-gray-700">
+            <button id="stop-generation-button" class="w-full text-center py-2 rounded-lg font-semibold text-sm bg-red-500 text-white hidden">Остановить генерацию</button>
         </div>
     </div>
 
@@ -230,6 +243,7 @@
             let currentConfirmAction = null;
             let activeChatId = null;
             let currentCodeFile = 'index.html';
+            let generationAbortController = null; // Для отмены запроса
 
             // --- Элементы UI ---
             const ui = {
@@ -249,8 +263,8 @@
                 codeTabsContainer: document.getElementById('code-tabs-container'),
                 codeView: document.getElementById('code-view'),
                 previewView: document.getElementById('preview-view'),
-                codeOutput: document.getElementById('code-output'),
-                previewFrame: document.getElementById('preview-frame'),
+                codeEditor: document.getElementById('code-editor'),
+                lineNumbers: document.getElementById('line-numbers'),
                 aiStatusContainer: document.getElementById('ai-status-container'),
                 newChatButton: document.getElementById('new-chat-button'),
                 chatList: document.getElementById('chat-list'),
@@ -267,6 +281,10 @@
                 typingIndicator: document.getElementById('typing-indicator-container'),
                 copyCodeButton: document.getElementById('copy-code-button'),
                 toastContainer: document.getElementById('toast-container'),
+                stopGenerationButton: document.getElementById('stop-generation-button'),
+                codeEditActions: document.getElementById('code-edit-actions'),
+                saveEditButton: document.getElementById('save-edit-button'),
+                cancelEditButton: document.getElementById('cancel-edit-button'),
             };
 
             const user = tg.initDataUnsafe.user;
@@ -432,53 +450,63 @@
                 ui.sendButton.classList.toggle('cursor-not-allowed', ui.sendButton.disabled);
             }
 
-            async function callGeminiAPI(prompt, codeObject = null, retries = 3, delay = 1000) {
+            async function callGeminiAPI(prompt, codeObject = null, signal) {
                 try {
                     const body = { prompt };
-                    if (codeObject) {
-                        body.codeObject = codeObject;
-                    }
-                    const { data, error } = await supabaseClient.functions.invoke('generate-code', { 
-                        body: body 
+                    if (codeObject) body.codeObject = codeObject;
+                    
+                    // Используем fetch напрямую для поддержки AbortSignal
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-code`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`
+                        },
+                        body: JSON.stringify(body),
+                        signal: signal
                     });
 
-                    if (error) throw error;
-                    if (data.error) throw new Error(data.error);
-                    return data;
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    
+                    const result = await response.json();
+                    if (result.error) throw new Error(result.error);
+                    return result;
+
                 } catch (error) {
-                    if (retries > 0) {
-                        console.log(`Ошибка API, пробую снова... Осталось попыток: ${retries - 1}. Задержка: ${delay}ms`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        return callGeminiAPI(prompt, codeObject, retries - 1, delay * 2);
-                    } else {
-                        console.error("Ошибка вызова функции Supabase (generate-code) после всех попыток:", error.message);
-                        const userFriendlyError = "Не удалось связаться с AI после нескольких попыток. Проверьте ваше интернет-соединение или попробуйте позже.";
-                        addMessage(`❌ ${userFriendlyError}`, 'bot');
-                        
-                        const apiStatusDiv = ui.aiStatusContainer.querySelector('div:last-child');
-                        if (apiStatusDiv) {
-                                apiStatusDiv.querySelector('span:last-child').textContent = 'Ошибка сети.';
-                                apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
-                        }
-                        return null;
+                    if (error.name === 'AbortError') {
+                        console.log('Запрос к AI отменен пользователем.');
+                        return { cancelled: true };
                     }
+                    console.error("Ошибка вызова функции Supabase (generate-code):", error.message);
+                    addMessage(`❌ Ошибка при обращении к AI: ${error.message}`, 'bot');
+                    return null;
                 }
             }
             
             async function runAiProcess(steps, prompt, codeObject = null) {
                 isGenerating = true;
+                generationAbortController = new AbortController();
                 updateInputState();
                 ui.typingIndicator.classList.remove('hidden');
                 ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
+                ui.stopGenerationButton.classList.remove('hidden');
 
                 openModal(ui.codeModal);
                 currentCodeFile = 'index.html';
                 renderCodeTabs();
                 switchTab(currentCodeFile);
-                ui.codeOutput.innerHTML = '';
+                ui.codeEditor.value = '';
                 ui.aiStatusContainer.innerHTML = '';
                 
                 for (const step of steps) {
+                    if (generationAbortController.signal.aborted) {
+                        isGenerating = false;
+                        updateInputState();
+                        ui.typingIndicator.classList.add('hidden');
+                        ui.stopGenerationButton.classList.add('hidden');
+                        return;
+                    }
                     const statusDiv = document.createElement('div');
                     statusDiv.className = 'flex items-center space-x-2';
                     statusDiv.innerHTML = `<span><div class="spinner"></div></span><span>${step}</span>`;
@@ -492,20 +520,25 @@
                 apiStatusDiv.innerHTML = '<span><div class="spinner"></div></span><span>Отправка запроса в AI...</span>';
                 ui.aiStatusContainer.appendChild(apiStatusDiv);
                 
-                let generatedCodeObject = await callGeminiAPI(prompt, codeObject);
+                let result = await callGeminiAPI(prompt, codeObject, generationAbortController.signal);
                 
                 ui.typingIndicator.classList.add('hidden');
+                ui.stopGenerationButton.classList.add('hidden');
 
-                if (!generatedCodeObject || !generatedCodeObject['index.html']) {
+                if (!result || result.cancelled || !result['index.html']) {
                     isGenerating = false;
                     updateInputState();
+                    if (result && result.cancelled) {
+                        apiStatusDiv.querySelector('span:last-child').textContent = 'Генерация отменена.';
+                        apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '🛑';
+                    }
                     return;
                 }
 
                 apiStatusDiv.querySelector('span:last-child').textContent = 'Получение ответа...';
                 apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
                 
-                await saveAndDisplayCode(generatedCodeObject);
+                await saveAndDisplayCode(result);
             }
 
             function initiateAiGeneration(prompt) {
@@ -522,25 +555,34 @@
                 runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], prompt, latestCodeObject);
             }
 
-            async function saveAndDisplayCode(codeObject) {
+            async function saveAndDisplayCode(codeObject, isUserEdit = false) {
                 const activeChat = localState.chats[activeChatId];
                 const newVersion = activeChat.codeHistory.length + 1;
                 
-                const { error } = await supabaseClient.from('code_history').insert({ chat_id: activeChatId, version: newVersion, code_object: codeObject });
+                const { error } = await supabaseClient.from('code_history').insert({ 
+                    chat_id: activeChatId, 
+                    version: newVersion, 
+                    code_object: codeObject,
+                    is_user_edit: isUserEdit
+                });
                 if (error) { console.error("Ошибка сохранения истории кода:", error); return; }
 
-                activeChat.codeHistory.push({ version: newVersion, code: codeObject });
+                activeChat.codeHistory.push({ version: newVersion, code: codeObject, is_user_edit: isUserEdit });
                 
                 renderCodeTabs();
                 displayCodeFile(currentCodeFile);
                 
-                setTimeout(() => {
-                    switchTab('preview');
-                    addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
-                    isGenerating = false;
-                    updateInputState();
-                    updateDeployActions();
-                }, 500);
+                if (!isUserEdit) {
+                    setTimeout(() => {
+                        switchTab('preview');
+                        addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
+                        isGenerating = false;
+                        updateInputState();
+                        updateDeployActions();
+                    }, 500);
+                } else {
+                     addMessage("Вы сохранили новую версию кода.", 'bot', newVersion);
+                }
             }
             
             function renderCodeTabs() {
@@ -571,23 +613,16 @@
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
                 const codeContent = latestCodeObject[fileName] || `// Файл ${fileName} не найден.`;
                 
-                const tempCode = document.createElement('code');
-                tempCode.textContent = codeContent;
-                const language = fileName.split('.').pop();
-                tempCode.className = `language-${language}`;
-                hljs.highlightElement(tempCode);
-
-                const highlightedHtml = tempCode.innerHTML;
-                ui.codeOutput.innerHTML = highlightedHtml.split('\n').map((line, i) => {
-                    return `<tr><td class="line-number">${i + 1}</td><td class="line-content">${line || ' '}</td></tr>`;
-                }).join('');
-
+                ui.codeEditor.value = codeContent;
+                updateLineNumbers();
+                
                 currentCodeFile = fileName;
 
                 ui.codeTabsContainer.querySelectorAll('.tab-button').forEach(tab => {
                     tab.classList.toggle('active', tab.dataset.tab === fileName);
                 });
                 ui.copyCodeButton.style.display = 'block';
+                ui.codeEditActions.classList.add('hidden');
             }
 
             function switchTab(tabName) {
@@ -600,6 +635,7 @@
                     ui.codeView.classList.add('hidden');
                     ui.previewView.classList.remove('hidden');
                     ui.copyCodeButton.style.display = 'none';
+                    ui.codeEditActions.classList.add('hidden');
                 } else {
                     displayCodeFile(tabName);
                     ui.codeView.classList.remove('hidden');
@@ -864,7 +900,6 @@
                 }
             }
 
-            // ИЗМЕНЕНО: Полностью переработанная функция рендеринга профиля
             async function renderProfileDetails() {
                 const u = localState.user;
                 const allChats = Object.values(localState.chats);
@@ -976,7 +1011,7 @@
             }
 
             function copyCode() {
-                const codeToCopy = Array.from(ui.codeOutput.querySelectorAll('.line-content')).map(td => td.textContent).join('\n');
+                const codeToCopy = ui.codeEditor.value;
                 const textArea = document.createElement('textarea');
                 textArea.value = codeToCopy;
                 document.body.appendChild(textArea);
@@ -998,6 +1033,33 @@
                 input.style.height = (input.scrollHeight) + 'px';
             }
 
+            function updateLineNumbers() {
+                const lineCount = ui.codeEditor.value.split('\n').length;
+                ui.lineNumbers.innerHTML = Array.from({ length: lineCount }, (_, i) => i + 1).join('<br>');
+                ui.lineNumbers.scrollTop = ui.codeEditor.scrollTop;
+            }
+
+            function handleCodeEdit() {
+                const originalCode = localState.chats[activeChatId]?.codeHistory.slice(-1)[0]?.code[currentCodeFile] || '';
+                if (ui.codeEditor.value !== originalCode) {
+                    ui.codeEditActions.classList.remove('hidden');
+                } else {
+                    ui.codeEditActions.classList.add('hidden');
+                }
+            }
+
+            async function handleSaveEdit() {
+                const activeChat = localState.chats[activeChatId];
+                if (!activeChat) return;
+
+                const latestCodeObject = JSON.parse(JSON.stringify(activeChat.codeHistory.slice(-1)[0].code));
+                latestCodeObject[currentCodeFile] = ui.codeEditor.value;
+
+                await saveAndDisplayCode(latestCodeObject, true);
+                ui.codeEditActions.classList.add('hidden');
+                showToast('Изменения сохранены!');
+            }
+
             function setupEventListeners() {
                 ui.messageInput.addEventListener('keydown', e => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1014,6 +1076,22 @@
                 ui.confirmActionButton.addEventListener('click', handleConfirm);
                 ui.cancelConfirmButton.addEventListener('click', closeModal);
                 ui.copyCodeButton.addEventListener('click', copyCode);
+                ui.stopGenerationButton.addEventListener('click', () => {
+                    if (generationAbortController) {
+                        generationAbortController.abort();
+                    }
+                });
+                ui.codeEditor.addEventListener('input', () => {
+                    updateLineNumbers();
+                    handleCodeEdit();
+                });
+                ui.codeEditor.addEventListener('scroll', () => {
+                    ui.lineNumbers.scrollTop = ui.codeEditor.scrollTop;
+                });
+                ui.saveEditButton.addEventListener('click', handleSaveEdit);
+                ui.cancelEditButton.addEventListener('click', () => {
+                    displayCodeFile(currentCodeFile); // Revert changes
+                });
                 
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.subscriptionModal].forEach(modal => {
                     if (modal) {

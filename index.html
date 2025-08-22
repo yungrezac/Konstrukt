@@ -4,14 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>Devtol Mini App</title>
-    <!-- Подключение Tailwind CSS -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Подключение Telegram Web App SDK -->
+    <!-- Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Подключение Supabase -->
+    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- JSZip (для функции деплоя) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- highlight.js для подсветки синтаксиса -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- НОВОЕ: marked.js для рендеринга Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <style>
         :root {
             --tg-bg-color: var(--tg-theme-bg-color, #111827);
@@ -24,41 +30,64 @@
         }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: var(--tg-text-color); background-color: var(--tg-bg-color); overflow: hidden; font-size: 15px; }
         .app-container { display: flex; flex-direction: column; height: 100vh; }
-        .chat-area { flex-grow: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column;}
+        .chat-area { flex-grow: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; scroll-behavior: smooth; }
         .message-container { animation: message-appear 0.3s ease-out; }
         @keyframes message-appear { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .message { max-width: 80%; padding: 0.4rem 0.8rem; border-radius: 1.15rem; margin-bottom: 0.5rem; word-wrap: break-word; line-height: 1.4; }
-        .user-message { background-color: var(--tg-button-color); color: var(--tg-button-text-color); align-self: flex-end; margin-left: auto; border-bottom-right-radius: 0.25rem; }
-        .bot-message { background-color: var(--tg-secondary-bg-color); align-self: flex-start; border-bottom-left-radius: 0.25rem; }
-        .loader { display: flex; align-items: center; }
-        .loader .dot { background-color: var(--tg-hint-color); width: 6px; height: 6px; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
-        .loader .dot:nth-child(1) { animation-delay: -0.32s; }
-        .loader .dot:nth-child(2) { animation-delay: -0.16s; }
+        .message { max-width: 80%; padding: 0.5rem 0.9rem; border-radius: 1.25rem; margin-bottom: 0.5rem; word-wrap: break-word; line-height: 1.4; transition: all 0.2s ease-in-out; }
+        .user-message { background-color: var(--tg-button-color); color: var(--tg-button-text-color); align-self: flex-end; margin-left: auto; border-bottom-right-radius: 0.35rem; }
+        .bot-message { background-color: var(--tg-secondary-bg-color); align-self: flex-start; border-bottom-left-radius: 0.35rem; }
+        
+        /* Стили для Markdown в сообщениях */
+        .bot-message .markdown-content pre { background-color: #111827; padding: 0.5rem; border-radius: 0.5rem; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; }
+        .bot-message .markdown-content code { background-color: #111827; padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-size: 13px; }
+        .bot-message .markdown-content pre code { background-color: transparent; padding: 0; }
+        .bot-message .markdown-content ul { padding-left: 1.25rem; list-style-type: disc; }
+        .bot-message .markdown-content ol { padding-left: 1.25rem; list-style-type: decimal; }
+        .bot-message .markdown-content p { margin: 0; }
+        .bot-message .markdown-content strong { font-weight: 600; }
+
+        .typing-indicator { display: flex; align-items: center; }
+        .typing-indicator span { background-color: var(--tg-hint-color); width: 8px; height: 8px; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
         @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+        
         .modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.6); z-index: 40; opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none; }
         .modal-overlay.visible { opacity: 1; pointer-events: auto; }
         .modal { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background-color: var(--tg-secondary-bg-color, #1f2937); border-top-left-radius: 1rem; border-top-right-radius: 1rem; transform: translateY(100%); transition: transform 0.3s ease-in-out; display: flex; flex-direction: column; }
         .modal.visible { transform: translateY(0); }
         .modal-handle { width: 36px; height: 4px; background-color: var(--tg-hint-color, #9ca3af); border-radius: 2px; margin: 6px auto; flex-shrink: 0; }
+        
         #code-modal .tab-button.active { border-bottom-color: var(--tg-button-color); color: var(--tg-text-color); }
-        #code-output { white-space: pre-wrap; word-wrap: break-word; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; }
+        
+        /* Стили для нумерации строк кода */
+        .line-numbers-table { width: 100%; border-collapse: collapse; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; }
+        .line-numbers-table td { vertical-align: top; padding: 0; }
+        .line-number { text-align: right; padding-right: 1em; color: var(--tg-hint-color); -webkit-user-select: none; user-select: none; width: 1%; }
+        .line-content { white-space: pre-wrap; word-wrap: break-word; }
+
         .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
         #animated-greeting {
-            font-size: 4.5rem;
-            font-weight: 800;
-            line-height: 1;
+            font-size: 4.5rem; font-weight: 800; line-height: 1;
             background: linear-gradient(90deg, #a855f7, #ec4899, #ef4444, #ec4899, #a855f7);
-            background-size: 200% auto;
-            color: #fff;
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            background-size: 200% auto; color: #fff; background-clip: text;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             animation: gradient-animation 5s linear infinite;
         }
         @keyframes gradient-animation { to { background-position: 200% center; } }
+        
         .progress-bar { background-color: #374151; border-radius: 9999px; }
         .progress-bar-inner { background-color: var(--tg-button-color); height: 100%; border-radius: 9999px; transition: width 0.5s ease-in-out; }
+        
+        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; }
+        .toast { background-color: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; animation: fade-in-out 3s ease-in-out; }
+        @keyframes fade-in-out { 0% { opacity: 0; transform: translateY(-20px); } 10% { opacity: 1; transform: translateY(0); } 90% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-20px); } }
+
+        /* Стили для textarea */
+        #message-input { resize: none; max-height: 120px; overflow-y: auto; }
+        #message-input::-webkit-scrollbar { display: none; } /* Скрыть скроллбар */
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -66,12 +95,12 @@
     <div id="app" class="app-container">
         <header class="flex items-center justify-between p-2 flex-shrink-0" style="background-color: var(--tg-header-bg-color);">
             <div class="flex items-center space-x-2">
-                <svg id="menu-button" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
+                <svg id="menu-button" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 cursor-pointer p-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
                 <h1 id="header-title" class="text-lg font-semibold truncate max-w-[150px]">Devtol</h1>
             </div>
             <div class="flex items-center space-x-2">
                 <div id="header-action-container">
-                     <button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">FREE</button>
+                    <button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">FREE</button>
                 </div>
                 <img id="user-photo" src="https://placehold.co/40x40/1a202c/ffffff?text=U" alt="User Avatar" class="w-7 h-7 rounded-full cursor-pointer">
             </div>
@@ -81,27 +110,30 @@
             <div id="initial-greeting" class="absolute inset-0 flex flex-col items-center justify-center text-center px-4 transition-opacity duration-300 z-10" style="background-color: var(--tg-bg-color);">
                 <h2 id="animated-greeting" class="mb-6">Привет</h2>
                 <p id="greeting-text" class="text-xl font-semibold mb-4"></p>
-                <p class="text-gray-400 max-w-md text-sm">
+                <p class="text-gray-400 max-w-md text-sm mb-6">
                     Я могу сгенерировать для вас веб-приложение с фронтендом и бэкендом, а затем опубликовать его. Просто опишите свою идею.
                 </p>
             </div>
             <div id="chat-area" class="chat-area h-full w-full absolute inset-0"></div>
         </main>
         
-        <div id="loader" class="hidden p-3"><div class="message bot-message loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+        <div id="typing-indicator-container" class="p-3 hidden"><div class="message bot-message typing-indicator"><span></span><span></span><span></span></div></div>
 
         <footer class="p-2 flex-shrink-0 relative">
-             <div class="rounded-xl p-1.5 flex items-center" style="background-color: var(--tg-secondary-bg-color);">
-                <input id="message-input" type="text" placeholder="Спросить Devtol" class="flex-grow bg-transparent focus:outline-none mx-2 text-sm">
-                <div id="action-button-container" class="flex-shrink-0">
-                     <button id="send-button" class="p-1.5 rounded-full transition-opacity">
-                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            <div class="rounded-xl p-1.5 flex items-start" style="background-color: var(--tg-secondary-bg-color);">
+                <!-- ИЗМЕНЕНО: input на textarea -->
+                <textarea id="message-input" placeholder="Спросить Devtol" class="flex-grow bg-transparent focus:outline-none mx-2 text-sm pt-1.5" rows="1"></textarea>
+                <div id="action-button-container" class="flex-shrink-0 self-end">
+                    <button id="send-button" class="p-1.5 rounded-full transition-opacity">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     </button>
                 </div>
             </div>
         </footer>
     </div>
     
+    <div id="toast-container"></div>
+
     <!-- Модальные окна -->
     <div id="modal-overlay" class="modal-overlay"></div>
     <div id="history-modal" class="modal" style="height: 90%;">
@@ -117,9 +149,7 @@
         <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
             <h2 class="text-lg font-bold">Профиль</h2>
         </div>
-        <div id="profile-content" class="p-4 overflow-y-auto">
-            <!-- Содержимое профиля будет генерироваться динамически -->
-        </div>
+        <div id="profile-content" class="p-4 overflow-y-auto"></div>
     </div>
 
     <div id="subscription-modal" class="modal" style="height: auto; max-height: 80%;">
@@ -150,16 +180,20 @@
     <div id="code-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
         <div id="code-modal-header" class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
-            <div id="code-tabs-container" class="flex items-center space-x-3 text-gray-400 text-sm overflow-x-auto">
-                <!-- Вкладки для файлов будут здесь -->
-            </div>
-            <div id="deploy-actions-container" class="flex items-center space-x-2 flex-shrink-0 ml-2">
-                <!-- Кнопки деплоя будут здесь -->
+            <div id="code-tabs-container" class="flex items-center space-x-3 text-gray-400 text-sm overflow-x-auto"></div>
+            <div class="flex items-center space-x-2 flex-shrink-0 ml-2">
+                <button id="copy-code-button" class="p-1.5 rounded-full hover:bg-gray-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                </button>
+                <div id="deploy-actions-container"></div>
             </div>
         </div>
-        <div id="code-view" class="overflow-y-auto p-3 flex-grow">
+        <div id="code-view" class="overflow-y-auto p-3 flex-grow relative">
             <div id="ai-status-container" class="mb-3 text-gray-400 space-y-1.5 text-sm"></div>
-            <pre><code id="code-output"></code></pre>
+            <!-- ИЗМЕНЕНО: Структура для нумерации строк -->
+            <table class="line-numbers-table">
+                <tbody id="code-output"></tbody>
+            </table>
         </div>
         <div id="preview-view" class="hidden flex-grow bg-white">
             <iframe id="preview-frame" class="w-full h-full border-none"></iframe>
@@ -168,11 +202,11 @@
 
     <div id="confirm-restore-modal" class="modal" style="height: auto; max-height: 40%;">
         <div class="p-4 text-center">
-            <h3 class="text-base font-bold mb-2">Восстановить эту версию?</h3>
-            <p class="text-gray-400 mb-4 text-sm">Все более новые версии в этом чате будут удалены.</p>
+            <h3 id="confirm-title" class="text-base font-bold mb-2">Восстановить эту версию?</h3>
+            <p id="confirm-text" class="text-gray-400 mb-4 text-sm">Все более новые версии в этом чате будут удалены.</p>
             <div class="flex justify-center space-x-3">
-                <button id="cancel-restore-button" class="px-5 py-2 rounded-lg bg-gray-600 text-sm">Нет</button>
-                <button id="confirm-restore-button" class="px-5 py-2 rounded-lg text-sm" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Да</button>
+                <button id="cancel-confirm-button" class="px-5 py-2 rounded-lg bg-gray-600 text-sm">Нет</button>
+                <button id="confirm-action-button" class="px-5 py-2 rounded-lg text-sm" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Да</button>
             </div>
         </div>
     </div>
@@ -195,9 +229,9 @@
             // --- Состояние приложения ---
             let localState = { user: null, chats: {} }; 
             let isGenerating = false;
-            let versionToRestore = null;
+            let currentConfirmAction = null; // НОВОЕ: для универсального модального окна подтверждения
             let activeChatId = null;
-            let currentCodeFile = 'index.html'; // НОВОЕ: отслеживаем активный файл
+            let currentCodeFile = 'index.html';
 
             // --- Элементы UI ---
             const ui = {
@@ -214,7 +248,7 @@
                 profileModal: document.getElementById('profile-modal'),
                 profileContent: document.getElementById('profile-content'),
                 codeModal: document.getElementById('code-modal'),
-                codeTabsContainer: document.getElementById('code-tabs-container'), // ИЗМЕНЕНО
+                codeTabsContainer: document.getElementById('code-tabs-container'),
                 codeView: document.getElementById('code-view'),
                 previewView: document.getElementById('preview-view'),
                 codeOutput: document.getElementById('code-output'),
@@ -223,13 +257,18 @@
                 newChatButton: document.getElementById('new-chat-button'),
                 chatList: document.getElementById('chat-list'),
                 confirmRestoreModal: document.getElementById('confirm-restore-modal'),
-                confirmRestoreButton: document.getElementById('confirm-restore-button'),
-                cancelRestoreButton: document.getElementById('cancel-restore-button'),
+                confirmTitle: document.getElementById('confirm-title'),
+                confirmText: document.getElementById('confirm-text'),
+                confirmActionButton: document.getElementById('confirm-action-button'),
+                cancelConfirmButton: document.getElementById('cancel-confirm-button'),
                 headerActionContainer: document.getElementById('header-action-container'),
                 deployActionsContainer: document.getElementById('deploy-actions-container'),
                 subscriptionModal: document.getElementById('subscription-modal'),
                 buyProButton: document.getElementById('buy-pro-button'),
                 buyUltimaButton: document.getElementById('buy-ultima-button'),
+                typingIndicator: document.getElementById('typing-indicator-container'),
+                copyCodeButton: document.getElementById('copy-code-button'),
+                toastContainer: document.getElementById('toast-container'),
             };
 
             const user = tg.initDataUnsafe.user;
@@ -337,9 +376,14 @@
                     msgContent.className = `message ${msg.sender === 'user' ? 'user-message' : 'bot-message'}`;
                     
                     if (msg.text) {
-                        const textP = document.createElement('p');
-                        textP.innerHTML = msg.text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-blue-300 underline">$1</a>');
-                        msgContent.appendChild(textP);
+                        const contentDiv = document.createElement('div');
+                        if (msg.sender === 'bot') {
+                            contentDiv.className = 'markdown-content';
+                            contentDiv.innerHTML = marked.parse(msg.text);
+                        } else {
+                            contentDiv.innerHTML = msg.text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-blue-300 underline">$1</a>');
+                        }
+                        msgContent.appendChild(contentDiv);
                     }
                     if (msg.code_version) {
                         const isLatest = msg.code_version === latestCodeVersion;
@@ -354,7 +398,7 @@
                         } else {
                             button.style.backgroundColor = '#4B5563';
                             button.style.color = 'white';
-                            button.onclick = () => showRestoreConfirmation(msg.code_version);
+                            button.onclick = () => showConfirmation('restore', msg.code_version);
                         }
                         msgContent.appendChild(button);
                     }
@@ -376,6 +420,7 @@
                         improveAiGeneration(text);
                     }
                     ui.messageInput.value = '';
+                    autoResizeInput(); // Сбросить высоту поля ввода
                     updateInputState();
                     tg.HapticFeedback.impactOccurred('light');
                 }
@@ -414,8 +459,8 @@
                         
                         const apiStatusDiv = ui.aiStatusContainer.querySelector('div:last-child');
                         if (apiStatusDiv) {
-                             apiStatusDiv.querySelector('span:last-child').textContent = 'Ошибка сети.';
-                             apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
+                                apiStatusDiv.querySelector('span:last-child').textContent = 'Ошибка сети.';
+                                apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
                         }
                         return null;
                     }
@@ -425,11 +470,14 @@
             async function runAiProcess(steps, prompt, codeObject = null) {
                 isGenerating = true;
                 updateInputState();
+                ui.typingIndicator.classList.remove('hidden');
+                ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
+
                 openModal(ui.codeModal);
-                currentCodeFile = 'index.html'; // Сбрасываем на главный файл при новой генерации
+                currentCodeFile = 'index.html';
                 renderCodeTabs();
                 switchTab(currentCodeFile);
-                ui.codeOutput.textContent = '';
+                ui.codeOutput.innerHTML = '';
                 ui.aiStatusContainer.innerHTML = '';
                 
                 for (const step of steps) {
@@ -448,6 +496,8 @@
                 
                 let generatedCodeObject = await callGeminiAPI(prompt, codeObject);
                 
+                ui.typingIndicator.classList.add('hidden');
+
                 if (!generatedCodeObject || !generatedCodeObject['index.html']) {
                     isGenerating = false;
                     updateInputState();
@@ -484,10 +534,10 @@
                 activeChat.codeHistory.push({ version: newVersion, code: codeObject });
                 
                 renderCodeTabs();
-                displayCodeFile(currentCodeFile); // Отображаем текущий файл
+                displayCodeFile(currentCodeFile);
                 
                 setTimeout(() => {
-                    switchTab('preview'); // Переключаемся на превью после генерации
+                    switchTab('preview');
                     addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
                     isGenerating = false;
                     updateInputState();
@@ -495,7 +545,6 @@
                 }, 500);
             }
             
-            // НОВАЯ ФУНКЦИЯ: Рендерит вкладки для файлов кода
             function renderCodeTabs() {
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat || activeChat.codeHistory.length === 0) {
@@ -504,7 +553,6 @@
                 }
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
                 const files = Object.keys(latestCodeObject);
-                // Добавляем вкладку Preview
                 files.push('preview');
 
                 ui.codeTabsContainer.innerHTML = files.map(file => `
@@ -518,19 +566,32 @@
                 });
             }
             
-            // НОВАЯ ФУНКЦИЯ: Отображает содержимое конкретного файла
             function displayCodeFile(fileName) {
-                 const activeChat = localState.chats[activeChatId];
+                const activeChat = localState.chats[activeChatId];
                 if (!activeChat || activeChat.codeHistory.length === 0) return;
                 
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
-                ui.codeOutput.textContent = latestCodeObject[fileName] || `// Файл ${fileName} не найден.`;
+                const codeContent = latestCodeObject[fileName] || `// Файл ${fileName} не найден.`;
+                
+                // Создаем временный элемент для подсветки
+                const tempCode = document.createElement('code');
+                tempCode.textContent = codeContent;
+                const language = fileName.split('.').pop();
+                tempCode.className = `language-${language}`;
+                hljs.highlightElement(tempCode);
+
+                // Разбиваем подсвеченный HTML на строки и добавляем в таблицу
+                const highlightedHtml = tempCode.innerHTML;
+                ui.codeOutput.innerHTML = highlightedHtml.split('\n').map((line, i) => {
+                    return `<tr><td class="line-number">${i + 1}</td><td class="line-content">${line || ' '}</td></tr>`;
+                }).join('');
+
                 currentCodeFile = fileName;
 
-                // Обновляем активную вкладку
                 ui.codeTabsContainer.querySelectorAll('.tab-button').forEach(tab => {
                     tab.classList.toggle('active', tab.dataset.tab === fileName);
                 });
+                ui.copyCodeButton.style.display = 'block';
             }
 
             function switchTab(tabName) {
@@ -542,13 +603,13 @@
                     ui.previewFrame.srcdoc = latestCode;
                     ui.codeView.classList.add('hidden');
                     ui.previewView.classList.remove('hidden');
+                    ui.copyCodeButton.style.display = 'none';
                 } else {
-                    displayCodeFile(tabName); // Отображаем код выбранного файла
+                    displayCodeFile(tabName);
                     ui.codeView.classList.remove('hidden');
                     ui.previewView.classList.add('hidden');
                 }
                 
-                // Обновляем активную вкладку
                 ui.codeTabsContainer.querySelectorAll('.tab-button').forEach(tab => {
                     tab.classList.toggle('active', tab.dataset.tab === tabName);
                 });
@@ -559,7 +620,7 @@
                 const codeHistoryItem = activeChat.codeHistory.find(h => h.version === version);
                 if (!codeHistoryItem) return;
                 
-                currentCodeFile = 'index.html'; // Всегда начинаем с index.html
+                currentCodeFile = 'index.html';
                 renderCodeTabs();
                 updateDeployActions();
                 openModal(ui.codeModal);
@@ -603,12 +664,17 @@
             }
 
             async function switchChat(chatId) {
+                if (activeChatId === chatId) {
+                    closeModal();
+                    return;
+                }
                 activeChatId = chatId;
                 ui.messageInput.value = '';
                 await loadActiveChatDetails();
                 renderMessages();
                 updateHeader();
                 updateInputState();
+                autoResizeInput();
                 closeModal();
             }
 
@@ -617,19 +683,62 @@
                 const chats = Object.values(localState.chats).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                 chats.forEach(chat => {
                     const chatDiv = document.createElement('div');
-                    chatDiv.className = `p-2.5 rounded-lg cursor-pointer ${chat.id === activeChatId ? 'bg-gray-800' : 'hover:bg-gray-800'}`;
-                    chatDiv.innerHTML = `<p class="font-semibold truncate text-sm">${chat.title || 'Новый чат'}</p>`;
-                    chatDiv.onclick = () => switchChat(chat.id);
+                    chatDiv.className = `p-2.5 rounded-lg flex justify-between items-center group transition-colors ${chat.id === activeChatId ? 'bg-gray-800' : 'hover:bg-gray-800'}`;
+                    
+                    const titleP = document.createElement('p');
+                    titleP.className = 'font-semibold truncate text-sm cursor-pointer flex-grow';
+                    titleP.textContent = chat.title || 'Новый чат';
+                    titleP.onclick = () => switchChat(chat.id);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'ml-2 p-1 rounded-full hover:bg-red-500/20 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity';
+                    deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        showConfirmation('deleteChat', chat.id);
+                    };
+
+                    chatDiv.appendChild(titleP);
+                    // Не даем удалить последний чат
+                    if (chats.length > 1) {
+                        chatDiv.appendChild(deleteBtn);
+                    }
+                    
                     ui.chatList.appendChild(chatDiv);
                 });
             }
 
-            function showRestoreConfirmation(version) {
-                versionToRestore = version;
+            function showConfirmation(action, data) {
+                currentConfirmAction = { action, data };
+                if (action === 'restore') {
+                    ui.confirmTitle.textContent = 'Восстановить эту версию?';
+                    ui.confirmText.textContent = 'Все более новые версии в этом чате будут удалены.';
+                    ui.confirmActionButton.textContent = 'Да';
+                    ui.confirmActionButton.style.backgroundColor = 'var(--tg-button-color)';
+                } else if (action === 'deleteChat') {
+                    ui.confirmTitle.textContent = 'Удалить этот чат?';
+                    ui.confirmText.textContent = 'Это действие нельзя будет отменить.';
+                    ui.confirmActionButton.textContent = 'Удалить';
+                    ui.confirmActionButton.style.backgroundColor = '#ef4444'; // Red color
+                }
                 openModal(ui.confirmRestoreModal);
             }
 
-            async function confirmRestore() {
+            async function handleConfirm() {
+                if (!currentConfirmAction) return;
+                const { action, data } = currentConfirmAction;
+
+                if (action === 'restore') {
+                    await confirmRestore(data);
+                } else if (action === 'deleteChat') {
+                    await deleteChat(data);
+                }
+
+                currentConfirmAction = null;
+                closeModal();
+            }
+
+            async function confirmRestore(versionToRestore) {
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat || versionToRestore === null) return;
                 
@@ -649,8 +758,27 @@
                 if(lastValidMessageIndex > -1) activeChat.messages.splice(lastValidMessageIndex + 1);
                 
                 renderMessages();
-                closeModal();
-                versionToRestore = null;
+            }
+
+            async function deleteChat(chatIdToDelete) {
+                const { error } = await supabaseClient.from('chats').delete().eq('id', chatIdToDelete);
+                if (error) {
+                    console.error("Ошибка удаления чата:", error);
+                    tg.showAlert("Не удалось удалить чат.");
+                    return;
+                }
+                delete localState.chats[chatIdToDelete];
+                
+                if (activeChatId === chatIdToDelete) {
+                    const remainingChats = Object.values(localState.chats).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    const newActiveChatId = remainingChats.length > 0 ? remainingChats[0].id : null;
+                    if (newActiveChatId) {
+                        await switchChat(newActiveChatId);
+                    } else {
+                        await createNewChat(true); // Создаем новый, если все удалены
+                    }
+                }
+                renderChatList();
             }
 
             function updateHeader() {
@@ -682,7 +810,7 @@
                     } else if (chat.is_deploying) {
                         buttonsHTML = `<button class="text-xs font-bold px-2.5 py-1 rounded-full flex items-center" style="background-color: var(--tg-secondary-bg-color);" disabled><div class="spinner mr-1.5"></div>Деплой...</button>`;
                     } else {
-                         buttonsHTML = `<button id="deploy-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Деплой</button>`;
+                        buttonsHTML = `<button id="deploy-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Деплой</button>`;
                     }
                 }
                 ui.deployActionsContainer.innerHTML = buttonsHTML;
@@ -696,7 +824,6 @@
                 if (openDeployBtn) openDeployBtn.onclick = () => tg.openLink(chat.deploy_url);
             }
             
-            // ИЗМЕНЕНО: Новая функция деплоя
             async function deployApp() {
                 const chat = localState.chats[activeChatId];
                 if (!chat || chat.codeHistory.length === 0) {
@@ -711,12 +838,10 @@
 
                 try {
                     const latestCodeObject = chat.codeHistory.slice(-1)[0].code;
-                    // Вызываем новую облачную функцию, которая умеет деплоить и фронт, и бэк
                     const { data, error } = await supabaseClient.functions.invoke('deploy-full-app', { 
                         body: { 
                             codeObject: latestCodeObject, 
                             netlifySiteId: chat.netlify_site_id,
-                            // Передаем ID чата, чтобы назвать бэкенд-функцию уникально
                             chatId: activeChatId 
                         } 
                     });
@@ -783,7 +908,7 @@
                                 <div class="progress-bar h-2 w-full"><div class="progress-bar-inner" style="width: ${chatPercentage}%;"></div></div>
                             </div>
                         </div>
-                         <button id="upgrade-plan-button" class="w-full mt-4 text-center py-2 rounded-lg font-semibold text-sm" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Улучшить план</button>
+                        <button id="upgrade-plan-button" class="w-full mt-4 text-center py-2 rounded-lg font-semibold text-sm" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Улучшить план</button>
                     </div>
                     <div class="mt-6">
                         <h4 class="font-bold mb-3">Мои приложения</h4>
@@ -793,16 +918,55 @@
                 document.getElementById('upgrade-plan-button').onclick = openSubscriptionModal;
             }
             
+            function showToast(message) {
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.textContent = message;
+                ui.toastContainer.appendChild(toast);
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            }
+
+            function copyCode() {
+                const codeToCopy = Array.from(ui.codeOutput.querySelectorAll('.line-content')).map(td => td.textContent).join('\n');
+                const textArea = document.createElement('textarea');
+                textArea.value = codeToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('Код скопирован!');
+                    tg.HapticFeedback.notificationOccurred('success');
+                } catch (err) {
+                    showToast('Ошибка при копировании');
+                    console.error('Fallback: Oops, unable to copy', err);
+                }
+                document.body.removeChild(textArea);
+            }
+
+            function autoResizeInput() {
+                const input = ui.messageInput;
+                input.style.height = 'auto';
+                input.style.height = (input.scrollHeight) + 'px';
+            }
+
             function setupEventListeners() {
-                ui.messageInput.addEventListener('keypress', e => e.key === 'Enter' && sendMessage());
-                ui.messageInput.addEventListener('input', updateInputState);
+                ui.messageInput.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+                });
+                ui.messageInput.addEventListener('input', autoResizeInput);
                 ui.sendButton.addEventListener('click', sendMessage);
                 ui.menuButton.addEventListener('click', () => { renderChatList(); openModal(ui.historyModal); });
                 ui.newChatButton.addEventListener('click', () => createNewChat(false));
                 ui.userPhoto.addEventListener('click', openProfileModal);
                 ui.modalOverlay.addEventListener('click', closeModal);
-                ui.confirmRestoreButton.addEventListener('click', confirmRestore);
-                ui.cancelRestoreButton.addEventListener('click', closeModal);
+                ui.confirmActionButton.addEventListener('click', handleConfirm);
+                ui.cancelConfirmButton.addEventListener('click', closeModal);
+                ui.copyCodeButton.addEventListener('click', copyCode);
                 
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.subscriptionModal].forEach(modal => {
                     if (modal) {
@@ -852,6 +1016,7 @@
                 updateInputState();
                 updateHeader();
                 renderMessages();
+                autoResizeInput();
             }
 
             initApp();

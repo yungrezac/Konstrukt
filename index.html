@@ -389,30 +389,36 @@
                 ui.sendButton.classList.toggle('cursor-not-allowed', ui.sendButton.disabled);
             }
 
-            // ИЗМЕНЕНИЕ: Добавлен механизм повторных попыток и улучшенное сообщение об ошибке
-            async function callGeminiAPI(prompt, retries = 3, delay = 1000) {
+            // ИЗМЕНЕНИЕ: Функция теперь принимает codeObject
+            async function callGeminiAPI(prompt, codeObject = null, retries = 3, delay = 1000) {
                 try {
-                    const { data, error } = await supabaseClient.functions.invoke('generate-code', { body: { prompt } });
-                    if (error) throw error; 
+                    const body = { prompt };
+                    if (codeObject) {
+                        body.codeObject = codeObject;
+                    }
+                    const { data, error } = await supabaseClient.functions.invoke('generate-code', { 
+                        body: body 
+                    });
+
+                    if (error) throw error;
                     if (data.error) throw new Error(data.error);
                     return data;
                 } catch (error) {
                     if (retries > 0) {
                         console.log(`Ошибка API, пробую снова... Осталось попыток: ${retries - 1}. Задержка: ${delay}ms`);
                         await new Promise(resolve => setTimeout(resolve, delay));
-                        return callGeminiAPI(prompt, retries - 1, delay * 2); // Экспоненциальная задержка
+                        return callGeminiAPI(prompt, codeObject, retries - 1, delay * 2);
                     } else {
                         console.error("Ошибка вызова функции Supabase (generate-code) после всех попыток:", error.message);
                         const userFriendlyError = "Не удалось связаться с AI после нескольких попыток. Проверьте ваше интернет-соединение или попробуйте позже.";
                         addMessage(`❌ ${userFriendlyError}`, 'bot');
                         
-                        // Обновляем статус в модальном окне, чтобы показать ошибку
                         const apiStatusDiv = ui.aiStatusContainer.querySelector('div:last-child');
                         if (apiStatusDiv) {
                              apiStatusDiv.querySelector('span:last-child').textContent = 'Ошибка сети.';
                              apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
                         }
-                        return null; // Возвращаем null для обозначения сбоя
+                        return null;
                     }
                 }
             }
@@ -421,7 +427,8 @@
                 return codeObject['index.html'] || 'Код не найден.';
             }
 
-            async function runAiProcess(steps, prompt) {
+            // ИЗМЕНЕНИЕ: Функция теперь принимает codeObject
+            async function runAiProcess(steps, prompt, codeObject = null) {
                 isGenerating = true;
                 updateInputState();
                 openModal(ui.codeModal);
@@ -443,9 +450,8 @@
                 apiStatusDiv.innerHTML = '<span><div class="spinner"></div></span><span>Отправка запроса в AI...</span>';
                 ui.aiStatusContainer.appendChild(apiStatusDiv);
                 
-                let generatedCodeObject = await callGeminiAPI(prompt);
+                let generatedCodeObject = await callGeminiAPI(prompt, codeObject);
                 
-                // ИЗМЕНЕНИЕ: Обработка случая, когда API возвращает null после всех попыток
                 if (!generatedCodeObject || !generatedCodeObject['index.html']) {
                     isGenerating = false;
                     updateInputState();
@@ -460,20 +466,18 @@
             }
 
             function initiateAiGeneration(prompt) {
-                localState.chats[activeChatId].mode = 'html';
-                const fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}". Ответ в JSON: { "index.html": "..." }. Используй Tailwind CSS. Приложение должно быть полностью функциональным, красивым, минималистичным и адаптированным для мобильных устройств.`;
-                runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], fullPrompt);
+                runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], prompt);
             }
 
+            // ИЗМЕНЕНИЕ: Функция теперь передает и промпт, и код
             function improveAiGeneration(prompt) {
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat || activeChat.codeHistory.length === 0) {
-                    initiateAiGeneration(prompt); return;
+                    initiateAiGeneration(prompt); 
+                    return;
                 }
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
-                const codeString = JSON.stringify(latestCodeObject, null, 2);
-                const fullPrompt = `Ты - эксперт по HTML и Tailwind CSS. Вот существующий код приложения в формате JSON:\n\n${codeString}\n\nВнеси следующее улучшение: "${prompt}". Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлом index.html.`;
-                runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], fullPrompt);
+                runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], prompt, latestCodeObject);
             }
 
             async function typeCode(codeObject, formattedCode) {

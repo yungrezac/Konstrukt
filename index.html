@@ -147,7 +147,6 @@
         </div>
     </div>
 
-    <!-- ИЗМЕНЕНИЕ: Модальное окно для кода и предпросмотра -->
     <div id="code-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
         <div id="code-modal-header" class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
@@ -159,12 +158,10 @@
                 <!-- Кнопки деплоя будут здесь -->
             </div>
         </div>
-        <!-- Вкладка с кодом -->
         <div id="code-view" class="overflow-y-auto p-3 flex-grow">
             <div id="ai-status-container" class="mb-3 text-gray-400 space-y-1.5 text-sm"></div>
             <pre><code id="code-output"></code></pre>
         </div>
-        <!-- ИЗМЕНЕНИЕ: Вкладка с предпросмотром теперь внутри модального окна -->
         <div id="preview-view" class="hidden flex-grow bg-white">
             <iframe id="preview-frame" class="w-full h-full border-none"></iframe>
         </div>
@@ -392,20 +389,31 @@
                 ui.sendButton.classList.toggle('cursor-not-allowed', ui.sendButton.disabled);
             }
 
-            async function callGeminiAPI(prompt) {
+            // ИЗМЕНЕНИЕ: Добавлен механизм повторных попыток и улучшенное сообщение об ошибке
+            async function callGeminiAPI(prompt, retries = 3, delay = 1000) {
                 try {
                     const { data, error } = await supabaseClient.functions.invoke('generate-code', { body: { prompt } });
-                    if (error) throw error;
+                    if (error) throw error; 
                     if (data.error) throw new Error(data.error);
                     return data;
                 } catch (error) {
-                    console.error("Ошибка вызова функции Supabase (generate-code):", error.message);
-                    const errorMsg = "Ошибка конфигурации API.";
-                    addMessage(`❌ ${errorMsg}`, 'bot');
-                    isGenerating = false;
-                    updateInputState();
-                    closeModal();
-                    return { "index.html": `<!-- ${errorMsg} -->` };
+                    if (retries > 0) {
+                        console.log(`Ошибка API, пробую снова... Осталось попыток: ${retries - 1}. Задержка: ${delay}ms`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return callGeminiAPI(prompt, retries - 1, delay * 2); // Экспоненциальная задержка
+                    } else {
+                        console.error("Ошибка вызова функции Supabase (generate-code) после всех попыток:", error.message);
+                        const userFriendlyError = "Не удалось связаться с AI после нескольких попыток. Проверьте ваше интернет-соединение или попробуйте позже.";
+                        addMessage(`❌ ${userFriendlyError}`, 'bot');
+                        
+                        // Обновляем статус в модальном окне, чтобы показать ошибку
+                        const apiStatusDiv = ui.aiStatusContainer.querySelector('div:last-child');
+                        if (apiStatusDiv) {
+                             apiStatusDiv.querySelector('span:last-child').textContent = 'Ошибка сети.';
+                             apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
+                        }
+                        return null; // Возвращаем null для обозначения сбоя
+                    }
                 }
             }
             
@@ -437,9 +445,8 @@
                 
                 let generatedCodeObject = await callGeminiAPI(prompt);
                 
-                if (!generatedCodeObject['index.html']) {
-                    apiStatusDiv.querySelector('span:last-child').textContent = 'Ошибка генерации кода.';
-                    apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
+                // ИЗМЕНЕНИЕ: Обработка случая, когда API возвращает null после всех попыток
+                if (!generatedCodeObject || !generatedCodeObject['index.html']) {
                     isGenerating = false;
                     updateInputState();
                     return;
@@ -478,7 +485,7 @@
 
                 activeChat.codeHistory.push({ version: newVersion, code: codeObject });
                 
-                ui.codeOutput.textContent = formattedCode; // Показываем код сразу
+                ui.codeOutput.textContent = formattedCode;
                 
                 setTimeout(() => {
                     switchTab('preview');
@@ -489,7 +496,6 @@
                 }, 500);
             }
 
-            // ИЗМЕНЕНИЕ: Упрощенная функция переключения вкладок
             function switchTab(tabName) {
                 ui.codeTabs.querySelectorAll('.tab-button').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
                 const isPreview = tabName === 'preview';
@@ -514,7 +520,6 @@
                 ui.codeOutput.textContent = formatCodeForDisplay(codeObject);
                 updateDeployActions();
                 openModal(ui.codeModal);
-                // Переключаемся на нужную вкладку ПОСЛЕ открытия модального окна
                 switchTab(switchToPreview ? 'preview' : 'code');
             }
 

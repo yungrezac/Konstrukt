@@ -10,6 +10,8 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- Подключение Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- JSZip (для функции деплоя) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --tg-bg-color: var(--tg-theme-bg-color, #111827);
@@ -28,6 +30,11 @@
         .message { max-width: 80%; padding: 0.4rem 0.8rem; border-radius: 1.15rem; margin-bottom: 0.5rem; word-wrap: break-word; line-height: 1.4; }
         .user-message { background-color: var(--tg-button-color); color: var(--tg-button-text-color); align-self: flex-end; margin-left: auto; border-bottom-right-radius: 0.25rem; }
         .bot-message { background-color: var(--tg-secondary-bg-color); align-self: flex-start; border-bottom-left-radius: 0.25rem; }
+        .loader { display: flex; align-items: center; }
+        .loader .dot { background-color: var(--tg-hint-color); width: 6px; height: 6px; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
+        .loader .dot:nth-child(1) { animation-delay: -0.32s; }
+        .loader .dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
         .modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.6); z-index: 40; opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none; }
         .modal-overlay.visible { opacity: 1; pointer-events: auto; }
         .modal { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background-color: var(--tg-secondary-bg-color, #1f2937); border-top-left-radius: 1rem; border-top-right-radius: 1rem; transform: translateY(100%); transition: transform 0.3s ease-in-out; display: flex; flex-direction: column; }
@@ -81,6 +88,8 @@
             <div id="chat-area" class="chat-area h-full w-full absolute inset-0"></div>
         </main>
         
+        <div id="loader" class="hidden p-3"><div class="message bot-message loader"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+
         <footer class="p-2 flex-shrink-0 relative">
              <div class="rounded-xl p-1.5 flex items-center" style="background-color: var(--tg-secondary-bg-color);">
                 <input id="message-input" type="text" placeholder="Спросить Devtol" class="flex-grow bg-transparent focus:outline-none mx-2 text-sm">
@@ -138,6 +147,7 @@
         </div>
     </div>
 
+    <!-- ИЗМЕНЕНИЕ: Модальное окно для кода и предпросмотра -->
     <div id="code-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
         <div id="code-modal-header" class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
@@ -149,16 +159,12 @@
                 <!-- Кнопки деплоя будут здесь -->
             </div>
         </div>
+        <!-- Вкладка с кодом -->
         <div id="code-view" class="overflow-y-auto p-3 flex-grow">
-            <!-- УЛУЧШЕНИЕ: Контейнер для статуса и прогресса генерации -->
-            <div id="generation-progress-container" class="hidden mb-3 p-3 rounded-lg bg-gray-800 text-sm">
-                <div id="ai-status-container" class="space-y-2"></div>
-                <div class="w-full bg-gray-700 rounded-full h-1.5 mt-3">
-                    <div id="generation-progress-bar" class="bg-purple-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
-                </div>
-            </div>
-            <pre><code id="code-output" class="language-html"></code></pre>
+            <div id="ai-status-container" class="mb-3 text-gray-400 space-y-1.5 text-sm"></div>
+            <pre><code id="code-output"></code></pre>
         </div>
+        <!-- ИЗМЕНЕНИЕ: Вкладка с предпросмотром теперь внутри модального окна -->
         <div id="preview-view" class="hidden flex-grow bg-white">
             <iframe id="preview-frame" class="w-full h-full border-none"></iframe>
         </div>
@@ -216,9 +222,7 @@
                 previewView: document.getElementById('preview-view'),
                 codeOutput: document.getElementById('code-output'),
                 previewFrame: document.getElementById('preview-frame'),
-                generationProgressContainer: document.getElementById('generation-progress-container'),
                 aiStatusContainer: document.getElementById('ai-status-container'),
-                generationProgressBar: document.getElementById('generation-progress-bar'),
                 newChatButton: document.getElementById('new-chat-button'),
                 chatList: document.getElementById('chat-list'),
                 confirmRestoreModal: document.getElementById('confirm-restore-modal'),
@@ -368,8 +372,12 @@
                 const text = ui.messageInput.value.trim();
                 if (text) {
                     addMessage(text, 'user');
-                    // УЛУЧШЕНИЕ: Единая точка входа для генерации
-                    handleAiGenerationRequest(text);
+                    const activeChat = localState.chats[activeChatId];
+                    if (activeChat.codeHistory.length === 0) { 
+                        initiateAiGeneration(text);
+                    } else {
+                        improveAiGeneration(text);
+                    }
                     ui.messageInput.value = '';
                     updateInputState();
                     tg.HapticFeedback.impactOccurred('light');
@@ -384,25 +392,27 @@
                 ui.sendButton.classList.toggle('cursor-not-allowed', ui.sendButton.disabled);
             }
 
-            // УЛУЧШЕНИЕ: Более надежный вызов API с обработкой ошибок
             async function callGeminiAPI(prompt) {
                 try {
                     const { data, error } = await supabaseClient.functions.invoke('generate-code', { body: { prompt } });
-                    if (error) throw new Error(`Network error: ${error.message}`);
-                    if (data.error) throw new Error(`API error: ${data.error}`);
-                    if (!data['index.html']) throw new Error('AI returned invalid or empty code.');
+                    if (error) throw error;
+                    if (data.error) throw new Error(data.error);
                     return data;
                 } catch (error) {
                     console.error("Ошибка вызова функции Supabase (generate-code):", error.message);
-                    throw error; // Пробрасываем ошибку дальше для обработки в UI
+                    const errorMsg = "Ошибка конфигурации API.";
+                    addMessage(`❌ ${errorMsg}`, 'bot');
+                    isGenerating = false;
+                    updateInputState();
+                    closeModal();
+                    return { "index.html": `<!-- ${errorMsg} -->` };
                 }
             }
             
             function formatCodeForDisplay(codeObject) {
-                return codeObject['index.html'] || '<!-- Код не найден. -->';
+                return codeObject['index.html'] || 'Код не найден.';
             }
 
-            // УЛУЧШЕНИЕ: Более информативный и динамичный процесс генерации
             async function runAiProcess(steps, prompt) {
                 isGenerating = true;
                 updateInputState();
@@ -410,131 +420,76 @@
                 switchTab('code');
                 ui.codeOutput.textContent = '';
                 ui.aiStatusContainer.innerHTML = '';
-                ui.generationProgressContainer.classList.remove('hidden');
-                ui.generationProgressBar.style.width = '0%';
-
-                try {
-                    for (let i = 0; i < steps.length; i++) {
-                        const step = steps[i];
-                        const statusDiv = document.createElement('div');
-                        statusDiv.className = 'flex items-center space-x-2 text-gray-400';
-                        statusDiv.innerHTML = `<span><div class="spinner"></div></span><span>${step}</span>`;
-                        ui.aiStatusContainer.appendChild(statusDiv);
-                        
-                        // Имитация прогресса
-                        await new Promise(resolve => setTimeout(resolve, 700));
-                        
-                        statusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
-                        statusDiv.classList.remove('text-gray-400');
-                        ui.generationProgressBar.style.width = `${((i + 1) / (steps.length + 1)) * 100}%`;
-                    }
-                    
-                    const apiStatusDiv = ui.aiStatusContainer.children[ui.aiStatusContainer.children.length - 1];
-                    apiStatusDiv.querySelector('span:last-child').textContent = 'Генерация кода...';
-
-                    const generatedCodeObject = await callGeminiAPI(prompt);
-                    
-                    apiStatusDiv.querySelector('span:last-child').textContent = 'Код сгенерирован!';
-                    ui.generationProgressBar.style.width = '100%';
-
-                    await saveAndDisplayCode(generatedCodeObject);
-
-                } catch (error) {
-                    const errorMsg = "Произошла ошибка при генерации. Попробуйте еще раз.";
-                    addMessage(`❌ ${errorMsg}`, 'bot');
-                    
-                    // Обновляем UI в модальном окне, чтобы показать ошибку
-                    const lastStatus = ui.aiStatusContainer.querySelector('div:last-child');
-                    if (lastStatus) {
-                        lastStatus.querySelector('.spinner, .✅').parentElement.innerHTML = '❌';
-                        lastStatus.querySelector('span:last-child').textContent = error.message;
-                    }
-                    
+                
+                for (const step of steps) {
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = 'flex items-center space-x-2';
+                    statusDiv.innerHTML = `<span><div class="spinner"></div></span><span>${step}</span>`;
+                    ui.aiStatusContainer.appendChild(statusDiv);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    statusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
+                }
+                
+                const apiStatusDiv = document.createElement('div');
+                apiStatusDiv.className = 'flex items-center space-x-2';
+                apiStatusDiv.innerHTML = '<span><div class="spinner"></div></span><span>Отправка запроса в AI...</span>';
+                ui.aiStatusContainer.appendChild(apiStatusDiv);
+                
+                let generatedCodeObject = await callGeminiAPI(prompt);
+                
+                if (!generatedCodeObject['index.html']) {
+                    apiStatusDiv.querySelector('span:last-child').textContent = 'Ошибка генерации кода.';
+                    apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
                     isGenerating = false;
                     updateInputState();
-                    // Не закрываем модальное окно, чтобы пользователь видел ошибку
+                    return;
                 }
+
+                apiStatusDiv.querySelector('span:last-child').textContent = 'Получение ответа...';
+                apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
+                
+                const formattedCode = formatCodeForDisplay(generatedCodeObject);
+                typeCode(generatedCodeObject, formattedCode);
             }
 
-            // УЛУЧШЕНИЕ: Единая функция для обработки запросов к AI
-            function handleAiGenerationRequest(userPrompt) {
+            function initiateAiGeneration(prompt) {
+                localState.chats[activeChatId].mode = 'html';
+                const fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}". Ответ в JSON: { "index.html": "..." }. Используй Tailwind CSS. Приложение должно быть полностью функциональным, красивым, минималистичным и адаптированным для мобильных устройств.`;
+                runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], fullPrompt);
+            }
+
+            function improveAiGeneration(prompt) {
                 const activeChat = localState.chats[activeChatId];
-                const isInitialGeneration = activeChat.codeHistory.length === 0;
-
-                let prompt;
-                let steps;
-
-                if (isInitialGeneration) {
-                    prompt = `Ты — эксперт по созданию веб-приложений. Создай одностраничное HTML-приложение на основе следующего запроса: "${userPrompt}".
-                    
-                    Требования:
-                    1.  Весь код должен быть в одном файле \`index.html\`.
-                    2.  Используй Tailwind CSS для стилизации (<script src="https://cdn.tailwindcss.com"></script>).
-                    3.  Приложение должно быть красивым, современным, минималистичным и полностью адаптивным для мобильных устройств.
-                    4.  Добавь мета-тег viewport для корректного отображения на мобильных.
-                    5.  Весь JS-код должен быть внутри тега <script> в конце body.
-                    
-                    Ответ верни СТРОГО в формате JSON: \`{ "index.html": "..." }\`. Никакого текста до или после JSON.`;
-                    steps = ["Анализ запроса...", "Проектирование структуры...", "Подготовка к генерации..."];
-                } else {
-                    const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
-                    const codeString = JSON.stringify(latestCodeObject, null, 2);
-                    // УЛУЧШЕНИЕ: Передаем всю историю сообщений для лучшего контекста
-                    const conversationHistory = activeChat.messages
-                        .map(m => `${m.sender === 'user' ? 'Пользователь' : 'AI'}: ${m.text || '[сгенерирован код]'}`)
-                        .join('\n');
-
-                    prompt = `Ты — эксперт по созданию веб-приложений. Вот текущий код приложения в формате JSON:
-                    \`\`\`json
-                    ${codeString}
-                    \`\`\`
-                    
-                    Вот история нашего диалога:
-                    \`\`\`
-                    ${conversationHistory}
-                    \`\`\`
-
-                    Внеси следующее изменение в код на основе последнего запроса пользователя: "${userPrompt}".
-                    
-                    Важно:
-                    1.  Проанализируй весь диалог, чтобы понять полный контекст задачи.
-                    2.  Верни ПОЛНЫЙ обновленный код всего приложения.
-                    3.  Ответ должен быть СТРОГО в формате JSON: \`{ "index.html": "..." }\`. Никакого текста до или после JSON.`;
-                    steps = [`Анализ правки: "${userPrompt}"`, "Применение изменений...", "Пересборка кода..."];
+                if (!activeChat || activeChat.codeHistory.length === 0) {
+                    initiateAiGeneration(prompt); return;
                 }
-
-                runAiProcess(steps, prompt);
+                const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
+                const codeString = JSON.stringify(latestCodeObject, null, 2);
+                const fullPrompt = `Ты - эксперт по HTML и Tailwind CSS. Вот существующий код приложения в формате JSON:\n\n${codeString}\n\nВнеси следующее улучшение: "${prompt}". Ответ должен содержать ТОЛЬКО полный и обновленный JSON с файлом index.html.`;
+                runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], fullPrompt);
             }
 
-            // УЛУЧШЕНИЕ: Отдельная функция для сохранения и отображения кода
-            async function saveAndDisplayCode(codeObject) {
+            async function typeCode(codeObject, formattedCode) {
                 const activeChat = localState.chats[activeChatId];
                 const newVersion = activeChat.codeHistory.length + 1;
                 
                 const { error } = await supabaseClient.from('code_history').insert({ chat_id: activeChatId, version: newVersion, code_object: codeObject });
-                if (error) { 
-                    console.error("Ошибка сохранения истории кода:", error);
-                    addMessage("❌ Не удалось сохранить новую версию кода.", 'bot');
-                    return; 
-                }
+                if (error) { console.error("Ошибка сохранения истории кода:", error); return; }
 
                 activeChat.codeHistory.push({ version: newVersion, code: codeObject });
                 
-                const formattedCode = formatCodeForDisplay(codeObject);
-                ui.codeOutput.textContent = formattedCode;
+                ui.codeOutput.textContent = formattedCode; // Показываем код сразу
                 
-                // Плавное завершение
                 setTimeout(() => {
-                    ui.generationProgressContainer.classList.add('hidden');
                     switchTab('preview');
-                    addMessage("Готово! Приложение обновлено. Вы можете его опубликовать.", 'bot', newVersion);
+                    addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
                     isGenerating = false;
                     updateInputState();
                     updateDeployActions();
-                    tg.HapticFeedback.notificationOccurred('success');
-                }, 1000);
+                }, 500);
             }
 
+            // ИЗМЕНЕНИЕ: Упрощенная функция переключения вкладок
             function switchTab(tabName) {
                 ui.codeTabs.querySelectorAll('.tab-button').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
                 const isPreview = tabName === 'preview';
@@ -557,9 +512,9 @@
                 if (!codeHistoryItem) return;
                 const codeObject = codeHistoryItem.code;
                 ui.codeOutput.textContent = formatCodeForDisplay(codeObject);
-                ui.generationProgressContainer.classList.add('hidden'); // Скрываем прогресс при просмотре старых версий
                 updateDeployActions();
                 openModal(ui.codeModal);
+                // Переключаемся на нужную вкладку ПОСЛЕ открытия модального окна
                 switchTab(switchToPreview ? 'preview' : 'code');
             }
 
@@ -694,11 +649,91 @@
             }
             
             async function deployToNetlify() {
-                // Эта функция остается без изменений
+                const chat = localState.chats[activeChatId];
+                if (!chat || chat.codeHistory.length === 0) {
+                    addMessage('Ошибка: не найден код для деплоя.', 'bot');
+                    return;
+                }
+
+                chat.is_deploying = true;
+                await supabaseClient.from('chats').update({ is_deploying: true }).eq('id', activeChatId);
+                updateDeployActions();
+                addMessage(`Начинаю деплой проекта...`, 'bot');
+
+                try {
+                    const latestCodeObject = chat.codeHistory.slice(-1)[0].code;
+                    const { data, error } = await supabaseClient.functions.invoke('deploy-to-netlify', { body: { codeObject: latestCodeObject, netlifySiteId: chat.netlify_site_id } });
+                    if (error) throw error;
+                    if (data.error) throw new Error(data.error);
+
+                    const { deploy_url, netlify_site_id } = data;
+                    chat.deploy_url = deploy_url;
+                    chat.netlify_site_id = netlify_site_id;
+                    chat.is_deploying = false;
+                    await supabaseClient.from('chats').update({ deploy_url: deploy_url, netlify_site_id: netlify_site_id, is_deploying: false }).eq('id', activeChatId);
+                    
+                    addMessage(`✅ Успех! Ваш сайт доступен по адресу: ${deploy_url}`, 'bot');
+                    tg.HapticFeedback.notificationOccurred('success');
+                    updateDeployActions();
+
+                } catch (error) {
+                    console.error('Ошибка деплоя:', error);
+                    addMessage(`❌ Ошибка деплоя: ${error.message}`, 'bot');
+                    tg.HapticFeedback.notificationOccurred('error');
+                    chat.is_deploying = false;
+                    await supabaseClient.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
+                    updateDeployActions();
+                }
             }
 
             async function renderProfileDetails() {
-                // Эта функция остается без изменений
+                const u = localState.user;
+                const allChats = Object.values(localState.chats);
+                const deployedChats = allChats.filter(c => c.deploy_url);
+                const limits = SUBSCRIPTION_LIMITS[u.subscription_plan || 'free'];
+                const chatUsage = allChats.length;
+                const chatPercentage = limits.chats === Infinity ? 100 : (chatUsage / limits.chats) * 100;
+
+                let deployedAppsHTML = '<p class="text-sm text-gray-400">У вас пока нет опубликованных приложений.</p>';
+                if (deployedChats.length > 0) {
+                    deployedAppsHTML = deployedChats.map(chat => `
+                        <div class="bg-gray-800 p-3 rounded-lg flex justify-between items-center space-x-2">
+                            <div class="flex-1 w-0">
+                                <p class="font-semibold text-sm truncate">${chat.title || 'Безымянное приложение'}</p>
+                                <a href="${chat.deploy_url}" target="_blank" class="text-xs text-purple-400 truncate block">${chat.deploy_url}</a>
+                            </div>
+                            <button onclick="Telegram.WebApp.openLink('${chat.deploy_url}')" class="text-xs font-bold p-2 rounded-full bg-gray-700 hover:bg-gray-600 flex-shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                            </button>
+                        </div>
+                    `).join('');
+                }
+
+                ui.profileContent.innerHTML = `
+                    <div class="text-center">
+                        <img src="${u.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${u.first_name.charAt(0).toUpperCase()}`}" class="w-24 h-24 rounded-full mx-auto mb-3 border-2 border-purple-500">
+                        <h3 class="text-xl font-bold">${u.first_name || ''} ${u.last_name || ''}</h3>
+                        <p class="text-gray-400 text-sm">${u.username ? `@${u.username}` : 'Username не указан'}</p>
+                    </div>
+                    <div class="mt-6">
+                        <h4 class="font-bold mb-3">Мои лимиты (План: ${limits.name})</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span>Чаты</span>
+                                    <span>${chatUsage} / ${limits.chats === Infinity ? '∞' : limits.chats}</span>
+                                </div>
+                                <div class="progress-bar h-2 w-full"><div class="progress-bar-inner" style="width: ${chatPercentage}%;"></div></div>
+                            </div>
+                        </div>
+                         <button id="upgrade-plan-button" class="w-full mt-4 text-center py-2 rounded-lg font-semibold text-sm" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Улучшить план</button>
+                    </div>
+                    <div class="mt-6">
+                        <h4 class="font-bold mb-3">Мои приложения</h4>
+                        <div class="space-y-2">${deployedAppsHTML}</div>
+                    </div>
+                `;
+                document.getElementById('upgrade-plan-button').onclick = openSubscriptionModal;
             }
             
             function setupEventListeners() {
@@ -728,7 +763,23 @@
             }
             
             function buySubscription(plan, amount) {
-                // Эта функция остается без изменений
+                const paymentProviderToken = "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ";
+                if (!paymentProviderToken || paymentProviderToken === "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ") {
+                    tg.showAlert("Платежная система не настроена. Обратитесь к разработчику."); return;
+                }
+                const invoice = { title: `Подписка ${SUBSCRIPTION_LIMITS[plan].name}`, description: `Доступ к расширенным функциям Devtol.`, payload: `buy-${plan}-plan-user-${user.id}`, provider_token: paymentProviderToken, currency: 'RUB', prices: [{ label: `Подписка ${SUBSCRIPTION_LIMITS[plan].name}`, amount: amount }] };
+                tg.openInvoice(invoice.payload, async (status) => {
+                    if (status === 'paid') {
+                        const { error } = await supabaseClient.from('users').update({ subscription_plan: plan }).eq('id', localState.user.id);
+                        if (error) { console.error("Ошибка обновления подписки:", error); tg.showAlert("Не удалось обновить подписку. Свяжитесь с поддержкой."); return; }
+                        localState.user.subscription_plan = plan;
+                        updateHeader();
+                        closeModal();
+                        tg.showAlert('Спасибо! Ваша подписка успешно обновлена.');
+                    } else if (status === 'failed') {
+                        tg.showAlert('Не удалось обработать платеж. Попробуйте снова.');
+                    }
+                });
             }
 
             async function initApp() {

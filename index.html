@@ -82,7 +82,7 @@
                 <h2 id="animated-greeting" class="mb-6">Привет</h2>
                 <p id="greeting-text" class="text-xl font-semibold mb-4"></p>
                 <p class="text-gray-400 max-w-md text-sm">
-                    Я могу сгенерировать для вас веб-приложение на HTML и сразу же опубликовать его в интернете. Просто опишите свою идею.
+                    Я могу сгенерировать для вас веб-приложение с фронтендом и бэкендом, а затем опубликовать его. Просто опишите свою идею.
                 </p>
             </div>
             <div id="chat-area" class="chat-area h-full w-full absolute inset-0"></div>
@@ -150,11 +150,10 @@
     <div id="code-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
         <div id="code-modal-header" class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
-            <div id="code-tabs" class="flex space-x-3 text-gray-400 text-sm">
-                <button data-tab="code" class="tab-button font-bold py-1 border-b-2 border-transparent">Код</button>
-                <button data-tab="preview" class="tab-button font-bold py-1 border-b-2 border-transparent">Просмотр</button>
+            <div id="code-tabs-container" class="flex items-center space-x-3 text-gray-400 text-sm overflow-x-auto">
+                <!-- Вкладки для файлов будут здесь -->
             </div>
-            <div id="deploy-actions-container" class="flex items-center space-x-2">
+            <div id="deploy-actions-container" class="flex items-center space-x-2 flex-shrink-0 ml-2">
                 <!-- Кнопки деплоя будут здесь -->
             </div>
         </div>
@@ -198,6 +197,7 @@
             let isGenerating = false;
             let versionToRestore = null;
             let activeChatId = null;
+            let currentCodeFile = 'index.html'; // НОВОЕ: отслеживаем активный файл
 
             // --- Элементы UI ---
             const ui = {
@@ -214,7 +214,7 @@
                 profileModal: document.getElementById('profile-modal'),
                 profileContent: document.getElementById('profile-content'),
                 codeModal: document.getElementById('code-modal'),
-                codeTabs: document.getElementById('code-tabs'),
+                codeTabsContainer: document.getElementById('code-tabs-container'), // ИЗМЕНЕНО
                 codeView: document.getElementById('code-view'),
                 previewView: document.getElementById('preview-view'),
                 codeOutput: document.getElementById('code-output'),
@@ -389,7 +389,6 @@
                 ui.sendButton.classList.toggle('cursor-not-allowed', ui.sendButton.disabled);
             }
 
-            // ИЗМЕНЕНИЕ: Функция теперь принимает codeObject
             async function callGeminiAPI(prompt, codeObject = null, retries = 3, delay = 1000) {
                 try {
                     const body = { prompt };
@@ -423,16 +422,13 @@
                 }
             }
             
-            function formatCodeForDisplay(codeObject) {
-                return codeObject['index.html'] || 'Код не найден.';
-            }
-
-            // ИЗМЕНЕНИЕ: Функция теперь принимает codeObject
             async function runAiProcess(steps, prompt, codeObject = null) {
                 isGenerating = true;
                 updateInputState();
                 openModal(ui.codeModal);
-                switchTab('code');
+                currentCodeFile = 'index.html'; // Сбрасываем на главный файл при новой генерации
+                renderCodeTabs();
+                switchTab(currentCodeFile);
                 ui.codeOutput.textContent = '';
                 ui.aiStatusContainer.innerHTML = '';
                 
@@ -461,15 +457,13 @@
                 apiStatusDiv.querySelector('span:last-child').textContent = 'Получение ответа...';
                 apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
                 
-                const formattedCode = formatCodeForDisplay(generatedCodeObject);
-                typeCode(generatedCodeObject, formattedCode);
+                await saveAndDisplayCode(generatedCodeObject);
             }
 
             function initiateAiGeneration(prompt) {
-                runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], prompt);
+                runAiProcess(["Анализирую запрос...", "Проектирую структуру приложения...", "Создаю фронтенд и бэкенд...", "Начинаю генерацию..."], prompt);
             }
 
-            // ИЗМЕНЕНИЕ: Функция теперь передает и промпт, и код
             function improveAiGeneration(prompt) {
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat || activeChat.codeHistory.length === 0) {
@@ -480,7 +474,7 @@
                 runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], prompt, latestCodeObject);
             }
 
-            async function typeCode(codeObject, formattedCode) {
+            async function saveAndDisplayCode(codeObject) {
                 const activeChat = localState.chats[activeChatId];
                 const newVersion = activeChat.codeHistory.length + 1;
                 
@@ -489,19 +483,57 @@
 
                 activeChat.codeHistory.push({ version: newVersion, code: codeObject });
                 
-                ui.codeOutput.textContent = formattedCode;
+                renderCodeTabs();
+                displayCodeFile(currentCodeFile); // Отображаем текущий файл
                 
                 setTimeout(() => {
-                    switchTab('preview');
+                    switchTab('preview'); // Переключаемся на превью после генерации
                     addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
                     isGenerating = false;
                     updateInputState();
                     updateDeployActions();
                 }, 500);
             }
+            
+            // НОВАЯ ФУНКЦИЯ: Рендерит вкладки для файлов кода
+            function renderCodeTabs() {
+                const activeChat = localState.chats[activeChatId];
+                if (!activeChat || activeChat.codeHistory.length === 0) {
+                    ui.codeTabsContainer.innerHTML = '';
+                    return;
+                }
+                const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
+                const files = Object.keys(latestCodeObject);
+                // Добавляем вкладку Preview
+                files.push('preview');
+
+                ui.codeTabsContainer.innerHTML = files.map(file => `
+                    <button data-tab="${file}" class="tab-button font-bold py-1 border-b-2 border-transparent whitespace-nowrap">
+                        ${file === 'preview' ? 'Просмотр' : file}
+                    </button>
+                `).join('');
+
+                ui.codeTabsContainer.querySelectorAll('.tab-button').forEach(button => {
+                    button.addEventListener('click', () => switchTab(button.dataset.tab));
+                });
+            }
+            
+            // НОВАЯ ФУНКЦИЯ: Отображает содержимое конкретного файла
+            function displayCodeFile(fileName) {
+                 const activeChat = localState.chats[activeChatId];
+                if (!activeChat || activeChat.codeHistory.length === 0) return;
+                
+                const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
+                ui.codeOutput.textContent = latestCodeObject[fileName] || `// Файл ${fileName} не найден.`;
+                currentCodeFile = fileName;
+
+                // Обновляем активную вкладку
+                ui.codeTabsContainer.querySelectorAll('.tab-button').forEach(tab => {
+                    tab.classList.toggle('active', tab.dataset.tab === fileName);
+                });
+            }
 
             function switchTab(tabName) {
-                ui.codeTabs.querySelectorAll('.tab-button').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
                 const isPreview = tabName === 'preview';
                 
                 if (isPreview) {
@@ -511,20 +543,27 @@
                     ui.codeView.classList.add('hidden');
                     ui.previewView.classList.remove('hidden');
                 } else {
+                    displayCodeFile(tabName); // Отображаем код выбранного файла
                     ui.codeView.classList.remove('hidden');
                     ui.previewView.classList.add('hidden');
                 }
+                
+                // Обновляем активную вкладку
+                ui.codeTabsContainer.querySelectorAll('.tab-button').forEach(tab => {
+                    tab.classList.toggle('active', tab.dataset.tab === tabName);
+                });
             }
 
             function openCodeModal(switchToPreview = false, version) {
                 const activeChat = localState.chats[activeChatId];
                 const codeHistoryItem = activeChat.codeHistory.find(h => h.version === version);
                 if (!codeHistoryItem) return;
-                const codeObject = codeHistoryItem.code;
-                ui.codeOutput.textContent = formatCodeForDisplay(codeObject);
+                
+                currentCodeFile = 'index.html'; // Всегда начинаем с index.html
+                renderCodeTabs();
                 updateDeployActions();
                 openModal(ui.codeModal);
-                switchTab(switchToPreview ? 'preview' : 'code');
+                switchTab(switchToPreview ? 'preview' : currentCodeFile);
             }
 
             function openModal(modal) {
@@ -652,12 +691,13 @@
                 const updateDeployBtn = document.getElementById('update-deploy-button');
                 const openDeployBtn = document.getElementById('open-deploy-button');
 
-                if (deployBtn) deployBtn.onclick = deployToNetlify;
-                if (updateDeployBtn) updateDeployBtn.onclick = deployToNetlify;
+                if (deployBtn) deployBtn.onclick = deployApp;
+                if (updateDeployBtn) updateDeployBtn.onclick = deployApp;
                 if (openDeployBtn) openDeployBtn.onclick = () => tg.openLink(chat.deploy_url);
             }
             
-            async function deployToNetlify() {
+            // ИЗМЕНЕНО: Новая функция деплоя
+            async function deployApp() {
                 const chat = localState.chats[activeChatId];
                 if (!chat || chat.codeHistory.length === 0) {
                     addMessage('Ошибка: не найден код для деплоя.', 'bot');
@@ -667,11 +707,19 @@
                 chat.is_deploying = true;
                 await supabaseClient.from('chats').update({ is_deploying: true }).eq('id', activeChatId);
                 updateDeployActions();
-                addMessage(`Начинаю деплой проекта...`, 'bot');
+                addMessage(`Начинаю деплой проекта (фронтенд и бэкенд)...`, 'bot');
 
                 try {
                     const latestCodeObject = chat.codeHistory.slice(-1)[0].code;
-                    const { data, error } = await supabaseClient.functions.invoke('deploy-to-netlify', { body: { codeObject: latestCodeObject, netlifySiteId: chat.netlify_site_id } });
+                    // Вызываем новую облачную функцию, которая умеет деплоить и фронт, и бэк
+                    const { data, error } = await supabaseClient.functions.invoke('deploy-full-app', { 
+                        body: { 
+                            codeObject: latestCodeObject, 
+                            netlifySiteId: chat.netlify_site_id,
+                            // Передаем ID чата, чтобы назвать бэкенд-функцию уникально
+                            chatId: activeChatId 
+                        } 
+                    });
                     if (error) throw error;
                     if (data.error) throw new Error(data.error);
 
@@ -755,9 +803,7 @@
                 ui.modalOverlay.addEventListener('click', closeModal);
                 ui.confirmRestoreButton.addEventListener('click', confirmRestore);
                 ui.cancelRestoreButton.addEventListener('click', closeModal);
-                ui.codeTabs.querySelectorAll('.tab-button').forEach(button => {
-                    button.addEventListener('click', () => switchTab(button.dataset.tab));
-                });
+                
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.subscriptionModal].forEach(modal => {
                     if (modal) {
                         let startY;

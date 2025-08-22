@@ -61,16 +61,30 @@
         #code-modal .tab-button.active { border-bottom-color: var(--tg-button-color); color: var(--tg-text-color); }
         
         /* Стили для редактора кода */
-        .code-editor-wrapper { position: relative; height: 100%; }
-        .line-numbers { font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; padding: 1rem 0.5rem 1rem 1rem; text-align: right; color: var(--tg-hint-color); -webkit-user-select: none; user-select: none; position: absolute; top: 0; left: 0; bottom: 0; overflow: hidden; }
-        #code-editor {
-            width: 100%; height: 100%;
-            background: transparent; border: none; outline: none; resize: none;
-            color: var(--tg-text-color);
-            font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px;
-            line-height: 1.5;
-            padding: 1rem 1rem 1rem 3.5rem; /* Отступ слева для номеров строк */
+        .code-editor-wrapper { position: relative; width: 100%; height: 100%; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; line-height: 1.5; }
+        #code-editor, #highlight-pre {
+            padding: 1rem;
+            margin: 0;
+            border: 0;
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
         }
+        #code-editor {
+            position: absolute; inset: 0; z-index: 1;
+            resize: none;
+            color: transparent;
+            caret-color: white;
+            background: transparent;
+            -webkit-text-fill-color: transparent;
+        }
+        #highlight-pre {
+            position: absolute; inset: 0; z-index: 0;
+            pointer-events: none;
+        }
+        #highlight-pre::-webkit-scrollbar { display: none; }
+        #highlight-pre { -ms-overflow-style: none; scrollbar-width: none; }
 
         .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -196,15 +210,15 @@
                 <div id="deploy-actions-container"></div>
             </div>
         </div>
-        <div id="code-view" class="overflow-y-auto p-0 flex-grow relative">
-            <div id="ai-status-container" class="p-3 mb-3 text-gray-400 space-y-1.5 text-sm"></div>
+        <div id="code-view" class="p-0 flex-grow relative bg-gray-800">
+            <div id="ai-status-container" class="p-3 text-gray-400 space-y-1.5 text-sm"></div>
             <div class="code-editor-wrapper">
-                <div id="line-numbers" class="line-numbers">1</div>
                 <textarea id="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+                <pre id="highlight-pre"><code id="highlight-output" class="language-html"></code></pre>
             </div>
         </div>
         <div id="preview-view" class="hidden flex-grow bg-white">
-            <iframe id="preview-frame" class="w-full h-full border-none"></iframe>
+            <iframe id="preview-frame" class="w-full h-full border-none" sandbox="allow-scripts allow-same-origin"></iframe>
         </div>
         <div id="code-modal-footer" class="p-2 border-t border-gray-700">
             <button id="stop-generation-button" class="w-full text-center py-2 rounded-lg font-semibold text-sm bg-red-500 text-white hidden">Остановить генерацию</button>
@@ -243,7 +257,7 @@
             let currentConfirmAction = null;
             let activeChatId = null;
             let currentCodeFile = 'index.html';
-            let generationAbortController = null; // Для отмены запроса
+            let generationAbortController = null;
 
             // --- Элементы UI ---
             const ui = {
@@ -264,7 +278,8 @@
                 codeView: document.getElementById('code-view'),
                 previewView: document.getElementById('preview-view'),
                 codeEditor: document.getElementById('code-editor'),
-                lineNumbers: document.getElementById('line-numbers'),
+                highlightPre: document.getElementById('highlight-pre'),
+                highlightOutput: document.getElementById('highlight-output'),
                 aiStatusContainer: document.getElementById('ai-status-container'),
                 newChatButton: document.getElementById('new-chat-button'),
                 chatList: document.getElementById('chat-list'),
@@ -455,7 +470,6 @@
                     const body = { prompt };
                     if (codeObject) body.codeObject = codeObject;
                     
-                    // Используем fetch напрямую для поддержки AbortSignal
                     const { data: { session } } = await supabaseClient.auth.getSession();
                     const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-code`, {
                         method: 'POST',
@@ -614,7 +628,7 @@
                 const codeContent = latestCodeObject[fileName] || `// Файл ${fileName} не найден.`;
                 
                 ui.codeEditor.value = codeContent;
-                updateLineNumbers();
+                updateHighlight();
                 
                 currentCodeFile = fileName;
 
@@ -1033,10 +1047,15 @@
                 input.style.height = (input.scrollHeight) + 'px';
             }
 
-            function updateLineNumbers() {
-                const lineCount = ui.codeEditor.value.split('\n').length;
-                ui.lineNumbers.innerHTML = Array.from({ length: lineCount }, (_, i) => i + 1).join('<br>');
-                ui.lineNumbers.scrollTop = ui.codeEditor.scrollTop;
+            function syncScroll() {
+                ui.highlightPre.scrollTop = ui.codeEditor.scrollTop;
+                ui.highlightPre.scrollLeft = ui.codeEditor.scrollLeft;
+            }
+
+            function updateHighlight() {
+                const code = ui.codeEditor.value;
+                ui.highlightOutput.textContent = code;
+                hljs.highlightElement(ui.highlightOutput);
             }
 
             function handleCodeEdit() {
@@ -1082,12 +1101,10 @@
                     }
                 });
                 ui.codeEditor.addEventListener('input', () => {
-                    updateLineNumbers();
+                    updateHighlight();
                     handleCodeEdit();
                 });
-                ui.codeEditor.addEventListener('scroll', () => {
-                    ui.lineNumbers.scrollTop = ui.codeEditor.scrollTop;
-                });
+                ui.codeEditor.addEventListener('scroll', syncScroll);
                 ui.saveEditButton.addEventListener('click', handleSaveEdit);
                 ui.cancelEditButton.addEventListener('click', () => {
                     displayCodeFile(currentCodeFile); // Revert changes

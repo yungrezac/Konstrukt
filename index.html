@@ -12,8 +12,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- JSZip (для функции деплоя) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- Подключение иконок Lucide -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
             --tg-bg-color: var(--tg-theme-bg-color, #111827);
@@ -44,8 +42,6 @@
         .modal-handle { width: 36px; height: 4px; background-color: var(--tg-hint-color, #9ca3af); border-radius: 2px; margin: 6px auto; flex-shrink: 0; }
         #code-modal .tab-button.active { border-bottom-color: var(--tg-button-color); color: var(--tg-text-color); }
         #code-output { white-space: pre-wrap; word-wrap: break-word; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; }
-        #preview-view.fullscreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 60; background-color: #fff; }
-        #preview-frame { width: 100%; height: 100%; border: none; }
         .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         #animated-greeting {
@@ -63,17 +59,6 @@
         @keyframes gradient-animation { to { background-position: 200% center; } }
         .progress-bar { background-color: #374151; border-radius: 9999px; }
         .progress-bar-inner { background-color: var(--tg-button-color); height: 100%; border-radius: 9999px; transition: width 0.5s ease-in-out; }
-        .quick-action-button {
-            background-color: var(--tg-secondary-bg-color);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0.75rem;
-            padding: 0.75rem;
-            text-align: left;
-            transition: background-color 0.2s;
-        }
-        .quick-action-button:hover {
-            background-color: #374151;
-        }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -81,7 +66,7 @@
     <div id="app" class="app-container">
         <header class="flex items-center justify-between p-2 flex-shrink-0" style="background-color: var(--tg-header-bg-color);">
             <div class="flex items-center space-x-2">
-                <button id="menu-button" class="p-1.5 rounded-full hover:bg-gray-700"><i data-lucide="menu"></i></button>
+                <svg id="menu-button" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
                 <h1 id="header-title" class="text-lg font-semibold truncate max-w-[150px]">Devtol</h1>
             </div>
             <div class="flex items-center space-x-2">
@@ -96,27 +81,9 @@
             <div id="initial-greeting" class="absolute inset-0 flex flex-col items-center justify-center text-center px-4 transition-opacity duration-300 z-10" style="background-color: var(--tg-bg-color);">
                 <h2 id="animated-greeting" class="mb-6">Привет</h2>
                 <p id="greeting-text" class="text-xl font-semibold mb-4"></p>
-                <p class="text-gray-400 max-w-md text-sm mb-8">
+                <p class="text-gray-400 max-w-md text-sm">
                     Я могу сгенерировать для вас веб-приложение на HTML и сразу же опубликовать его в интернете. Просто опишите свою идею.
                 </p>
-                <div class="grid grid-cols-2 gap-3 max-w-md w-full">
-                    <button class="quick-action-button" data-prompt="Создай простое приложение-список дел">
-                        <p class="font-semibold text-sm">📝 Список дел</p>
-                        <p class="text-xs text-gray-400">Организуй свои задачи</p>
-                    </button>
-                    <button class="quick-action-button" data-prompt="Сделай страницу-портфолио для фотографа">
-                        <p class="font-semibold text-sm">📸 Сайт-портфолио</p>
-                        <p class="text-xs text-gray-400">Покажи свои лучшие работы</p>
-                    </button>
-                    <button class="quick-action-button" data-prompt="Сгенерируй лендинг для мобильного приложения">
-                        <p class="font-semibold text-sm">📱 Лендинг приложения</p>
-                        <p class="text-xs text-gray-400">Привлеки новых пользователей</p>
-                    </button>
-                    <button class="quick-action-button" data-prompt="Создай простую игру 'Камень, ножницы, бумага'">
-                        <p class="font-semibold text-sm">🎮 Мини-игра</p>
-                        <p class="text-xs text-gray-400">Проверь свою удачу</p>
-                    </button>
-                </div>
             </div>
             <div id="chat-area" class="chat-area h-full w-full absolute inset-0"></div>
         </main>
@@ -125,7 +92,6 @@
 
         <footer class="p-2 flex-shrink-0 relative">
              <div class="rounded-xl p-1.5 flex items-center" style="background-color: var(--tg-secondary-bg-color);">
-                <button id="attach-button" class="p-1.5 rounded-full hover:bg-gray-700 transition-opacity"><i data-lucide="paperclip"></i></button>
                 <input id="message-input" type="text" placeholder="Спросить Devtol" class="flex-grow bg-transparent focus:outline-none mx-2 text-sm">
                 <div id="action-button-container" class="flex-shrink-0">
                      <button id="send-button" class="p-1.5 rounded-full transition-opacity">
@@ -142,7 +108,7 @@
         <div class="modal-handle"></div>
         <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
             <h2 class="text-lg font-bold">История</h2>
-            <button id="new-chat-button" class="text-xs font-semibold px-2.5 py-1 rounded-md flex items-center" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);"><i data-lucide="plus" class="w-4 h-4 mr-1"></i>Новый чат</button>
+            <button id="new-chat-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">+ Новый чат</button>
         </div>
         <div id="chat-list" class="overflow-y-auto p-3"></div>
     </div>
@@ -181,6 +147,7 @@
         </div>
     </div>
 
+    <!-- ИЗМЕНЕНИЕ: Модальное окно для кода и предпросмотра -->
     <div id="code-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
         <div id="code-modal-header" class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
@@ -192,14 +159,15 @@
                 <!-- Кнопки деплоя будут здесь -->
             </div>
         </div>
+        <!-- Вкладка с кодом -->
         <div id="code-view" class="overflow-y-auto p-3 flex-grow">
             <div id="ai-status-container" class="mb-3 text-gray-400 space-y-1.5 text-sm"></div>
-            <pre><code id="code-output" class="language-html"></code></pre>
+            <pre><code id="code-output"></code></pre>
         </div>
-    </div>
-    <!-- Preview View вынесен за пределы модального окна для полноэкранного режима -->
-    <div id="preview-view" class="hidden">
-        <iframe id="preview-frame"></iframe>
+        <!-- ИЗМЕНЕНИЕ: Вкладка с предпросмотром теперь внутри модального окна -->
+        <div id="preview-view" class="hidden flex-grow bg-white">
+            <iframe id="preview-frame" class="w-full h-full border-none"></iframe>
+        </div>
     </div>
 
     <div id="confirm-restore-modal" class="modal" style="height: auto; max-height: 40%;">
@@ -217,18 +185,24 @@
         document.addEventListener('DOMContentLoaded', () => {
             const tg = window.Telegram.WebApp;
 
-            // ЗАМЕНИТЕ НА ВАШИ КЛЮЧИ SUPABASE
+            // --- Конфигурация ---
             const SUPABASE_URL = 'https://tqptazkadicujedoyykp.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxcHRhemthZGljdWplZG95eWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTU2ODUsImV4cCI6MjA3MTEzMTY4NX0.FaNU-OlO1yEo7e9ADUCbPWvK0RG90_GedlaXUXUM0Eo';
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             
             const SUBSCRIPTION_LIMITS = {
-                free: { chats: 3, messages: 10, name: 'FREE' },
-                pro: { chats: 15, messages: 50, name: 'PRO' },
+                free: { chats: 1, messages: 5, name: 'FREE' },
+                pro: { chats: 10, messages: 15, name: 'PRO' },
                 ultima: { chats: Infinity, messages: Infinity, name: 'ULTIMA' }
             };
 
+            // --- Состояние приложения ---
             let localState = { user: null, chats: {} }; 
+            let isGenerating = false;
+            let versionToRestore = null;
+            let activeChatId = null;
+
+            // --- Элементы UI ---
             const ui = {
                 messageInput: document.getElementById('message-input'),
                 sendButton: document.getElementById('send-button'),
@@ -259,14 +233,11 @@
                 subscriptionModal: document.getElementById('subscription-modal'),
                 buyProButton: document.getElementById('buy-pro-button'),
                 buyUltimaButton: document.getElementById('buy-ultima-button'),
-                quickActionButtons: document.querySelectorAll('.quick-action-button'),
             };
 
-            let isGenerating = false;
-            let versionToRestore = null;
-            let activeChatId = null;
-
             const user = tg.initDataUnsafe.user;
+
+            // --- Функции ---
 
             function forceDarkTheme() {
                 tg.setHeaderColor('#1f2937');
@@ -287,7 +258,6 @@
             async function loadDataFromSupabase() {
                 if (!user || !user.id) {
                     console.error("Нет данных о пользователе Telegram.");
-                    // Можно показать ошибку пользователю
                     return;
                 }
                 let { data: userData, error: userError } = await supabaseClient
@@ -430,7 +400,7 @@
                     return data;
                 } catch (error) {
                     console.error("Ошибка вызова функции Supabase (generate-code):", error.message);
-                    const errorMsg = "Ошибка конфигурации API. Проверьте ключ в Supabase Functions.";
+                    const errorMsg = "Ошибка конфигурации API.";
                     addMessage(`❌ ${errorMsg}`, 'bot');
                     isGenerating = false;
                     updateInputState();
@@ -484,7 +454,7 @@
 
             function initiateAiGeneration(prompt) {
                 localState.chats[activeChatId].mode = 'html';
-                const fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}". Ответ в JSON: { "index.html": "..." }. Используй Tailwind CSS. Приложение должно быть полностью функциональным, красивым, минималистичным и адаптированным для мобильных устройств. Добавь немного интерактива с JS.`;
+                const fullPrompt = `Создай однофайловое HTML-приложение на тему "${prompt}". Ответ в JSON: { "index.html": "..." }. Используй Tailwind CSS. Приложение должно быть полностью функциональным, красивым, минималистичным и адаптированным для мобильных устройств.`;
                 runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], fullPrompt);
             }
 
@@ -508,7 +478,7 @@
 
                 activeChat.codeHistory.push({ version: newVersion, code: codeObject });
                 
-                ui.codeOutput.textContent = formattedCode;
+                ui.codeOutput.textContent = formattedCode; // Показываем код сразу
                 
                 setTimeout(() => {
                     switchTab('preview');
@@ -519,6 +489,7 @@
                 }, 500);
             }
 
+            // ИЗМЕНЕНИЕ: Упрощенная функция переключения вкладок
             function switchTab(tabName) {
                 ui.codeTabs.querySelectorAll('.tab-button').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
                 const isPreview = tabName === 'preview';
@@ -527,21 +498,12 @@
                     const activeChat = localState.chats[activeChatId];
                     const latestCode = activeChat.codeHistory.length > 0 ? activeChat.codeHistory.slice(-1)[0].code['index.html'] : '';
                     ui.previewFrame.srcdoc = latestCode;
+                    ui.codeView.classList.add('hidden');
                     ui.previewView.classList.remove('hidden');
-                    ui.previewView.classList.add('fullscreen');
-                    tg.BackButton.show();
-                    tg.onEvent('backButtonClicked', onPreviewBackClick);
                 } else {
                     ui.codeView.classList.remove('hidden');
                     ui.previewView.classList.add('hidden');
-                    ui.previewView.classList.remove('fullscreen');
-                    tg.BackButton.hide();
-                    tg.offEvent('backButtonClicked', onPreviewBackClick);
                 }
-            }
-            
-            function onPreviewBackClick() {
-                switchTab('code');
             }
 
             function openCodeModal(switchToPreview = false, version) {
@@ -551,8 +513,9 @@
                 const codeObject = codeHistoryItem.code;
                 ui.codeOutput.textContent = formatCodeForDisplay(codeObject);
                 updateDeployActions();
-                switchTab(switchToPreview ? 'preview' : 'code');
                 openModal(ui.codeModal);
+                // Переключаемся на нужную вкладку ПОСЛЕ открытия модального окна
+                switchTab(switchToPreview ? 'preview' : 'code');
             }
 
             function openModal(modal) {
@@ -566,9 +529,6 @@
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.subscriptionModal].forEach(modal => {
                     if (modal) modal.classList.remove('visible');
                 });
-                if (ui.previewView.classList.contains('fullscreen')) {
-                    onPreviewBackClick();
-                }
             }
             
             async function openProfileModal() {
@@ -668,17 +628,16 @@
                 if (chat && chat.codeHistory.length > 0) {
                     if (chat.deploy_url) {
                         buttonsHTML = `
-                            <button id="open-deploy-button" class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-500 text-white flex items-center"><i data-lucide="external-link" class="w-3 h-3 mr-1"></i>Открыть</button>
-                            <button id="update-deploy-button" class="text-xs font-semibold px-2.5 py-1 rounded-md flex items-center" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);"><i data-lucide="upload-cloud" class="w-3 h-3 mr-1"></i>Обновить</button>
+                            <button id="open-deploy-button" class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-500 text-white">Открыть</button>
+                            <button id="update-deploy-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Обновить</button>
                         `;
                     } else if (chat.is_deploying) {
                         buttonsHTML = `<button class="text-xs font-bold px-2.5 py-1 rounded-full flex items-center" style="background-color: var(--tg-secondary-bg-color);" disabled><div class="spinner mr-1.5"></div>Деплой...</button>`;
                     } else {
-                         buttonsHTML = `<button id="deploy-button" class="text-xs font-semibold px-2.5 py-1 rounded-md flex items-center" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);"><i data-lucide="upload-cloud" class="w-3 h-3 mr-1"></i>Деплой</button>`;
+                         buttonsHTML = `<button id="deploy-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Деплой</button>`;
                     }
                 }
                 ui.deployActionsContainer.innerHTML = buttonsHTML;
-                lucide.createIcons();
                 
                 const deployBtn = document.getElementById('deploy-button');
                 const updateDeployBtn = document.getElementById('update-deploy-button');
@@ -744,7 +703,7 @@
                                 <a href="${chat.deploy_url}" target="_blank" class="text-xs text-purple-400 truncate block">${chat.deploy_url}</a>
                             </div>
                             <button onclick="Telegram.WebApp.openLink('${chat.deploy_url}')" class="text-xs font-bold p-2 rounded-full bg-gray-700 hover:bg-gray-600 flex-shrink-0">
-                                <i data-lucide="external-link" class="w-4 h-4"></i>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                             </button>
                         </div>
                     `).join('');
@@ -774,7 +733,6 @@
                         <div class="space-y-2">${deployedAppsHTML}</div>
                     </div>
                 `;
-                lucide.createIcons();
                 document.getElementById('upgrade-plan-button').onclick = openSubscriptionModal;
             }
             
@@ -802,18 +760,10 @@
                 });
                 ui.buyProButton.addEventListener('click', () => buySubscription('pro', 299900));
                 ui.buyUltimaButton.addEventListener('click', () => buySubscription('ultima', 999900));
-                ui.quickActionButtons.forEach(button => {
-                    button.addEventListener('click', () => {
-                        const prompt = button.dataset.prompt;
-                        ui.messageInput.value = prompt;
-                        sendMessage();
-                    });
-                });
             }
             
             function buySubscription(plan, amount) {
-                // ЗАМЕНИТЕ НА ВАШ ТОКЕН ПРОВАЙДЕРА ПЛАТЕЖЕЙ
-                const paymentProviderToken = "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ"; 
+                const paymentProviderToken = "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ";
                 if (!paymentProviderToken || paymentProviderToken === "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ") {
                     tg.showAlert("Платежная система не настроена. Обратитесь к разработчику."); return;
                 }
@@ -836,7 +786,6 @@
                 tg.ready();
                 tg.expand();
                 forceDarkTheme();
-                lucide.createIcons();
 
                 if (user && user.first_name) {
                     ui.greetingText.textContent = `${user.first_name}, что создадим сегодня?`;

@@ -198,12 +198,16 @@
             let isGenerating = false;
             let versionToRestore = null;
             let activeChatId = null;
+            // ИЗМЕНЕНИЕ: Добавлены переменные для управления перезарядкой
+            let cooldownEndTime = 0;
+            let cooldownInterval = null;
 
             // --- Элементы UI ---
             const ui = {
                 messageInput: document.getElementById('message-input'),
                 sendButton: document.getElementById('send-button'),
                 chatArea: document.getElementById('chat-area'),
+                actionButtonContainer: document.getElementById('action-button-container'),
                 initialGreeting: document.getElementById('initial-greeting'),
                 greetingText: document.getElementById('greeting-text'),
                 userPhoto: document.getElementById('user-photo'),
@@ -381,16 +385,47 @@
                 }
             }
             
+            // ИЗМЕНЕНИЕ: Функция теперь управляет состоянием перезарядки
             function updateInputState() {
+                const now = Date.now();
+                const isInCooldown = now < cooldownEndTime;
                 const hasContent = ui.messageInput.value.trim().length > 0;
-                ui.messageInput.disabled = isGenerating;
-                ui.sendButton.disabled = isGenerating || !hasContent;
-                ui.sendButton.classList.toggle('opacity-50', ui.sendButton.disabled);
-                ui.sendButton.classList.toggle('cursor-not-allowed', ui.sendButton.disabled);
+
+                ui.messageInput.disabled = isGenerating || isInCooldown;
+                // Кнопка отправки может быть не найдена, если ее заменяет таймер
+                if (ui.sendButton) {
+                    ui.sendButton.disabled = isGenerating || !hasContent || isInCooldown;
+                    ui.sendButton.classList.toggle('opacity-50', ui.sendButton.disabled);
+                    ui.sendButton.classList.toggle('cursor-not-allowed', ui.sendButton.disabled);
+                }
+
+                if (isInCooldown) {
+                    if (!cooldownInterval) {
+                        cooldownInterval = setInterval(updateInputState, 1000);
+                    }
+                    const secondsLeft = Math.ceil((cooldownEndTime - now) / 1000);
+                    ui.actionButtonContainer.innerHTML = `<span class="text-sm font-semibold px-3 py-2" style="color: var(--tg-hint-color);">${secondsLeft}s</span>`;
+                } else {
+                    if (cooldownInterval) {
+                        clearInterval(cooldownInterval);
+                        cooldownInterval = null;
+                    }
+                    ui.actionButtonContainer.innerHTML = `<button id="send-button" class="p-1.5 rounded-full transition-opacity">
+                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                                                         </button>`;
+                    ui.sendButton = document.getElementById('send-button');
+                    ui.sendButton.addEventListener('click', sendMessage);
+                    
+                    // Обновляем состояние кнопки после ее пересоздания
+                    const newHasContent = ui.messageInput.value.trim().length > 0;
+                    ui.sendButton.disabled = isGenerating || !newHasContent;
+                    ui.sendButton.classList.toggle('opacity-50', ui.sendButton.disabled);
+                    ui.sendButton.classList.toggle('cursor-not-allowed', ui.sendButton.disabled);
+                }
             }
 
-            // ИЗМЕНЕНИЕ: Функция теперь принимает codeObject
-            async function callGeminiAPI(prompt, codeObject = null, retries = 3, delay = 1000) {
+            // ИЗМЕНЕНИЕ: Убрана логика повторных попыток, она теперь на сервере
+            async function callGeminiAPI(prompt, codeObject = null) {
                 try {
                     const body = { prompt };
                     if (codeObject) {
@@ -404,22 +439,16 @@
                     if (data.error) throw new Error(data.error);
                     return data;
                 } catch (error) {
-                    if (retries > 0) {
-                        console.log(`Ошибка API, пробую снова... Осталось попыток: ${retries - 1}. Задержка: ${delay}ms`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        return callGeminiAPI(prompt, codeObject, retries - 1, delay * 2);
-                    } else {
-                        console.error("Ошибка вызова функции Supabase (generate-code) после всех попыток:", error.message);
-                        const userFriendlyError = "Не удалось связаться с AI после нескольких попыток. Проверьте ваше интернет-соединение или попробуйте позже.";
-                        addMessage(`❌ ${userFriendlyError}`, 'bot');
-                        
-                        const apiStatusDiv = ui.aiStatusContainer.querySelector('div:last-child');
-                        if (apiStatusDiv) {
-                             apiStatusDiv.querySelector('span:last-child').textContent = 'Ошибка сети.';
-                             apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
-                        }
-                        return null;
+                    console.error("Ошибка вызова функции Supabase (generate-code):", error.message);
+                    const userFriendlyError = "Не удалось связаться с AI. Проверьте ваше интернет-соединение или попробуйте позже.";
+                    addMessage(`❌ ${userFriendlyError}`, 'bot');
+                    
+                    const apiStatusDiv = ui.aiStatusContainer.querySelector('div:last-child');
+                    if (apiStatusDiv) {
+                         apiStatusDiv.querySelector('span:last-child').textContent = 'Ошибка сети.';
+                         apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
                     }
+                    return null;
                 }
             }
             
@@ -427,7 +456,6 @@
                 return codeObject['index.html'] || 'Код не найден.';
             }
 
-            // ИЗМЕНЕНИЕ: Функция теперь принимает codeObject
             async function runAiProcess(steps, prompt, codeObject = null) {
                 isGenerating = true;
                 updateInputState();
@@ -452,9 +480,13 @@
                 
                 let generatedCodeObject = await callGeminiAPI(prompt, codeObject);
                 
+                // ИЗМЕНЕНИЕ: Запускаем перезарядку независимо от результата
+                cooldownEndTime = Date.now() + 35000; // 35 секунд
+                updateInputState();
+
                 if (!generatedCodeObject || !generatedCodeObject['index.html']) {
                     isGenerating = false;
-                    updateInputState();
+                    // updateInputState уже вызван, так что просто выходим
                     return;
                 }
 
@@ -469,7 +501,6 @@
                 runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], prompt);
             }
 
-            // ИЗМЕНЕНИЕ: Функция теперь передает и промпт, и код
             function improveAiGeneration(prompt) {
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat || activeChat.codeHistory.length === 0) {
@@ -495,8 +526,7 @@
                     switchTab('preview');
                     addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
                     isGenerating = false;
-                    updateInputState();
-                    updateDeployActions();
+                    // updateInputState будет вызван таймером перезарядки
                 }, 500);
             }
 

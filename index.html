@@ -17,6 +17,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <!-- marked.js для рендеринга Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- НОВОЕ: Google GenAI SDK -->
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+        window.GoogleGenerativeAI = GoogleGenerativeAI;
+    </script>
 
     <style>
         :root {
@@ -170,7 +175,6 @@
         <div id="profile-content" class="p-4 overflow-y-auto"></div>
     </div>
 
-    <!-- ИЗМЕНЕНО: Полностью переработанное модальное окно подписок -->
     <div id="subscription-modal" class="modal" style="height: auto; max-height: 90%;">
         <div class="modal-handle"></div>
         <div id="subscription-content" class="p-4 overflow-y-auto">
@@ -228,6 +232,9 @@
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxcHRhemthZGljdWplZG95eWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTU2ODUsImV4cCI6MjA3MTEzMTY4NX0.FaNU-OlO1yEo7e9ADUCbPWvK0RG90_GedlaXUXUM0Eo';
             const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             
+            // ВАЖНО: Замените 'ВАШ_GOOGLE_API_KEY' на ваш реальный ключ API
+            const GEMINI_API_KEY = 'AIzaSyCeE885TVI3rmRTD5fH43IqwYU-getBnpU';
+
             const PLANS = {
                 free: { name: 'Free', price: 0, priceId: null, features: ['1 чат', '5 сообщений в день', 'Базовая скорость генерации'], order: 1 },
                 pro: { name: 'Pro', price: 2999, priceId: 'pro', features: ['10 чатов', '15 сообщений в день', 'Высокая скорость генерации', 'Приоритетная поддержка'], order: 2 },
@@ -241,6 +248,7 @@
             let activeChatId = null;
             let currentCodeFile = 'index.html';
             let generationAbortController = null;
+            let genAI = null; // Инициализируем SDK позже
 
             // --- Элементы UI ---
             const ui = {
@@ -447,34 +455,49 @@
                 ui.sendButton.classList.toggle('cursor-not-allowed', ui.sendButton.disabled);
             }
 
-            async function callGeminiAPI(prompt, codeObject = null, signal) {
-                try {
-                    const body = { prompt };
-                    if (codeObject) body.codeObject = codeObject;
-                    
-                    const { data: { session } } = await supabaseClient.auth.getSession();
-                    const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-code`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${session.access_token}`
-                        },
-                        body: JSON.stringify(body),
-                        signal: signal
-                    });
+            // ИЗМЕНЕНО: Функция для вызова Google GenAI SDK
+            async function callGeminiAPI(prompt, codeObject = null) {
+                if (!genAI) {
+                    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'ВАШ_GOOGLE_API_KEY') {
+                        tg.showAlert('Ключ Google GenAI API не настроен. Пожалуйста, добавьте его в код.');
+                        return null;
+                    }
+                    genAI = new window.GoogleGenerativeAI(GEMINI_API_KEY);
+                }
 
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                try {
+                    const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+                    let fullPrompt = `Ты - эксперт по веб-разработке.
+                    Задача: "${prompt}"
+                    `;
+
+                    if (codeObject) {
+                        fullPrompt += `\n\nВот существующий код, который нужно улучшить:\n\`\`\`json\n${JSON.stringify(codeObject, null, 2)}\n\`\`\``;
+                    }
+
+                    fullPrompt += `\n\nВАЖНО: Твой ответ должен быть ИСКЛЮЧИТЕЛЬНО валидным JSON объектом.
+                    Ключи в JSON - это имена файлов (например, "index.html", "script.js").
+                    Значения - это полный код для каждого файла в виде строки.
+                    Не добавляй никаких объяснений, текста или markdown-разметки вне этого JSON объекта.`;
                     
-                    const result = await response.json();
-                    if (result.error) throw new Error(result.error);
-                    return result;
+                    const result = await model.generateContent(fullPrompt);
+                    const response = await result.response;
+                    let text = response.text();
+                    
+                    // Очистка ответа, если модель добавила markdown
+                    text = text.replace(/^```json\n/, '').replace(/\n```$/, '');
+
+                    try {
+                        const codeObject = JSON.parse(text);
+                        return codeObject;
+                    } catch (e) {
+                        console.error("Ошибка парсинга JSON ответа от AI:", e);
+                        addMessage(`❌ AI вернул некорректный формат данных. Попробуйте переформулировать запрос.`, 'bot');
+                        return null;
+                    }
 
                 } catch (error) {
-                    if (error.name === 'AbortError') {
-                        console.log('Запрос к AI отменен пользователем.');
-                        return { cancelled: true };
-                    }
-                    console.error("Ошибка вызова функции Supabase (generate-code):", error.message);
+                    console.error("Ошибка вызова Google GenAI API:", error);
                     addMessage(`❌ Ошибка при обращении к AI: ${error.message}`, 'bot');
                     return null;
                 }
@@ -482,7 +505,6 @@
             
             async function runAiProcess(steps, prompt, codeObject = null) {
                 isGenerating = true;
-                generationAbortController = new AbortController();
                 updateInputState();
                 ui.typingIndicator.classList.remove('hidden');
                 ui.chatArea.scrollTop = ui.chatArea.scrollHeight;
@@ -496,18 +518,11 @@
                 ui.aiStatusContainer.innerHTML = '';
                 
                 for (const step of steps) {
-                    if (generationAbortController.signal.aborted) {
-                        isGenerating = false;
-                        updateInputState();
-                        ui.typingIndicator.classList.add('hidden');
-                        ui.stopGenerationButton.classList.add('hidden');
-                        return;
-                    }
                     const statusDiv = document.createElement('div');
                     statusDiv.className = 'flex items-center space-x-2';
                     statusDiv.innerHTML = `<span><div class="spinner"></div></span><span>${step}</span>`;
                     ui.aiStatusContainer.appendChild(statusDiv);
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Уменьшил задержку
                     statusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
                 }
                 
@@ -516,18 +531,16 @@
                 apiStatusDiv.innerHTML = '<span><div class="spinner"></div></span><span>Отправка запроса в AI...</span>';
                 ui.aiStatusContainer.appendChild(apiStatusDiv);
                 
-                let result = await callGeminiAPI(prompt, codeObject, generationAbortController.signal);
+                let result = await callGeminiAPI(prompt, codeObject);
                 
                 ui.typingIndicator.classList.add('hidden');
                 ui.stopGenerationButton.classList.add('hidden');
 
-                if (!result || result.cancelled || !result['index.html']) {
+                if (!result || !result['index.html']) {
                     isGenerating = false;
                     updateInputState();
-                    if (result && result.cancelled) {
-                        apiStatusDiv.querySelector('span:last-child').textContent = 'Генерация отменена.';
-                        apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '🛑';
-                    }
+                    apiStatusDiv.querySelector('span:last-child').textContent = 'Генерация не удалась.';
+                    apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
                     return;
                 }
 
@@ -538,7 +551,7 @@
             }
 
             function initiateAiGeneration(prompt) {
-                runAiProcess(["Анализирую запрос...", "Проектирую структуру приложения...", "Создаю фронтенд и бэкенд...", "Начинаю генерацию..."], prompt);
+                runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], prompt);
             }
 
             function improveAiGeneration(prompt) {

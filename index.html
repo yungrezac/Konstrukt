@@ -817,7 +817,6 @@
                 document.getElementById('header-action-button').onclick = renderSubscriptionModal;
             }
             
-            // ИЗМЕНЕНО: Функция для рендеринга и открытия модального окна подписок
             function renderSubscriptionModal() {
                 const currentPlanId = localState.user?.subscription_plan || 'free';
                 const currentPlan = PLANS[currentPlanId];
@@ -863,7 +862,6 @@
                 plansHTML += `</div>`;
                 ui.subscriptionContent.innerHTML = plansHTML;
 
-                // Добавляем обработчики событий для кнопок покупки
                 Object.entries(PLANS).forEach(([planId, plan]) => {
                     if (plan.priceId) {
                         const button = document.getElementById(`buy-${planId}-button`);
@@ -1119,7 +1117,10 @@
                         sendMessage();
                     }
                 });
-                ui.messageInput.addEventListener('input', autoResizeInput);
+                ui.messageInput.addEventListener('input', () => {
+                    autoResizeInput();
+                    updateInputState();
+                });
                 ui.sendButton.addEventListener('click', sendMessage);
                 ui.menuButton.addEventListener('click', () => { renderChatList(); openModal(ui.historyModal); });
                 ui.newChatButton.addEventListener('click', () => createNewChat(false));
@@ -1146,9 +1147,15 @@
                 [ui.historyModal, ui.profileModal, ui.codeModal, ui.confirmRestoreModal, ui.subscriptionModal].forEach(modal => {
                     if (modal) {
                         let startY;
-                        modal.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+                        const scrollableContent = modal.querySelector('.overflow-y-auto');
+                        modal.addEventListener('touchstart', (e) => { 
+                            startY = e.touches[0].clientY; 
+                        }, { passive: true });
                         modal.addEventListener('touchmove', (e) => {
-                            if (modal.scrollTop === 0 && e.touches[0].clientY > startY + 50) closeModal();
+                            const content = scrollableContent || modal;
+                            if (content.scrollTop === 0 && e.touches[0].clientY > startY + 50) {
+                                closeModal();
+                            }
                         }, { passive: true });
                     }
                 });
@@ -1187,7 +1194,6 @@
                         showToast('Спасибо! Ваша подписка успешно обновлена.');
                     } else {
                         showToast('Платеж не был завершен.');
-                        // Возвращаем кнопку в исходное состояние
                         buttonElement.disabled = false;
                         buttonElement.innerHTML = `Выбрать ${plan.name}`;
                     }

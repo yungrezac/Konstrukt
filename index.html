@@ -884,7 +884,7 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
 
             function updateHeader() {
                 const chat = localState.chats[activeChatId];
-                ui.headerTitle.textContent = chat?.title || 'Super Devtol';
+                ui.headerTitle.textContent = chat?.title || 'devtol';
                 const subName = PLANS[localState.user.subscription_plan].name.toUpperCase();
                 ui.headerActionContainer.innerHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">${subName}</button>`;
                 document.getElementById('header-action-button').onclick = renderSubscriptionModal;

@@ -3,117 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>devtol</title>
+    <title>Devtol Mini App</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- JSZip for ZIP download -->
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- JSZip (для функции деплоя) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- FileSaver for downloading ZIP -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <!-- highlight.js for syntax highlighting (enhanced with more languages) -->
+    <!-- highlight.js для подсветки синтаксиса -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/css.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
-    <!-- marked.js for rendering Markdown -->
+    <!-- marked.js для рендеринга Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- НОВОЕ: Google GenAI SDK -->
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+        window.GoogleGenerativeAI = GoogleGenerativeAI;
+    </script>
 
     <style>
         :root {
-            --tg-bg-color: var(--tg-theme-bg-color, #0f172a);
-            --tg-text-color: var(--tg-theme-text-color, #f1f5f9);
-            --tg-hint-color: var(--tg-theme-hint-color, #94a3b8);
-            --tg-secondary-bg-color: var(--tg-theme-secondary-bg-color, #1e293b);
-            --tg-header-bg-color: var(--tg-theme-secondary-bg-color, #1e293b);
-            --tg-button-color: var(--tg-theme-button-color, #8b5cf6);
+            --tg-bg-color: var(--tg-theme-bg-color, #111827);
+            --tg-text-color: var(--tg-theme-text-color, #ffffff);
+            --tg-hint-color: var(--tg-theme-hint-color, #9ca3af);
+            --tg-secondary-bg-color: var(--tg-theme-secondary-bg-color, #1f2937);
+            --tg-header-bg-color: var(--tg-theme-secondary-bg-color, #1f2937);
+            --tg-button-color: var(--tg-theme-button-color, #8774e1);
             --tg-button-text-color: var(--tg-theme-button-text-color, #ffffff);
-            --tg-accent-color: #a78bfa;
-            --tg-shadow-color: rgba(0, 0, 0, 0.3);
-            --tg-gradient-start: #4c1d95;
-            --tg-gradient-end: #6d28d9;
         }
-        body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            margin: 0; padding: 0; color: var(--tg-text-color); 
-            background-color: var(--tg-bg-color); 
-            overflow: hidden; font-size: 15px; 
-            font-weight: 400;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: var(--tg-text-color); background-color: var(--tg-bg-color); overflow: hidden; font-size: 15px; }
         .app-container { display: flex; flex-direction: column; height: 100vh; }
-        .chat-area { 
-            flex-grow: 1; overflow-y: auto; padding: 1rem; 
-            display: flex; flex-direction: column; scroll-behavior: smooth; 
-            background: linear-gradient(to bottom, var(--tg-bg-color), var(--tg-secondary-bg-color));
-        }
-        .message-container { animation: message-appear 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
-        @keyframes message-appear { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .message { 
-            max-width: 85%; padding: 0.75rem 1rem; border-radius: 1.5rem; margin-bottom: 0.75rem; 
-            word-wrap: break-word; line-height: 1.5; transition: all 0.3s ease; 
-            box-shadow: 0 2px 4px var(--tg-shadow-color);
-        }
-        .user-message { 
-            background: linear-gradient(135deg, var(--tg-button-color), var(--tg-accent-color)); 
-            color: var(--tg-button-text-color); align-self: flex-end; margin-left: auto; 
-            border-bottom-right-radius: 0.5rem; 
-        }
-        .bot-message { 
-            background: var(--tg-secondary-bg-color); align-self: flex-start; 
-            border-bottom-left-radius: 0.5rem; 
-        }
-        .message:hover { transform: scale(1.02); }
+        .chat-area { flex-grow: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; scroll-behavior: smooth; }
+        .message-container { animation: message-appear 0.3s ease-out; }
+        @keyframes message-appear { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .message { max-width: 80%; padding: 0.5rem 0.9rem; border-radius: 1.25rem; margin-bottom: 0.5rem; word-wrap: break-word; line-height: 1.4; transition: all 0.2s ease-in-out; }
+        .user-message { background-color: var(--tg-button-color); color: var(--tg-button-text-color); align-self: flex-end; margin-left: auto; border-bottom-right-radius: 0.35rem; }
+        .bot-message { background-color: var(--tg-secondary-bg-color); align-self: flex-start; border-bottom-left-radius: 0.35rem; }
         
-        /* Enhanced Markdown styles */
-        .bot-message .markdown-content pre { 
-            background-color: #0f172a; padding: 0.75rem; border-radius: 0.75rem; 
-            font-size: 13px; white-space: pre-wrap; word-wrap: break-word; 
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
-        }
-        .bot-message .markdown-content code { 
-            background-color: #0f172a; padding: 0.2rem 0.4rem; border-radius: 0.375rem; 
-            font-size: 13px; 
-        }
+        /* Стили для Markdown в сообщениях */
+        .bot-message .markdown-content pre { background-color: #111827; padding: 0.5rem; border-radius: 0.5rem; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; }
+        .bot-message .markdown-content code { background-color: #111827; padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-size: 13px; }
         .bot-message .markdown-content pre code { background-color: transparent; padding: 0; }
-        .bot-message .markdown-content ul { padding-left: 1.5rem; list-style-type: disc; }
-        .bot-message .markdown-content ol { padding-left: 1.5rem; list-style-type: decimal; }
-        .bot-message .markdown-content p { margin: 0.5rem 0; }
+        .bot-message .markdown-content ul { padding-left: 1.25rem; list-style-type: disc; }
+        .bot-message .markdown-content ol { padding-left: 1.25rem; list-style-type: decimal; }
+        .bot-message .markdown-content p { margin: 0; }
         .bot-message .markdown-content strong { font-weight: 600; }
-        .bot-message .markdown-content a { color: var(--tg-accent-color); text-decoration: underline; }
 
-        .typing-indicator { display: flex; align-items: center; gap: 4px; }
-        .typing-indicator span { 
-            background-color: var(--tg-hint-color); width: 10px; height: 10px; border-radius: 50%; 
-            animation: bounce 1.2s infinite ease-in-out both; 
-            box-shadow: 0 1px 2px var(--tg-shadow-color);
-        }
+        .typing-indicator { display: flex; align-items: center; }
+        .typing-indicator span { background-color: var(--tg-hint-color); width: 8px; height: 8px; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
         .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
         .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.6; } 40% { transform: scale(1.2); opacity: 1; } }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
         
-        .modal-overlay { 
-            position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.7); z-index: 40; 
-            opacity: 0; transition: opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); pointer-events: none; 
-        }
+        .modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.6); z-index: 40; opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none; }
         .modal-overlay.visible { opacity: 1; pointer-events: auto; }
-        .modal { 
-            position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; 
-            background-color: var(--tg-secondary-bg-color); border-top-left-radius: 1.5rem; border-top-right-radius: 1.5rem; 
-            transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
-            display: flex; flex-direction: column; box-shadow: 0 -4px 20px var(--tg-shadow-color);
-        }
+        .modal { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background-color: var(--tg-secondary-bg-color, #1f2937); border-top-left-radius: 1rem; border-top-right-radius: 1rem; transform: translateY(100%); transition: transform 0.3s ease-in-out; display: flex; flex-direction: column; }
         .modal.visible { transform: translateY(0); }
-        .modal-handle { width: 40px; height: 5px; background-color: var(--tg-hint-color); border-radius: 2.5px; margin: 8px auto; flex-shrink: 0; }
+        .modal-handle { width: 36px; height: 4px; background-color: var(--tg-hint-color, #9ca3af); border-radius: 2px; margin: 6px auto; flex-shrink: 0; }
         
-        #code-modal .tab-button.active { border-bottom-color: var(--tg-button-color); color: var(--tg-text-color); font-weight: 600; }
+        #code-modal .tab-button.active { border-bottom-color: var(--tg-button-color); color: var(--tg-text-color); }
         
-        /* Enhanced code editor styles */
-        .code-editor-wrapper { position: relative; width: 100%; height: 100%; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.6; }
+        /* Стили для редактора кода */
+        .code-editor-wrapper { position: relative; width: 100%; height: 100%; font-family: 'SF Mono', 'Menlo', 'Monaco', monospace; font-size: 13px; line-height: 1.5; }
         #code-editor, #highlight-pre {
-            padding: 1rem 1rem 1rem 3.5rem; /* Space for line numbers */
+            padding: 1rem;
             margin: 0;
             border: 0;
             white-space: pre;
@@ -125,97 +80,75 @@
             position: absolute; inset: 0; z-index: 1;
             resize: none;
             color: transparent;
-            caret-color: #ffffff;
+            caret-color: white;
             background: transparent;
             -webkit-text-fill-color: transparent;
         }
         #highlight-pre {
             position: absolute; inset: 0; z-index: 0;
             pointer-events: none;
-            background: #0f172a;
         }
-        #highlight-pre::-webkit-scrollbar { width: 8px; height: 8px; }
-        #highlight-pre::-webkit-scrollbar-thumb { background: var(--tg-hint-color); border-radius: 4px; }
-        #highlight-pre::-webkit-scrollbar-track { background: transparent; }
-        .line-numbers {
-            position: absolute; left: 0; top: 0; bottom: 0; width: 3rem;
-            padding: 1rem 0; text-align: right; color: var(--tg-hint-color);
-            user-select: none; pointer-events: none; background: #0f172a;
-            border-right: 1px solid #1e293b; overflow: hidden;
-            font-size: 12px; line-height: 1.6;
-        }
-        .line-number { padding-right: 0.75rem; }
+        #highlight-pre::-webkit-scrollbar { display: none; }
+        #highlight-pre { -ms-overflow-style: none; scrollbar-width: none; }
 
-        .spinner { border: 3px solid #475569; border-top-color: var(--tg-button-color); border-radius: 50%; width: 16px; height: 16px; animation: spin 0.8s linear infinite; }
+        .spinner { border: 2px solid #4B5563; border-top-color: var(--tg-button-color); border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
         #animated-greeting {
-            font-size: 5rem; font-weight: 900; line-height: 1;
-            background: linear-gradient(90deg, var(--tg-gradient-start), var(--tg-gradient-end), #c084fc);
-            background-size: 300% auto; color: #fff; background-clip: text;
+            font-size: 4.5rem; font-weight: 800; line-height: 1;
+            background: linear-gradient(90deg, #a855f7, #ec4899, #ef4444, #ec4899, #a855f7);
+            background-size: 200% auto; color: #fff; background-clip: text;
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            animation: gradient-animation 4s linear infinite;
-            text-shadow: 0 2px 4px var(--tg-shadow-color);
+            animation: gradient-animation 5s linear infinite;
         }
-        @keyframes gradient-animation { to { background-position: 300% center; } }
+        @keyframes gradient-animation { to { background-position: 200% center; } }
         
-        .progress-bar { background-color: #334155; border-radius: 9999px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
-        .progress-bar-inner { background: linear-gradient(to right, var(--tg-button-color), var(--tg-accent-color)); height: 100%; border-radius: 9999px; transition: width 0.5s ease-in-out; }
+        .progress-bar { background-color: #374151; border-radius: 9999px; }
+        .progress-bar-inner { background-color: var(--tg-button-color); height: 100%; border-radius: 9999px; transition: width 0.5s ease-in-out; }
         
-        #toast-container { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 100; }
-        .toast { background-color: rgba(15,23,42,0.9); color: white; padding: 12px 24px; border-radius: 9999px; font-size: 14px; animation: fade-in-out 3s ease-in-out; box-shadow: 0 2px 10px var(--tg-shadow-color); }
+        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; }
+        .toast { background-color: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; animation: fade-in-out 3s ease-in-out; }
         @keyframes fade-in-out { 0% { opacity: 0; transform: translateY(-20px); } 10% { opacity: 1; transform: translateY(0); } 90% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-20px); } }
 
-        #message-input { resize: none; max-height: 160px; overflow-y: auto; border: none; }
+        #message-input { resize: none; max-height: 120px; overflow-y: auto; }
         #message-input::-webkit-scrollbar { display: none; }
-        #message-input:focus { outline: none; }
-
-        /* Header enhancements */
-        header { 
-            background: linear-gradient(to bottom, var(--tg-header-bg-color), var(--tg-bg-color)); 
-            box-shadow: 0 2px 10px var(--tg-shadow-color); 
-        }
-
-        /* Button enhancements */
-        button { transition: all 0.3s ease; }
-        button:hover { transform: translateY(-1px); box-shadow: 0 2px 5px var(--tg-shadow-color); }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
 
     <div id="app" class="app-container">
-        <header class="flex items-center justify-between p-3 flex-shrink-0" style="background-color: var(--tg-header-bg-color);">
-            <div class="flex items-center space-x-3">
-                <svg id="menu-button" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 cursor-pointer p-0.5 hover:opacity-80 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
-                <h1 id="header-title" class="text-xl font-bold truncate max-w-[180px]">devtol</h1>
+        <header class="flex items-center justify-between p-2 flex-shrink-0" style="background-color: var(--tg-header-bg-color);">
+            <div class="flex items-center space-x-2">
+                <svg id="menu-button" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 cursor-pointer p-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
+                <h1 id="header-title" class="text-lg font-semibold truncate max-w-[150px]">Devtol</h1>
             </div>
-            <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2">
                 <div id="header-action-container">
                     <button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">FREE</button>
                 </div>
-                <img id="user-photo" src="https://placehold.co/40x40/1a202c/ffffff?text=U" alt="User Avatar" class="w-8 h-8 rounded-full cursor-pointer ring-2 ring-offset-2 ring-offset-transparent ring-purple-500 transition-transform hover:scale-105">
+                <img id="user-photo" src="https://placehold.co/40x40/1a202c/ffffff?text=U" alt="User Avatar" class="w-7 h-7 rounded-full cursor-pointer">
             </div>
         </header>
 
         <main class="flex-grow relative overflow-hidden">
-            <div id="initial-greeting" class="absolute inset-0 flex flex-col items-center justify-center text-center px-6 transition-opacity duration-500 z-10" style="background-color: var(--tg-bg-color);">
-                <h2 id="animated-greeting" class="mb-8">devtol</h2>
-                <p id="greeting-text" class="text-2xl font-bold mb-6 tracking-tight"></p>
-                <p class="text-gray-300 max-w-lg text-base mb-8 leading-relaxed">
-                    Я могу сгенерировать для вас веб-приложение с фронтендом и бэкендом, а затем вы можете скачать ZIP. Просто опишите свою идею.
+            <div id="initial-greeting" class="absolute inset-0 flex flex-col items-center justify-center text-center px-4 transition-opacity duration-300 z-10" style="background-color: var(--tg-bg-color);">
+                <h2 id="animated-greeting" class="mb-6">4bogfm5jvu74ry6b</h2>
+                <p id="greeting-text" class="text-xl font-semibold mb-4"></p>
+                <p class="text-gray-400 max-w-md text-sm mb-6">
+                    Я могу сгенерировать для вас веб-приложение с фронтендом и бэкендом, а затем опубликовать его. Просто опишите свою идею.
                 </p>
             </div>
             <div id="chat-area" class="chat-area h-full w-full absolute inset-0"></div>
         </main>
         
-        <div id="typing-indicator-container" class="p-4 hidden"><div class="message bot-message typing-indicator"><span></span><span></span><span></span></div></div>
+        <div id="typing-indicator-container" class="p-3 hidden"><div class="message bot-message typing-indicator"><span></span><span></span><span></span></div></div>
 
-        <footer class="p-3 flex-shrink-0 relative shadow-lg">
-            <div class="rounded-2xl p-2 flex items-start ring-1 ring-gray-700/50" style="background-color: var(--tg-secondary-bg-color);">
-                <textarea id="message-input" placeholder="Спросить devtol" class="flex-grow bg-transparent focus:outline-none mx-3 text-base pt-2 placeholder-gray-500"></textarea>
+        <footer class="p-2 flex-shrink-0 relative">
+            <div class="rounded-xl p-1.5 flex items-start" style="background-color: var(--tg-secondary-bg-color);">
+                <textarea id="message-input" placeholder="Спросить Devtol" class="flex-grow bg-transparent focus:outline-none mx-2 text-sm pt-1.5" rows="1"></textarea>
                 <div id="action-button-container" class="flex-shrink-0 self-end">
-                    <button id="send-button" class="p-2 rounded-full transition-all hover:bg-purple-500/20">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    <button id="send-button" class="p-1.5 rounded-full transition-opacity">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--tg-button-color);" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     </button>
                 </div>
             </div>
@@ -224,48 +157,49 @@
     
     <div id="toast-container"></div>
 
-    <!-- Modals -->
+    <!-- Модальные окна -->
     <div id="modal-overlay" class="modal-overlay"></div>
     <div id="history-modal" class="modal" style="height: 90%;">
         <div class="modal-handle"></div>
-        <div class="p-4 flex-shrink-0 border-b border-gray-700/50 flex justify-between items-center">
-            <h2 class="text-xl font-bold">История</h2>
-            <button id="new-chat-button" class="text-sm font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">+ Новый чат</button>
+        <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
+            <h2 class="text-lg font-bold">История</h2>
+            <button id="new-chat-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">+ Новый чат</button>
         </div>
-        <div id="chat-list" class="overflow-y-auto p-4 space-y-2"></div>
+        <div id="chat-list" class="overflow-y-auto p-3"></div>
     </div>
     <div id="profile-modal" class="modal" style="height: 90%;">
         <div class="modal-handle"></div>
-        <div class="p-4 flex-shrink-0 border-b border-gray-700/50 flex justify-between items-center">
-            <h2 class="text-xl font-bold">Профиль</h2>
+        <div class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
+            <h2 class="text-lg font-bold">Профиль</h2>
         </div>
-        <div id="profile-content" class="p-5 overflow-y-auto space-y-4"></div>
+        <div id="profile-content" class="p-4 overflow-y-auto"></div>
     </div>
 
     <div id="subscription-modal" class="modal" style="height: auto; max-height: 90%;">
         <div class="modal-handle"></div>
-        <div id="subscription-content" class="p-5 overflow-y-auto space-y-4"></div>
+        <div id="subscription-content" class="p-4 overflow-y-auto">
+            <!-- Содержимое будет генерироваться динамически -->
+        </div>
     </div>
 
     <div id="code-modal" class="modal flex flex-col" style="height: 90%;">
         <div class="modal-handle"></div>
-        <div id="code-modal-header" class="p-4 flex-shrink-0 border-b border-gray-700/50 flex justify-between items-center">
-            <div id="code-tabs-container" class="flex items-center space-x-4 text-gray-300 text-sm overflow-x-auto scrollbar-hide"></div>
-            <div class="flex items-center space-x-3 flex-shrink-0 ml-3">
-                <div id="code-edit-actions" class="hidden flex space-x-2">
-                    <button id="cancel-edit-button" class="text-sm font-semibold px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600">Отмена</button>
-                    <button id="save-edit-button" class="text-sm font-semibold px-3 py-1.5 rounded-lg hover:opacity-90" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Сохранить</button>
+        <div id="code-modal-header" class="p-3 flex-shrink-0 border-b border-gray-700 flex justify-between items-center">
+            <div id="code-tabs-container" class="flex items-center space-x-3 text-gray-400 text-sm overflow-x-auto"></div>
+            <div class="flex items-center space-x-2 flex-shrink-0 ml-2">
+                <div id="code-edit-actions" class="hidden">
+                    <button id="cancel-edit-button" class="text-xs font-semibold px-2.5 py-1 rounded-md bg-gray-600">Отмена</button>
+                    <button id="save-edit-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Сохранить</button>
                 </div>
-                <button id="copy-code-button" class="p-2 rounded-full hover:bg-gray-700/50 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                <button id="copy-code-button" class="p-1.5 rounded-full hover:bg-gray-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                 </button>
                 <div id="deploy-actions-container"></div>
             </div>
         </div>
         <div id="code-view" class="p-0 flex-grow relative bg-gray-800">
-            <div id="ai-status-container" class="p-4 text-gray-300 space-y-2 text-sm"></div>
+            <div id="ai-status-container" class="p-3 text-gray-400 space-y-1.5 text-sm"></div>
             <div class="code-editor-wrapper">
-                <div id="line-numbers" class="line-numbers"></div>
                 <textarea id="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
                 <pre id="highlight-pre"><code id="highlight-output" class="language-html"></code></pre>
             </div>
@@ -273,18 +207,18 @@
         <div id="preview-view" class="hidden flex-grow bg-white">
             <iframe id="preview-frame" class="w-full h-full border-none" sandbox="allow-scripts allow-same-origin"></iframe>
         </div>
-        <div id="code-modal-footer" class="p-3 border-t border-gray-700/50">
-            <button id="stop-generation-button" class="w-full text-center py-2.5 rounded-xl font-semibold text-sm bg-red-600 text-white hidden hover:bg-red-700">Остановить генерацию</button>
+        <div id="code-modal-footer" class="p-2 border-t border-gray-700">
+            <button id="stop-generation-button" class="w-full text-center py-2 rounded-lg font-semibold text-sm bg-red-500 text-white hidden">Остановить генерацию</button>
         </div>
     </div>
 
     <div id="confirm-restore-modal" class="modal" style="height: auto; max-height: 40%;">
-        <div class="p-5 text-center">
-            <h3 id="confirm-title" class="text-lg font-bold mb-3">Восстановить эту версию?</h3>
-            <p id="confirm-text" class="text-gray-300 mb-5 text-sm">Все более новые версии в этом чате будут удалены.</p>
-            <div class="flex justify-center space-x-4">
-                <button id="cancel-confirm-button" class="px-6 py-2.5 rounded-xl bg-gray-700 text-sm hover:bg-gray-600">Нет</button>
-                <button id="confirm-action-button" class="px-6 py-2.5 rounded-xl text-sm hover:opacity-90" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Да</button>
+        <div class="p-4 text-center">
+            <h3 id="confirm-title" class="text-base font-bold mb-2">Восстановить эту версию?</h3>
+            <p id="confirm-text" class="text-gray-400 mb-4 text-sm">Все более новые версии в этом чате будут удалены.</p>
+            <div class="flex justify-center space-x-3">
+                <button id="cancel-confirm-button" class="px-5 py-2 rounded-lg bg-gray-600 text-sm">Нет</button>
+                <button id="confirm-action-button" class="px-5 py-2 rounded-lg text-sm" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Да</button>
             </div>
         </div>
     </div>
@@ -293,34 +227,30 @@
         document.addEventListener('DOMContentLoaded', () => {
             const tg = window.Telegram.WebApp;
 
-            // --- Configuration ---
-            const XAI_API_KEY = 'YOUR_XAI_API_KEY_HERE'; // Get your key from https://x.ai/api and replace this
-            const XAI_MODEL = 'grok-4'; // Model name for Grok 4
-            const BOT_TOKEN = '8229548332:AAEk9oCBl5KdgNJ-U9Ut8kLMlNynwI_zqNE'; // Bot token for creating invoices
+            // --- Конфигурация ---
+            const SUPABASE_URL = 'https://tqptazkadicujedoyykp.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxcHRhemthZGljdWplZG95eWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NTU2ODUsImV4cCI6MjA3MTEzMTY4NX0.FaNU-OlO1yEo7e9ADUCbPWvK0RG90_GedlaXUXUM0Eo';
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             
+            // ВАЖНО: Замените 'ВАШ_GOOGLE_API_KEY' на ваш реальный ключ API
+            const GEMINI_API_KEY = 'AIzaSyDe8049InvrBO29io94XFQfl77LJXjY9m4';
+
             const PLANS = {
-                free: { name: 'Free', star_price: 0, features: ['1 чат', '5 сообщений в день'], order: 1 },
-                pro: { name: 'Pro', star_price: 100, features: ['10 чатов', '15 сообщений в день', 'Приоритетная генерация'], order: 2 },
-                ultima: { name: 'Ultima', star_price: 300, features: ['Безлимит чатов', 'Безлимит сообщений', 'Максимальная скорость'], order: 3 }
+                free: { name: 'Free', price: 0, priceId: null, features: ['1 чат', '5 сообщений в день', 'Базовая скорость генерации'], order: 1 },
+                pro: { name: 'Pro', price: 2999, priceId: 'pro', features: ['10 чатов', '15 сообщений в день', 'Высокая скорость генерации', 'Приоритетная поддержка'], order: 2 },
+                ultima: { name: 'Ultima', price: 9999, priceId: 'ultima', features: ['Безлимит чатов', 'Безлимит сообщений', 'Максимальная скорость', 'Приоритетная поддержка'], order: 3 }
             };
 
-            // --- App State (using localStorage) ---
-            let localState = JSON.parse(localStorage.getItem('super_devtol_state')) || { 
-                chats: {}, 
-                activeChatId: null,
-                user: { subscription_plan: 'free', subscription_end: 0, daily_messages: 0, last_reset: Date.now() }
-            };
+            // --- Состояние приложения ---
+            let localState = { user: null, chats: {} }; 
             let isGenerating = false;
             let currentConfirmAction = null;
-            let activeChatId = localState.activeChatId;
+            let activeChatId = null;
             let currentCodeFile = 'index.html';
             let generationAbortController = null;
+            let genAI = null; // Инициализируем SDK позже
 
-            function saveState() {
-                localStorage.setItem('super_devtol_state', JSON.stringify(localState));
-            }
-
-            // --- UI Elements ---
+            // --- Элементы UI ---
             const ui = {
                 messageInput: document.getElementById('message-input'),
                 sendButton: document.getElementById('send-button'),
@@ -334,8 +264,6 @@
                 historyModal: document.getElementById('history-modal'),
                 profileModal: document.getElementById('profile-modal'),
                 profileContent: document.getElementById('profile-content'),
-                subscriptionModal: document.getElementById('subscription-modal'),
-                subscriptionContent: document.getElementById('subscription-content'),
                 codeModal: document.getElementById('code-modal'),
                 codeTabsContainer: document.getElementById('code-tabs-container'),
                 codeView: document.getElementById('code-view'),
@@ -353,6 +281,8 @@
                 cancelConfirmButton: document.getElementById('cancel-confirm-button'),
                 headerActionContainer: document.getElementById('header-action-container'),
                 deployActionsContainer: document.getElementById('deploy-actions-container'),
+                subscriptionModal: document.getElementById('subscription-modal'),
+                subscriptionContent: document.getElementById('subscription-content'),
                 typingIndicator: document.getElementById('typing-indicator-container'),
                 copyCodeButton: document.getElementById('copy-code-button'),
                 toastContainer: document.getElementById('toast-container'),
@@ -360,84 +290,90 @@
                 codeEditActions: document.getElementById('code-edit-actions'),
                 saveEditButton: document.getElementById('save-edit-button'),
                 cancelEditButton: document.getElementById('cancel-edit-button'),
-                lineNumbers: document.getElementById('line-numbers'),
             };
 
             const user = tg.initDataUnsafe.user;
 
-            // --- Functions ---
+            // --- Функции ---
 
             function forceDarkTheme() {
-                tg.setHeaderColor('#1e293b');
-                tg.setBackgroundColor('#0f172a');
+                tg.setHeaderColor('#1f2937');
+                tg.setBackgroundColor('#111827');
                 const root = document.documentElement;
                 const darkThemeCssVars = {
-                    '--tg-theme-bg-color': '#0f172a',
-                    '--tg-theme-text-color': '#f1f5f9',
-                    '--tg-theme-hint-color': '#94a3b8',
-                    '--tg-theme-secondary-bg-color': '#1e293b',
-                    '--tg-theme-header-bg-color': '#1e293b',
-                    '--tg-theme-button-color': '#8b5cf6',
+                    '--tg-theme-bg-color': '#111827',
+                    '--tg-theme-text-color': '#ffffff',
+                    '--tg-theme-hint-color': '#9ca3af',
+                    '--tg-theme-secondary-bg-color': '#1f2937',
+                    '--tg-theme-header-bg-color': '#1f2937',
+                    '--tg-theme-button-color': '#8774e1',
                     '--tg-theme-button-text-color': '#ffffff',
                 };
                 Object.entries(darkThemeCssVars).forEach(([key, value]) => root.style.setProperty(key, value));
             }
 
-            function loadLocalData() {
-                if (Object.keys(localState.chats).length === 0) {
-                    createNewChat(true);
+            async function loadDataFromSupabase() {
+                if (!user || !user.id) {
+                    console.error("Нет данных о пользователе Telegram.");
+                    return;
+                }
+                let { data: userData, error: userError } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (userError && userError.code !== 'PGRST116') {
+                    console.error("Ошибка при загрузке пользователя:", userError); return;
+                }
+
+                if (!userData) {
+                    const { data: newUser, error: insertError } = await supabaseClient
+                        .from('users').insert({ id: user.id, first_name: user.first_name, last_name: user.last_name, username: user.username, photo_url: user.photo_url, }).select().single();
+                    if (insertError) { console.error("Ошибка при создании пользователя:", insertError); return; }
+                    userData = newUser;
+                }
+                localState.user = userData;
+
+                const { data: chatsData, error: chatsError } = await supabaseClient.from('chats').select('*').eq('user_id', user.id);
+                if (chatsError) { console.error("Ошибка при загрузке чатов:", chatsError); return; }
+                
+                localState.chats = {};
+                for (const chat of chatsData) {
+                    localState.chats[chat.id] = { ...chat, messages: [], codeHistory: [] };
+                }
+
+                if (chatsData.length === 0) {
+                    await createNewChat(true);
                 } else {
-                    activeChatId = localState.activeChatId || Object.keys(localState.chats)[0];
-                }
-                if (!localState.user) {
-                    localState.user = { subscription_plan: 'free', subscription_end: 0, daily_messages: 0, last_reset: Date.now() };
-                    saveState();
+                    activeChatId = chatsData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0].id;
+                    await loadActiveChatDetails();
                 }
             }
+            
+            async function loadActiveChatDetails() {
+                if (!activeChatId) return;
+                const { data: messagesData, error: messagesError } = await supabaseClient.from('messages').select('*').eq('chat_id', activeChatId).order('created_at', { ascending: true });
+                if (messagesError) console.error("Ошибка загрузки сообщений:", messagesError);
+                else localState.chats[activeChatId].messages = messagesData.map(m => ({...m, text: m.text_content}));
 
-            function checkSubscription() {
-                const now = Date.now();
-                if (localState.user.subscription_end < now && localState.user.subscription_plan !== 'free') {
-                    localState.user.subscription_plan = 'free';
-                    saveState();
-                    showToast('Ваша подписка истекла. Перейдите на Free план.');
-                }
+                const { data: codeHistoryData, error: codeHistoryError } = await supabaseClient.from('code_history').select('*').eq('chat_id', activeChatId).order('version', { ascending: true });
+                if(codeHistoryError) console.error("Ошибка загрузки истории кода:", codeHistoryError);
+                else localState.chats[activeChatId].codeHistory = codeHistoryData.map(c => ({...c, code: c.code_object}));
             }
 
-            function getPlanLimits(planId) {
-                const plan = PLANS[planId || 'free'];
-                return {
-                    chats: plan.order === 3 ? Infinity : plan.order === 2 ? 10 : 1,
-                    daily_messages: plan.order === 3 ? Infinity : plan.order === 2 ? 15 : 5
-                };
-            }
-
-            function checkDailyReset() {
-                const now = new Date();
-                const last = new Date(localState.user.last_reset);
-                if (now.toDateString() !== last.toDateString()) {
-                    localState.user.daily_messages = 0;
-                    localState.user.last_reset = now.getTime();
-                    saveState();
-                }
-            }
-
-            function incrementDailyMessage() {
-                checkDailyReset();
-                localState.user.daily_messages++;
-                saveState();
-            }
-
-            function addMessage(text, sender, codeVersion = null) {
+            async function addMessage(text, sender, codeVersion = null) {
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat) return;
                 
-                activeChat.messages.push({ sender, text, code_version: codeVersion });
-                saveState();
+                const { data: newMessage, error } = await supabaseClient.from('messages').insert({ chat_id: activeChatId, sender, text_content: text, code_version: codeVersion }).select().single();
+                if (error) { console.error("Ошибка сохранения сообщения:", error); return; }
+
+                activeChat.messages.push({ ...newMessage, text: newMessage.text_content });
 
                 if (sender === 'user' && activeChat.messages.filter(m => m.sender === 'user').length === 1 && text) {
                     activeChat.title = text;
-                    saveState();
+                    await supabaseClient.from('chats').update({ title: text }).eq('id', activeChatId);
                     ui.headerTitle.textContent = text;
                 }
                 renderMessages();
@@ -466,7 +402,7 @@
                             contentDiv.className = 'markdown-content';
                             contentDiv.innerHTML = marked.parse(msg.text);
                         } else {
-                            contentDiv.innerHTML = msg.text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-purple-300 underline">$1</a>');
+                            contentDiv.innerHTML = msg.text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-blue-300 underline">$1</a>');
                         }
                         msgContent.appendChild(contentDiv);
                     }
@@ -474,14 +410,14 @@
                         const isLatest = msg.code_version === latestCodeVersion;
                         const button = document.createElement('button');
                         button.textContent = isLatest ? 'Открыть код' : 'Восстановить';
-                        button.className = 'mt-3 w-full text-center py-2 rounded-xl font-semibold transition-colors text-sm hover:opacity-90';
+                        button.className = 'mt-2 w-full text-center py-1.5 rounded-lg font-semibold transition-colors text-sm';
                         
                         if (isLatest) {
                             button.style.backgroundColor = 'var(--tg-button-color)';
                             button.style.color = 'var(--tg-button-text-color)';
                             button.onclick = () => openCodeModal(true, msg.code_version);
                         } else {
-                            button.style.backgroundColor = '#475569';
+                            button.style.backgroundColor = '#4B5563';
                             button.style.color = 'white';
                             button.onclick = () => showConfirmation('restore', msg.code_version);
                         }
@@ -494,18 +430,9 @@
             }
 
             function sendMessage() {
-                checkSubscription();
-                checkDailyReset();
-                const limits = getPlanLimits(localState.user.subscription_plan);
-                if (localState.user.daily_messages >= limits.daily_messages) {
-                    showToast('Дневной лимит сообщений исчерпан. Обновите подписку.');
-                    renderSubscriptionModal();
-                    return;
-                }
                 if (isGenerating || ui.sendButton.disabled) return;
                 const text = ui.messageInput.value.trim();
                 if (text) {
-                    incrementDailyMessage();
                     addMessage(text, 'user');
                     const activeChat = localState.chats[activeChatId];
                     if (activeChat.codeHistory.length === 0) { 
@@ -528,57 +455,50 @@
                 ui.sendButton.classList.toggle('cursor-not-allowed', ui.sendButton.disabled);
             }
 
-            async function callGrokAPI(prompt, codeObject = null) {
-                if (!XAI_API_KEY || XAI_API_KEY === 'YOUR_XAI_API_KEY_HERE') {
-                    tg.showAlert('Please set your xAI API key in the code. Visit https://x.ai/api for details.');
-                    return null;
+            // ИЗМЕНЕНО: Функция для вызова Google GenAI SDK
+            async function callGeminiAPI(prompt, codeObject = null) {
+                if (!genAI) {
+                    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'ВАШ_GOOGLE_API_KEY') {
+                        tg.showAlert('Ключ Google GenAI API не настроен. Пожалуйста, добавьте его в код.');
+                        return null;
+                    }
+                    genAI = new window.GoogleGenerativeAI(GEMINI_API_KEY);
                 }
-
-                let fullPrompt = `You are a web development expert.
-Task: "${prompt}"
-`;
-
-                if (codeObject) {
-                    fullPrompt += `\n\nExisting code to improve:\n\`\`\`json\n${JSON.stringify(codeObject, null, 2)}\n\`\`\``;
-                }
-
-                fullPrompt += `\n\nIMPORTANT: Your response must be EXCLUSIVELY a valid JSON object.
-Keys in JSON are file names (e.g., "index.html", "script.js").
-Values are the full code for each file as a string.
-Do not add any explanations, text, or markdown outside this JSON object.`;
 
                 try {
-                    generationAbortController = new AbortController();
-                    const response = await fetch('https://api.x.ai/v1/chat/completions', {
-                        method: 'POST',
-                        signal: generationAbortController.signal,
-                        headers: {
-                            'Authorization': `Bearer ${XAI_API_KEY}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            model: XAI_MODEL,
-                            messages: [{ role: 'user', content: fullPrompt }],
-                            temperature: 0.7,
-                            max_tokens: 8192 // Increased for better output
-                        })
-                    });
+                    const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+                    let fullPrompt = `Ты - эксперт по веб-разработке.
+                    Задача: "${prompt}"
+                    `;
 
-                    const data = await response.json();
-                    if (data.choices && data.choices[0].message.content) {
-                        let text = data.choices[0].message.content;
-                        text = text.replace(/^```json\n/, '').replace(/\n```$/, '');
-                        return JSON.parse(text);
-                    } else {
-                        throw new Error('Invalid response from API');
+                    if (codeObject) {
+                        fullPrompt += `\n\nВот существующий код, который нужно улучшить:\n\`\`\`json\n${JSON.stringify(codeObject, null, 2)}\n\`\`\``;
                     }
+
+                    fullPrompt += `\n\nВАЖНО: Твой ответ должен быть ИСКЛЮЧИТЕЛЬНО валидным JSON объектом.
+                    Ключи в JSON - это имена файлов (например, "index.html", "script.js").
+                    Значения - это полный код для каждого файла в виде строки.
+                    Не добавляй никаких объяснений, текста или markdown-разметки вне этого JSON объекта.`;
+                    
+                    const result = await model.generateContent(fullPrompt);
+                    const response = await result.response;
+                    let text = response.text();
+                    
+                    // Очистка ответа, если модель добавила markdown
+                    text = text.replace(/^```json\n/, '').replace(/\n```$/, '');
+
+                    try {
+                        const codeObject = JSON.parse(text);
+                        return codeObject;
+                    } catch (e) {
+                        console.error("Ошибка парсинга JSON ответа от AI:", e);
+                        addMessage(`❌ AI вернул некорректный формат данных. Попробуйте переформулировать запрос.`, 'bot');
+                        return null;
+                    }
+
                 } catch (error) {
-                    if (error.name === 'AbortError') {
-                        console.log('Generation aborted');
-                    } else {
-                        console.error("Error calling xAI Grok API:", error);
-                        addMessage(`❌ Error accessing AI: ${error.message}. Check your API key and network.`, 'bot');
-                    }
+                    console.error("Ошибка вызова Google GenAI API:", error);
+                    addMessage(`❌ Ошибка при обращении к AI: ${error.message}`, 'bot');
                     return null;
                 }
             }
@@ -599,19 +519,19 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                 
                 for (const step of steps) {
                     const statusDiv = document.createElement('div');
-                    statusDiv.className = 'flex items-center space-x-3';
-                    statusDiv.innerHTML = `<span><div class="spinner"></div></span><span class="font-medium">${step}</span>`;
+                    statusDiv.className = 'flex items-center space-x-2';
+                    statusDiv.innerHTML = `<span><div class="spinner"></div></span><span>${step}</span>`;
                     ui.aiStatusContainer.appendChild(statusDiv);
-                    await new Promise(resolve => setTimeout(resolve, 300)); // Faster for better UX
-                    statusDiv.querySelector('.spinner').parentElement.innerHTML = '<svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>';
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Уменьшил задержку
+                    statusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
                 }
                 
                 const apiStatusDiv = document.createElement('div');
-                apiStatusDiv.className = 'flex items-center space-x-3';
-                apiStatusDiv.innerHTML = '<span><div class="spinner"></div></span><span class="font-medium">Запрос к Grok 4...</span>';
+                apiStatusDiv.className = 'flex items-center space-x-2';
+                apiStatusDiv.innerHTML = '<span><div class="spinner"></div></span><span>Отправка запроса в AI...</span>';
                 ui.aiStatusContainer.appendChild(apiStatusDiv);
                 
-                let result = await callGrokAPI(prompt, codeObject);
+                let result = await callGeminiAPI(prompt, codeObject);
                 
                 ui.typingIndicator.classList.add('hidden');
                 ui.stopGenerationButton.classList.add('hidden');
@@ -620,18 +540,18 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                     isGenerating = false;
                     updateInputState();
                     apiStatusDiv.querySelector('span:last-child').textContent = 'Генерация не удалась.';
-                    apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '<svg class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>';
+                    apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '❌';
                     return;
                 }
 
                 apiStatusDiv.querySelector('span:last-child').textContent = 'Получение ответа...';
-                apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '<svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>';
+                apiStatusDiv.querySelector('.spinner').parentElement.innerHTML = '✅';
                 
                 await saveAndDisplayCode(result);
             }
 
             function initiateAiGeneration(prompt) {
-                runAiProcess(["Анализ запроса...", "Проектирование структуры...", "Генерация кода с Grok 4..."], prompt);
+                runAiProcess(["Анализирую запрос...", "Проектирую структуру...", "Начинаю генерацию..."], prompt);
             }
 
             function improveAiGeneration(prompt) {
@@ -641,15 +561,22 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                     return;
                 }
                 const latestCodeObject = activeChat.codeHistory.slice(-1)[0].code;
-                runAiProcess([`Понял, нужно: "${prompt}"`, "Применение изменений...", "Переписывание кода с Grok 4..."], prompt, latestCodeObject);
+                runAiProcess([`Понял, нужно: "${prompt}"`, "Применяю изменения...", "Переписываю код..."], prompt, latestCodeObject);
             }
 
             async function saveAndDisplayCode(codeObject, isUserEdit = false) {
                 const activeChat = localState.chats[activeChatId];
                 const newVersion = activeChat.codeHistory.length + 1;
                 
+                const { error } = await supabaseClient.from('code_history').insert({ 
+                    chat_id: activeChatId, 
+                    version: newVersion, 
+                    code_object: codeObject,
+                    is_user_edit: isUserEdit
+                });
+                if (error) { console.error("Ошибка сохранения истории кода:", error); return; }
+
                 activeChat.codeHistory.push({ version: newVersion, code: codeObject, is_user_edit: isUserEdit });
-                saveState();
                 
                 renderCodeTabs();
                 displayCodeFile(currentCodeFile);
@@ -657,10 +584,10 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                 if (!isUserEdit) {
                     setTimeout(() => {
                         switchTab('preview');
-                        addMessage("Приложение сгенерировано. Вы можете скачать ZIP и развернуть его.", 'bot', newVersion);
+                        addMessage("Приложение сгенерировано. Вы можете опубликовать его.", 'bot', newVersion);
                         isGenerating = false;
                         updateInputState();
-                        updateDownloadActions();
+                        updateDeployActions();
                     }, 500);
                 } else {
                      addMessage("Вы сохранили новую версию кода.", 'bot', newVersion);
@@ -678,7 +605,7 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                 files.push('preview');
 
                 ui.codeTabsContainer.innerHTML = files.map(file => `
-                    <button data-tab="${file}" class="tab-button font-semibold py-2 px-1 border-b-2 border-transparent whitespace-nowrap hover:text-white transition-colors">
+                    <button data-tab="${file}" class="tab-button font-bold py-1 border-b-2 border-transparent whitespace-nowrap">
                         ${file === 'preview' ? 'Просмотр' : file}
                     </button>
                 `).join('');
@@ -696,8 +623,7 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                 const codeContent = latestCodeObject[fileName] || `// Файл ${fileName} не найден.`;
                 
                 ui.codeEditor.value = codeContent;
-                updateHighlight(fileName);
-                updateLineNumbers(codeContent);
+                updateHighlight();
                 
                 currentCodeFile = fileName;
 
@@ -737,7 +663,7 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                 
                 currentCodeFile = 'index.html';
                 renderCodeTabs();
-                updateDownloadActions();
+                updateDeployActions();
                 openModal(ui.codeModal);
                 switchTab(switchToPreview ? 'preview' : currentCodeFile);
             }
@@ -758,34 +684,35 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
             async function openProfileModal() {
                 ui.profileContent.innerHTML = '<div class="flex justify-center items-center h-full"><div class="spinner"></div></div>';
                 openModal(ui.profileModal);
-                renderProfileDetails();
+                await renderProfileDetails();
             }
             
-            function createNewChat(isInitial = false) {
-                checkSubscription();
-                const limits = getPlanLimits(localState.user.subscription_plan);
+            async function createNewChat(isInitial = false) {
                 const chatCount = Object.keys(localState.chats).length;
-                if (chatCount >= limits.chats && !isInitial) {
-                    showToast(`Вы достигли лимита в ${limits.chats} чатов. Обновите подписку.`);
+                const limit = PLANS[localState.user.subscription_plan || 'free'].chats;
+
+                if (!isInitial && chatCount >= limit) {
+                    tg.showAlert(`Вы достигли лимита в ${limit} чатов для плана ${PLANS[localState.user.subscription_plan || 'free'].name}. Обновите подписку.`);
                     renderSubscriptionModal();
                     return;
                 }
-                const newChatId = Date.now().toString();
-                localState.chats[newChatId] = { id: newChatId, title: '', messages: [], codeHistory: [] };
-                switchChat(newChatId);
+
+                const { data: newChat, error } = await supabaseClient.from('chats').insert({ user_id: localState.user.id }).select().single();
+                if (error) { console.error("Ошибка создания чата:", error); return; }
+                
+                localState.chats[newChat.id] = { ...newChat, messages: [], codeHistory: [] };
+                switchChat(newChat.id);
                 closeModal();
-                saveState();
             }
 
-            function switchChat(chatId) {
+            async function switchChat(chatId) {
                 if (activeChatId === chatId) {
                     closeModal();
                     return;
                 }
                 activeChatId = chatId;
-                localState.activeChatId = chatId;
-                saveState();
                 ui.messageInput.value = '';
+                await loadActiveChatDetails();
                 renderMessages();
                 updateHeader();
                 updateInputState();
@@ -795,19 +722,19 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
 
             function renderChatList() {
                 ui.chatList.innerHTML = '';
-                const chats = Object.values(localState.chats).sort((a, b) => new Date(b.id) - new Date(a.id));
+                const chats = Object.values(localState.chats).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                 chats.forEach(chat => {
                     const chatDiv = document.createElement('div');
-                    chatDiv.className = `p-3 rounded-xl flex justify-between items-center group transition-all hover:bg-gray-800/50 ${chat.id === activeChatId ? 'bg-gray-800' : ''}`;
+                    chatDiv.className = `p-2.5 rounded-lg flex justify-between items-center group transition-colors ${chat.id === activeChatId ? 'bg-gray-800' : 'hover:bg-gray-800'}`;
                     
                     const titleP = document.createElement('p');
-                    titleP.className = 'font-semibold truncate text-base cursor-pointer flex-grow';
+                    titleP.className = 'font-semibold truncate text-sm cursor-pointer flex-grow';
                     titleP.textContent = chat.title || 'Новый чат';
                     titleP.onclick = () => switchChat(chat.id);
 
                     const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'ml-3 p-1.5 rounded-full hover:bg-red-500/30 text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity';
-                    deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
+                    deleteBtn.className = 'ml-2 p-1 rounded-full hover:bg-red-500/20 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity';
+                    deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
                     deleteBtn.onclick = (e) => {
                         e.stopPropagation();
                         showConfirmation('deleteChat', chat.id);
@@ -838,170 +765,78 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                 openModal(ui.confirmRestoreModal);
             }
 
-            function handleConfirm() {
+            async function handleConfirm() {
                 if (!currentConfirmAction) return;
                 const { action, data } = currentConfirmAction;
 
                 if (action === 'restore') {
-                    confirmRestore(data);
+                    await confirmRestore(data);
                 } else if (action === 'deleteChat') {
-                    deleteChat(data);
+                    await deleteChat(data);
                 }
 
                 currentConfirmAction = null;
                 closeModal();
             }
 
-            function confirmRestore(versionToRestore) {
+            async function confirmRestore(versionToRestore) {
                 const activeChat = localState.chats[activeChatId];
                 if (!activeChat || versionToRestore === null) return;
                 
+                const { error: deleteCodeError } = await supabaseClient.from('code_history').delete().eq('chat_id', activeChatId).gt('version', versionToRestore);
+                const { error: deleteMsgError } = await supabaseClient.from('messages').delete().eq('chat_id', activeChatId).gt('code_version', versionToRestore);
+
+                if(deleteCodeError || deleteMsgError) {
+                    console.error("Ошибка восстановления:", deleteCodeError || deleteMsgError);
+                    tg.showAlert("Не удалось восстановить версию.");
+                    return;
+                }
+
                 const versionIndex = activeChat.codeHistory.findIndex(h => h.version === versionToRestore);
                 if (versionIndex !== -1) activeChat.codeHistory.splice(versionIndex + 1);
                 
                 const lastValidMessageIndex = activeChat.messages.map(m => m.code_version).lastIndexOf(versionToRestore);
                 if(lastValidMessageIndex > -1) activeChat.messages.splice(lastValidMessageIndex + 1);
                 
-                saveState();
                 renderMessages();
             }
 
-            function deleteChat(chatIdToDelete) {
+            async function deleteChat(chatIdToDelete) {
+                const { error } = await supabaseClient.from('chats').delete().eq('id', chatIdToDelete);
+                if (error) {
+                    console.error("Ошибка удаления чата:", error);
+                    tg.showAlert("Не удалось удалить чат.");
+                    return;
+                }
                 delete localState.chats[chatIdToDelete];
                 
                 if (activeChatId === chatIdToDelete) {
-                    const remainingChats = Object.values(localState.chats).sort((a, b) => new Date(b.id) - new Date(a.id));
+                    const remainingChats = Object.values(localState.chats).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                     const newActiveChatId = remainingChats.length > 0 ? remainingChats[0].id : null;
                     if (newActiveChatId) {
-                        switchChat(newActiveChatId);
+                        await switchChat(newActiveChatId);
                     } else {
-                        createNewChat(true);
+                        await createNewChat(true);
                     }
                 }
-                saveState();
                 renderChatList();
             }
 
             function updateHeader() {
                 const chat = localState.chats[activeChatId];
-                ui.headerTitle.textContent = chat?.title || 'devtol';
-                const subName = PLANS[localState.user.subscription_plan].name.toUpperCase();
+                ui.headerTitle.textContent = chat?.title || 'Devtol';
+                const subName = PLANS[localState.user?.subscription_plan || 'free'].name.toUpperCase();
                 ui.headerActionContainer.innerHTML = `<button id="header-action-button" class="text-xs font-bold px-2.5 py-1 rounded-full" style="background-color: var(--tg-secondary-bg-color);">${subName}</button>`;
                 document.getElementById('header-action-button').onclick = renderSubscriptionModal;
             }
-
-            function updateDownloadActions() {
-                const chat = localState.chats[activeChatId];
-                let buttonsHTML = '';
-                if (chat && chat.codeHistory.length > 0) {
-                    buttonsHTML = `<button id="download-zip-button" class="text-sm font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Скачать ZIP</button>`;
-                }
-                ui.deployActionsContainer.innerHTML = buttonsHTML;
-                
-                const downloadBtn = document.getElementById('download-zip-button');
-                if (downloadBtn) downloadBtn.onclick = downloadZip;
-            }
             
-            function downloadZip() {
-                const chat = localState.chats[activeChatId];
-                if (!chat || chat.codeHistory.length === 0) {
-                    addMessage('Ошибка: не найден код для скачивания.', 'bot');
-                    return;
-                }
-
-                const latestCodeObject = chat.codeHistory.slice(-1)[0].code;
-                var zip = new JSZip();
-                for (const [file, content] of Object.entries(latestCodeObject)) {
-                    zip.file(file, content);
-                }
-                zip.generateAsync({type: "blob"}).then(function(content) {
-                    saveAs(content, `${chat.title || 'app'}.zip`);
-                    addMessage(`✅ ZIP файл сгенерирован и скачан.`, 'bot');
-                    tg.HapticFeedback.notificationOccurred('success');
-                }).catch(error => {
-                    console.error('Ошибка создания ZIP:', error);
-                    addMessage(`❌ Ошибка создания ZIP: ${error.message}`, 'bot');
-                    tg.HapticFeedback.notificationOccurred('error');
-                });
-            }
-
-            function renderProfileDetails() {
-                const allChats = Object.values(localState.chats);
-                const chatUsage = allChats.length;
-                let messageCount = 0;
-                allChats.forEach(chat => {
-                    messageCount += chat.messages.filter(m => m.sender === 'user').length;
-                });
-                const codeVersionsCount = allChats.reduce((acc, chat) => acc + chat.codeHistory.length, 0);
-                const currentPlanId = localState.user.subscription_plan;
-                const limits = getPlanLimits(currentPlanId);
-                const chatPercentage = limits.chats === Infinity ? 100 : (chatUsage / limits.chats) * 100;
-
-                ui.profileContent.innerHTML = `
-                    <div class="space-y-6">
-                        <!-- User Card -->
-                        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-5 flex items-center space-x-4 shadow-lg">
-                            <img src="${user.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`}" class="w-20 h-20 rounded-full border-4 border-purple-600">
-                            <div>
-                                <h3 class="text-2xl font-bold">${user.first_name || ''} ${user.last_name || ''}</h3>
-                                <p class="text-gray-400 text-base">${user.username ? `@${user.username}` : 'Username не указан'}</p>
-                            </div>
-                        </div>
-
-                        <!-- Stats Card -->
-                        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-5 shadow-lg">
-                            <h4 class="font-bold mb-4 text-lg">Статистика</h4>
-                            <div class="grid grid-cols-3 gap-5 text-center">
-                                <div class="bg-gray-700/50 rounded-xl p-3">
-                                    <div class="bg-gradient-to-br from-purple-600 to-purple-400 rounded-full p-3 w-12 h-12 mx-auto flex items-center justify-center mb-2 shadow-md">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                                    </div>
-                                    <p class="text-2xl font-bold">${chatUsage}</p>
-                                    <p class="text-sm text-gray-400">Проектов</p>
-                                </div>
-                                <div class="bg-gray-700/50 rounded-xl p-3">
-                                    <div class="bg-gradient-to-br from-green-600 to-green-400 rounded-full p-3 w-12 h-12 mx-auto flex items-center justify-center mb-2 shadow-md">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                                    </div>
-                                    <p class="text-2xl font-bold">${messageCount}</p>
-                                    <p class="text-sm text-gray-400">Сообщений</p>
-                                </div>
-                                <div class="bg-gray-700/50 rounded-xl p-3">
-                                    <div class="bg-gradient-to-br from-sky-600 to-sky-400 rounded-full p-3 w-12 h-12 mx-auto flex items-center justify-center mb-2 shadow-md">
-                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                    </div>
-                                    <p class="text-2xl font-bold">${codeVersionsCount}</p>
-                                    <p class="text-sm text-gray-400">Версий кода</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Subscription Card -->
-                        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-5 shadow-lg">
-                            <h4 class="font-bold mb-4 text-lg">Мой план: ${PLANS[currentPlanId].name}</h4>
-                            <div class="space-y-3">
-                                <div>
-                                    <div class="flex justify-between text-sm mb-1">
-                                        <span>Чаты</span>
-                                        <span>${chatUsage} / ${limits.chats === Infinity ? '∞' : limits.chats}</span>
-                                    </div>
-                                    <div class="progress-bar h-2 w-full"><div class="progress-bar-inner" style="width: ${chatPercentage}%;"></div></div>
-                                </div>
-                            </div>
-                            <button id="manage-plan-button" class="w-full mt-5 text-center py-2.5 rounded-xl font-semibold text-sm hover:opacity-90" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Управление подпиской</button>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('manage-plan-button').onclick = renderSubscriptionModal;
-            }
-
             function renderSubscriptionModal() {
-                const currentPlanId = localState.user.subscription_plan;
+                const currentPlanId = localState.user?.subscription_plan || 'free';
                 const currentPlan = PLANS[currentPlanId];
 
                 let plansHTML = `
-                    <h2 class="text-2xl font-bold text-center mb-2">Разблокируйте полную мощность</h2>
-                    <p class="text-center text-gray-300 mb-6 text-base">Выберите ежемесячный план.</p>
+                    <h2 class="text-xl font-bold text-center mb-1">Разблокируйте полную мощность</h2>
+                    <p class="text-center text-gray-400 mb-6 text-sm">Выберите план, который подходит вам.</p>
                     <div class="space-y-4">
                 `;
 
@@ -1012,22 +847,22 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
 
                     let buttonHTML;
                     if (isCurrent) {
-                        buttonHTML = `<button class="w-full py-3 rounded-xl text-sm font-semibold bg-gray-700 cursor-default">Ваш план</button>`;
+                        buttonHTML = `<button class="w-full py-2.5 rounded-lg text-sm font-semibold bg-gray-600 cursor-default">Ваш план</button>`;
                     } else if (isUpgrade) {
-                        buttonHTML = `<button id="buy-${planId}-button" class="w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center hover:opacity-90" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Выбрать ${plan.name}</button>`;
+                        buttonHTML = `<button id="buy-${planId}-button" class="w-full py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Выбрать ${plan.name}</button>`;
                     } else {
-                        buttonHTML = `<button class="w-full py-3 rounded-xl text-sm font-semibold bg-gray-800 text-gray-400 cursor-not-allowed">Понижение недоступно</button>`;
+                        buttonHTML = `<button class="w-full py-2.5 rounded-lg text-sm font-semibold bg-gray-700 text-gray-400 cursor-not-allowed">Понижение недоступно</button>`;
                     }
 
                     plansHTML += `
-                        <div class="p-5 rounded-2xl border-2 ${isCurrent || isPopular ? 'border-purple-500' : 'border-gray-700'} bg-gradient-to-br from-gray-800 to-gray-900 relative shadow-md">
-                            ${isPopular ? '<div class="absolute top-0 right-2 -mt-3"><span class="bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">ПОПУЛЯРНЫЙ</span></div>' : ''}
-                            <h3 class="text-xl font-bold ${isCurrent || isPopular ? 'text-purple-300' : ''}">${plan.name}</h3>
-                            <p class="text-4xl font-bold my-3">${plan.star_price > 0 ? `${plan.star_price} ⭐` : 'Бесплатно'}<span class="text-base font-normal text-gray-300">${plan.star_price > 0 ? '/месяц' : ''}</span></p>
-                            <ul class="space-y-2 text-sm my-5">
+                        <div class="p-4 rounded-lg border-2 ${isCurrent || isPopular ? 'border-purple-500' : 'border-gray-700'} bg-gray-800 relative">
+                            ${isPopular ? '<div class="absolute top-0 -right-2 -mt-3 transform"><span class="bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded-full">ПОПУЛЯРНЫЙ</span></div>' : ''}
+                            <h3 class="text-lg font-bold ${isCurrent || isPopular ? 'text-purple-400' : ''}">${plan.name}</h3>
+                            <p class="text-3xl font-bold my-2">${plan.price > 0 ? `${plan.price} ₽` : 'Бесплатно'}<span class="text-sm font-normal text-gray-400">${plan.price > 0 ? '/месяц' : ''}</span></p>
+                            <ul class="space-y-2 text-sm my-4">
                                 ${plan.features.map(feature => `
                                     <li class="flex items-center">
-                                        <svg class="w-5 h-5 text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                        <svg class="w-4 h-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                         <span>${feature}</span>
                                     </li>
                                 `).join('')}
@@ -1041,10 +876,10 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                 ui.subscriptionContent.innerHTML = plansHTML;
 
                 Object.entries(PLANS).forEach(([planId, plan]) => {
-                    if (plan.star_price > 0) {
+                    if (plan.priceId) {
                         const button = document.getElementById(`buy-${planId}-button`);
                         if (button) {
-                            button.addEventListener('click', () => buySubscription(planId, button));
+                            button.addEventListener('click', () => buySubscription(planId, plan.price * 100, button));
                         }
                     }
                 });
@@ -1052,53 +887,177 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                 openModal(ui.subscriptionModal);
             }
 
-            async function buySubscription(planId, buttonElement) {
-                buttonElement.disabled = true;
-                buttonElement.innerHTML = `<div class="spinner mx-auto"></div>`;
+            function updateDeployActions() {
+                const chat = localState.chats[activeChatId];
+                let buttonsHTML = '';
+                if (chat && chat.codeHistory.length > 0) {
+                    if (chat.deploy_url) {
+                        buttonsHTML = `
+                            <button id="open-deploy-button" class="text-xs font-bold px-2.5 py-1 rounded-full bg-green-500 text-white">Открыть</button>
+                            <button id="update-deploy-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Обновить</button>
+                        `;
+                    } else if (chat.is_deploying) {
+                        buttonsHTML = `<button class="text-xs font-bold px-2.5 py-1 rounded-full flex items-center" style="background-color: var(--tg-secondary-bg-color);" disabled><div class="spinner mr-1.5"></div>Деплой...</button>`;
+                    } else {
+                        buttonsHTML = `<button id="deploy-button" class="text-xs font-semibold px-2.5 py-1 rounded-md" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Деплой</button>`;
+                    }
+                }
+                ui.deployActionsContainer.innerHTML = buttonsHTML;
+                
+                const deployBtn = document.getElementById('deploy-button');
+                const updateDeployBtn = document.getElementById('update-deploy-button');
+                const openDeployBtn = document.getElementById('open-deploy-button');
 
-                const plan = PLANS[planId];
-                const payload = `subscribe-${planId}-user-${user.id}`;
-                const prices = [{ label: `Подписка ${plan.name} на месяц`, amount: plan.star_price }];
+                if (deployBtn) deployBtn.onclick = deployApp;
+                if (updateDeployBtn) updateDeployBtn.onclick = deployApp;
+                if (openDeployBtn) openDeployBtn.onclick = () => tg.openLink(chat.deploy_url);
+            }
+            
+            async function deployApp() {
+                const chat = localState.chats[activeChatId];
+                if (!chat || chat.codeHistory.length === 0) {
+                    addMessage('Ошибка: не найден код для деплоя.', 'bot');
+                    return;
+                }
+
+                chat.is_deploying = true;
+                await supabaseClient.from('chats').update({ is_deploying: true }).eq('id', activeChatId);
+                updateDeployActions();
+                addMessage(`Начинаю деплой проекта (фронтенд и бэкенд)...`, 'bot');
 
                 try {
-                    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            title: `Подписка ${plan.name}`,
-                            description: `Ежемесячная подписка на ${plan.name} план в Super Devtol.`,
-                            payload: payload,
-                            currency: 'XTR',
-                            prices: prices
-                        })
+                    const latestCodeObject = chat.codeHistory.slice(-1)[0].code;
+                    const { data, error } = await supabaseClient.functions.invoke('deploy-full-app', { 
+                        body: { 
+                            codeObject: latestCodeObject, 
+                            netlifySiteId: chat.netlify_site_id,
+                            chatId: activeChatId 
+                        } 
                     });
-                    const data = await response.json();
-                    if (!data.ok) throw new Error(data.description);
+                    if (error) throw error;
+                    if (data.error) throw new Error(data.error);
 
-                    const invoiceLink = data.result;
+                    const { deploy_url, netlify_site_id } = data;
+                    chat.deploy_url = deploy_url;
+                    chat.netlify_site_id = netlify_site_id;
+                    chat.is_deploying = false;
+                    await supabaseClient.from('chats').update({ deploy_url: deploy_url, netlify_site_id: netlify_site_id, is_deploying: false }).eq('id', activeChatId);
+                    
+                    addMessage(`✅ Успех! Ваш сайт доступен по адресу: ${deploy_url}`, 'bot');
+                    tg.HapticFeedback.notificationOccurred('success');
+                    updateDeployActions();
 
-                    tg.openInvoice(invoiceLink, (status) => {
-                        buttonElement.disabled = false;
-                        buttonElement.innerHTML = `Выбрать ${plan.name}`;
-                        if (status === 'paid') {
-                            localState.user.subscription_plan = planId;
-                            localState.user.subscription_end = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
-                            saveState();
-                            updateHeader();
-                            closeModal();
-                            showToast('Спасибо! Ваша подписка успешно активирована.');
-                        } else {
-                            showToast('Платеж не был завершен.');
-                        }
-                    });
                 } catch (error) {
-                    console.error('Ошибка создания инвойса:', error);
-                    showToast('Ошибка при создании платежа.');
-                    buttonElement.disabled = false;
-                    buttonElement.innerHTML = `Выбрать ${plan.name}`;
+                    console.error('Ошибка деплоя:', error);
+                    addMessage(`❌ Ошибка деплоя: ${error.message}`, 'bot');
+                    tg.HapticFeedback.notificationOccurred('error');
+                    chat.is_deploying = false;
+                    await supabaseClient.from('chats').update({ is_deploying: false }).eq('id', activeChatId);
+                    updateDeployActions();
                 }
             }
 
+            async function renderProfileDetails() {
+                const u = localState.user;
+                const allChats = Object.values(localState.chats);
+                const deployedChats = allChats.filter(c => c.deploy_url);
+                const currentPlanId = u.subscription_plan || 'free';
+                const limits = PLANS[currentPlanId];
+                const chatUsage = allChats.length;
+                const chatPercentage = limits.chats === Infinity ? 100 : (chatUsage / limits.chats) * 100;
+
+                const chatIds = Object.keys(localState.chats);
+                let messageCount = 0;
+                if (chatIds.length > 0) {
+                    const { count, error } = await supabaseClient
+                        .from('messages')
+                        .select('id', { count: 'exact', head: true })
+                        .in('chat_id', chatIds)
+                        .eq('sender', 'user');
+                    if (!error) {
+                        messageCount = count || 0;
+                    }
+                }
+
+                let deployedAppsHTML = `<div class="bg-gray-800 p-3 rounded-lg text-center text-sm text-gray-400">У вас пока нет опубликованных приложений.</div>`;
+                if (deployedChats.length > 0) {
+                    deployedAppsHTML = deployedChats.map(chat => `
+                        <div class="bg-gray-800 p-3 rounded-lg flex justify-between items-center space-x-2">
+                            <div class="flex-1 w-0">
+                                <p class="font-semibold text-sm truncate">${chat.title || 'Безымянное приложение'}</p>
+                                <a href="${chat.deploy_url}" target="_blank" class="text-xs text-purple-400 truncate block">${chat.deploy_url}</a>
+                            </div>
+                            <button onclick="Telegram.WebApp.openLink('${chat.deploy_url}')" class="text-xs font-bold p-2 rounded-full bg-gray-700 hover:bg-gray-600 flex-shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                            </button>
+                        </div>
+                    `).join('');
+                }
+
+                ui.profileContent.innerHTML = `
+                    <div class="space-y-4">
+                        <!-- User Card -->
+                        <div class="bg-gray-800 rounded-lg p-4 flex items-center space-x-4">
+                            <img src="${u.photo_url || `https://placehold.co/128x128/7c3aed/ffffff?text=${u.first_name.charAt(0).toUpperCase()}`}" class="w-16 h-16 rounded-full border-2 border-purple-500">
+                            <div>
+                                <h3 class="text-lg font-bold">${u.first_name || ''} ${u.last_name || ''}</h3>
+                                <p class="text-gray-400 text-sm">${u.username ? `@${u.username}` : 'Username не указан'}</p>
+                            </div>
+                        </div>
+
+                        <!-- Stats Card -->
+                        <div class="bg-gray-800 rounded-lg p-4">
+                            <h4 class="font-bold mb-3 text-base">Статистика</h4>
+                            <div class="grid grid-cols-3 gap-4 text-center">
+                                <div>
+                                    <div class="bg-gray-700 rounded-full p-2 w-10 h-10 mx-auto flex items-center justify-center mb-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                                    </div>
+                                    <p class="text-xl font-bold">${chatUsage}</p>
+                                    <p class="text-xs text-gray-400">Проектов</p>
+                                </div>
+                                <div>
+                                    <div class="bg-gray-700 rounded-full p-2 w-10 h-10 mx-auto flex items-center justify-center mb-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                                    </div>
+                                    <p class="text-xl font-bold">${messageCount}</p>
+                                    <p class="text-xs text-gray-400">Сообщений</p>
+                                </div>
+                                <div>
+                                    <div class="bg-gray-700 rounded-full p-2 w-10 h-10 mx-auto flex items-center justify-center mb-1">
+                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l5 5L20 7" /></svg>
+                                    </div>
+                                    <p class="text-xl font-bold">${deployedChats.length}</p>
+                                    <p class="text-xs text-gray-400">Опубликовано</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Subscription Card -->
+                        <div class="bg-gray-800 rounded-lg p-4">
+                            <h4 class="font-bold mb-3 text-base">Мой план: ${limits.name}</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span>Чаты</span>
+                                        <span>${chatUsage} / ${limits.chats === Infinity ? '∞' : limits.chats}</span>
+                                    </div>
+                                    <div class="progress-bar h-2 w-full"><div class="progress-bar-inner" style="width: ${chatPercentage}%;"></div></div>
+                                </div>
+                            </div>
+                            <button id="manage-plan-button" class="w-full mt-4 text-center py-2 rounded-lg font-semibold text-sm" style="background-color: var(--tg-button-color); color: var(--tg-button-text-color);">Управление подпиской</button>
+                        </div>
+
+                        <!-- Apps Card -->
+                        <div class="bg-gray-800 rounded-lg p-4">
+                            <h4 class="font-bold mb-3 text-base">Мои приложения</h4>
+                            <div class="space-y-2">${deployedAppsHTML}</div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('manage-plan-button').onclick = renderSubscriptionModal;
+            }
+            
             function showToast(message) {
                 const toast = document.createElement('div');
                 toast.className = 'toast';
@@ -1135,25 +1094,16 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
             function syncScroll() {
                 ui.highlightPre.scrollTop = ui.codeEditor.scrollTop;
                 ui.highlightPre.scrollLeft = ui.codeEditor.scrollLeft;
-                ui.lineNumbers.scrollTop = ui.codeEditor.scrollTop;
             }
 
-            function updateHighlight(fileName) {
+            function updateHighlight() {
                 const code = ui.codeEditor.value;
-                const lang = fileName.split('.').pop().toLowerCase();
-                ui.highlightOutput.className = `language-${lang}`;
                 ui.highlightOutput.textContent = code;
                 hljs.highlightElement(ui.highlightOutput);
             }
 
-            function updateLineNumbers(code) {
-                const lines = code.split('\n').length;
-                ui.lineNumbers.innerHTML = Array.from({length: lines}, (_, i) => `<div class="line-number">${i + 1}</div>`).join('');
-            }
-
             function handleCodeEdit() {
-                const activeChat = localState.chats[activeChatId];
-                const originalCode = activeChat?.codeHistory.slice(-1)[0]?.code[currentCodeFile] || '';
+                const originalCode = localState.chats[activeChatId]?.codeHistory.slice(-1)[0]?.code[currentCodeFile] || '';
                 if (ui.codeEditor.value !== originalCode) {
                     ui.codeEditActions.classList.remove('hidden');
                 } else {
@@ -1195,14 +1145,10 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                 ui.stopGenerationButton.addEventListener('click', () => {
                     if (generationAbortController) {
                         generationAbortController.abort();
-                        addMessage('Генерация остановлена.', 'bot');
-                        isGenerating = false;
-                        updateInputState();
                     }
                 });
                 ui.codeEditor.addEventListener('input', () => {
-                    updateHighlight(currentCodeFile);
-                    updateLineNumbers(ui.codeEditor.value);
+                    updateHighlight();
                     handleCodeEdit();
                 });
                 ui.codeEditor.addEventListener('scroll', syncScroll);
@@ -1227,6 +1173,45 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                     }
                 });
             }
+            
+            function buySubscription(planId, amount, buttonElement) {
+                const paymentProviderToken = "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ";
+                if (!paymentProviderToken || paymentProviderToken === "ВАШ_ТОКЕН_ПРОВАЙДЕРА_ПЛАТЕЖЕЙ") {
+                    tg.showAlert("Платежная система не настроена. Обратитесь к разработчику."); return;
+                }
+
+                buttonElement.disabled = true;
+                buttonElement.innerHTML = `<div class="spinner mx-auto"></div>`;
+
+                const plan = PLANS[planId];
+                const invoice = { 
+                    title: `Подписка ${plan.name}`, 
+                    description: `Доступ к расширенным функциям Devtol.`, 
+                    payload: `buy-${planId}-plan-user-${user.id}`, 
+                    provider_token: paymentProviderToken, 
+                    currency: 'RUB', 
+                    prices: [{ label: `Подписка ${plan.name}`, amount: amount }] 
+                };
+
+                tg.openInvoice(invoice.payload, async (status) => {
+                    if (status === 'paid') {
+                        const { error } = await supabaseClient.from('users').update({ subscription_plan: planId }).eq('id', localState.user.id);
+                        if (error) { 
+                            console.error("Ошибка обновления подписки:", error);
+                            showToast("Не удалось обновить подписку. Свяжитесь с поддержкой.");
+                            return; 
+                        }
+                        localState.user.subscription_plan = planId;
+                        updateHeader();
+                        closeModal();
+                        showToast('Спасибо! Ваша подписка успешно обновлена.');
+                    } else {
+                        showToast('Платеж не был завершен.');
+                        buttonElement.disabled = false;
+                        buttonElement.innerHTML = `Выбрать ${plan.name}`;
+                    }
+                });
+            }
 
             async function initApp() {
                 tg.ready();
@@ -1238,8 +1223,7 @@ Do not add any explanations, text, or markdown outside this JSON object.`;
                     ui.userPhoto.src = user.photo_url || `https://placehold.co/40x40/7c3aed/ffffff?text=${user.first_name.charAt(0).toUpperCase()}`;
                 }
 
-                loadLocalData();
-                checkSubscription();
+                await loadDataFromSupabase();
                 setupEventListeners();
                 updateInputState();
                 updateHeader();
